@@ -1,0 +1,23 @@
+{
+  "name": "boilerplate_fastify",
+  "version": "1.0.0",
+  "description": "Boilerplate Fastify App",
+  "type": "module",
+  "author": "DFA",
+  "license": "ISC",
+  "packageManager": "pnpm@10.13.1",
+  "scripts": {
+    "dev": "tsx --watch src/server.ts",
+    "start": "node dist/server.js",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "fastify": "^5.5.0",
+    "pino-pretty": "^13.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.3.0",
+    "tsx": "^4.19.1",
+    "typescript": "^5.9.2"
+  }
+}
