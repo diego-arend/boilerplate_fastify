@@ -20,3 +20,19 @@ const start = async () => {
 };
 
 start();
+
+// Graceful shutdown
+const shutdown = async (signal: string) => {
+  server.log.info(`Received ${signal}. Shutting down gracefully...`);
+  try {
+    await server.close();
+    server.log.info("Server closed. Exiting process.");
+    process.exit(0);
+  } catch (err) {
+  server.log.error(`Error during shutdown: ${err instanceof Error ? err.message : String(err)}`);
+    process.exit(1);
+  }
+};
+
+process.on("SIGINT", () => shutdown("SIGINT"));
+process.on("SIGTERM", () => shutdown("SIGTERM"));
