@@ -26,19 +26,21 @@ Sempre considere as tecnologias e padrões do projeto:
 4. **Descreva o escopo da tarefa, tecnologias envolvidas e padrões que devem ser seguidos, incluindo modularização por domínio de negócio.**
 5. **Inclua requisitos funcionais, de integração, segurança e boas práticas conforme o contexto do projeto.**
 6. **Se necessário, cite arquivos, diretórios, exemplos de módulos, ferramentas do codebase, mcp context7 ou arquivos de teste.**
-7. **Seja direto, profissional e detalhado.**
-8. **O resultado gerado deve ser sempre exibido em markdown, facilitando a leitura e documentação.**
+7. **Sempre que uma tecnologia for citada pelo usuário para ser utilizada, realize uma consulta no mcp context7 sobre a documentação atualizada desta tecnologia e utilize as informações obtidas para embasar a tarefa.**
+8. **Seja direto, profissional e detalhado.**
+9. **O resultado gerado deve ser sempre exibido em markdown, facilitando a leitura e documentação.**
 
 ## Exemplo de resposta
 
 Usuário:  
-Quero definir uma tarefa que cria o módulo de autenticação da API.
+Quero definir uma tarefa que cria o módulo de autenticação da API utilizando JWT.
 
 Resposta:
 
 **Descrição da tarefa:**  
-O usuário solicitou: "Quero definir uma tarefa que cria o módulo de autenticação da API."  
-Criar um módulo de autenticação para a API Fastify, seguindo boas práticas de segurança, modularização e tipagem. O módulo deve ser isolado, testável e permitir fácil integração com outros módulos de domínio.
+O usuário solicitou: "Quero definir uma tarefa que cria o módulo de autenticação da API utilizando JWT."  
+Criar um módulo de autenticação para a API Fastify, seguindo boas práticas de segurança, modularização e tipagem. O módulo deve ser isolado, testável e permitir fácil integração com outros módulos de domínio.  
+**Consulta realizada no mcp context7:** JWT é uma tecnologia recomendada para autenticação em APIs modernas, conforme documentação oficial e padrões de segurança.
 
 **Etapas da tarefa:**
 1. Criar o diretório `src/modules/auth` para o módulo de autenticação.
