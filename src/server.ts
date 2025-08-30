@@ -1,7 +1,10 @@
+import dotenv from 'dotenv';
 import { fastify } from "fastify";
 import configFastify from "./fastify.config.js";
 import app from "./app.js";
 import { config } from "./lib/validateEnv.js";
+
+dotenv.config({ debug: false });
 
 const server = fastify(configFastify);
 
@@ -11,8 +14,8 @@ server.register(app);
 
 const start = async () => {
   try {
-    await server.listen({ port: 3000, host: "0.0.0.0" });
-    server.log.info("Server running on http://localhost:3000");
+    await server.listen({ port: config.PORT, host: "0.0.0.0" });
+    server.log.info(`Server running on http://localhost:${config.PORT}`);
   } catch (err) {
     server.log.error(err);
     process.exit(1);
