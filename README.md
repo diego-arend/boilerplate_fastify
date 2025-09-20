@@ -61,6 +61,40 @@ docker-compose exec app sh
 docker-compose ps
 ```
 
+## 📚 Documentação da API
+
+### Swagger UI (Desenvolvimento)
+A documentação interativa da API está disponível apenas em ambiente de desenvolvimento:
+
+- **URL**: `http://localhost:3001/docs`
+- **Ambiente**: `NODE_ENV=development`
+- **Funcionalidades**: Testes interativos, schemas, autenticação
+
+Para acessar:
+```bash
+# Definir ambiente de desenvolvimento
+export NODE_ENV=development
+
+# Iniciar aplicação
+docker-compose -f docker-compose.dev.yml up --build
+```
+
+Em seguida, acesse: `http://localhost:3001/docs`
+
+### Arquivos de Documentação
+- `http-docs/auth.http` - Testes HTTP para autenticação
+- `src/lib/response/README.md` - Documentação da classe ApiResponseHandler
+
+### Scripts de Desenvolvimento
+
+```bash
+# Executar em modo desenvolvimento (com Swagger se NODE_ENV=development)
+pnpm dev
+
+# Para habilitar Swagger, defina a variável de ambiente:
+NODE_ENV=development pnpm dev
+```
+
 ### Health Checks
 
 Todos os serviços incluem health checks automáticos:

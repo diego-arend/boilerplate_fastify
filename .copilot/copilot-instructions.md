@@ -166,6 +166,9 @@ pnpm docker:build          # Constrói imagem Docker
 - **ESLint**: Linting e correção automática
 - **Docker**: Suporte completo a containers
 
+### Testes e Verificações de Rotas
+- **Playwright MCP**: Para verificações de rotas e interações de teste HTTP, utilize o MCP (Model Context Protocol) do Playwright. Este servidor permite executar testes automatizados de API, verificar endpoints e validar respostas HTTP de forma programática e integrada ao ambiente de desenvolvimento.
+
 ### Dependências de Desenvolvimento
 - **tsx**: TypeScript execution com hot reload
 - **@types/node**: Tipos para Node.js

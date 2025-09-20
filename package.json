@@ -18,6 +18,8 @@
     "docker:build": "docker build -t boilerplate-fastify ."
   },
   "dependencies": {
+    "@fastify/swagger": "^9.5.1",
+    "@fastify/swagger-ui": "^5.2.3",
     "@types/mongoose": "^5.11.97",
     "dotenv": "^17.2.1",
     "fastify": "^5.5.0",

@@ -21,7 +21,57 @@ const authRepository = new AuthRepository();
 export default async function authController(fastify: FastifyInstance) {
 
   // Register route
-  fastify.post('/register', async (request, reply) => {
+  fastify.post('/register', {
+    schema: {
+      description: 'Registra um novo usuário no sistema',
+      tags: ['Auth'],
+      summary: 'Registrar Usuário',
+      body: {
+        type: 'object',
+        required: ['name', 'email', 'password'],
+        properties: {
+          name: { type: 'string', minLength: 2 },
+          email: { type: 'string', format: 'email' },
+          password: { type: 'string', minLength: 8 }
+        }
+      },
+      response: {
+        201: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            message: { type: 'string', example: 'Usuário registrado com sucesso' },
+            code: { type: 'number', example: 201 },
+            data: {
+              type: 'object',
+              properties: {
+                user: {
+                  type: 'object',
+                  properties: {
+                    id: { type: 'string', example: '507f1f77bcf86cd799439011' },
+                    name: { type: 'string', example: 'João Silva' },
+                    email: { type: 'string', example: 'joao@example.com' },
+                    role: { type: 'string', example: 'user' },
+                    status: { type: 'string', example: 'active' }
+                  }
+                },
+                token: { type: 'string', example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' }
+              }
+            }
+          }
+        },
+        400: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: false },
+            message: { type: 'string', example: 'Nome, email e senha são obrigatórios' },
+            code: { type: 'number', example: 400 },
+            error: { type: 'string', example: 'VALIDATION_ERROR' }
+          }
+        }
+      }
+    }
+  }, async (request, reply) => {
     try {
       const { name, email, password } = request.body as RegisterRequest;
 
@@ -75,7 +125,56 @@ export default async function authController(fastify: FastifyInstance) {
   });
 
   // Login route
-  fastify.post('/login', async (request, reply) => {
+  fastify.post('/login', {
+    schema: {
+      description: 'Faz login do usuário e retorna token JWT',
+      tags: ['Auth'],
+      summary: 'Login do Usuário',
+      body: {
+        type: 'object',
+        required: ['email', 'password'],
+        properties: {
+          email: { type: 'string', format: 'email' },
+          password: { type: 'string' }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            message: { type: 'string', example: 'Login realizado com sucesso' },
+            code: { type: 'number', example: 200 },
+            data: {
+              type: 'object',
+              properties: {
+                user: {
+                  type: 'object',
+                  properties: {
+                    id: { type: 'string', example: '507f1f77bcf86cd799439011' },
+                    name: { type: 'string', example: 'João Silva' },
+                    email: { type: 'string', example: 'joao@example.com' },
+                    role: { type: 'string', example: 'user' },
+                    status: { type: 'string', example: 'active' }
+                  }
+                },
+                token: { type: 'string', example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' }
+              }
+            }
+          }
+        },
+        401: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: false },
+            message: { type: 'string', example: 'Credenciais inválidas' },
+            code: { type: 'number', example: 401 },
+            error: { type: 'string', example: 'AUTHENTICATION_ERROR' }
+          }
+        }
+      }
+    }
+  }, async (request, reply) => {
     try {
       const { email, password } = request.body as LoginRequest;
 
@@ -130,7 +229,48 @@ export default async function authController(fastify: FastifyInstance) {
 
   // Protected route example
   fastify.get('/me', {
-    preHandler: fastify.authenticate
+    preHandler: fastify.authenticate,
+    schema: {
+      description: 'Retorna os dados do usuário autenticado',
+      tags: ['Auth'],
+      summary: 'Perfil do Usuário',
+      security: [{ bearerAuth: [] }],
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            message: { type: 'string', example: 'Dados do usuário retornados' },
+            code: { type: 'number', example: 200 },
+            data: {
+              type: 'object',
+              properties: {
+                user: {
+                  type: 'object',
+                  properties: {
+                    id: { type: 'string', example: '507f1f77bcf86cd799439011' },
+                    name: { type: 'string', example: 'João Silva' },
+                    email: { type: 'string', example: 'joao@example.com' },
+                    role: { type: 'string', example: 'user' },
+                    status: { type: 'string', example: 'active' },
+                    createdAt: { type: 'string', format: 'date-time' }
+                  }
+                }
+              }
+            }
+          }
+        },
+        401: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: false },
+            message: { type: 'string', example: 'Usuário não autenticado' },
+            code: { type: 'number', example: 401 },
+            error: { type: 'string', example: 'AUTHENTICATION_ERROR' }
+          }
+        }
+      }
+    }
   }, async (request, reply) => {
     try {
       // Verifica se usuário está autenticado
