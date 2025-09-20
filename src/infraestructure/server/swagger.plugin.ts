@@ -16,17 +16,19 @@ export default async function swaggerPlugin(
     return;
   }
 
-  // Configuração do Swagger
+  fastify.log.info('Registrando Swagger...');
+
+  // Configuração do Swagger com OpenAPI v3
   await fastify.register(fastifySwagger, {
     openapi: {
-      openapi: '3.0.0',
+      openapi: '3.0.3',
       info: {
         title: 'Boilerplate Fastify API',
         description: 'API backend modular utilizando Fastify e TypeScript',
         version: process.env.npm_package_version || '1.0.0',
         contact: {
-          name: 'Equipe de Desenvolvimento',
-          email: 'dev@example.com'
+          name: 'API Support',
+          email: 'support@example.com'
         },
         license: {
           name: 'ISC'
@@ -34,9 +36,18 @@ export default async function swaggerPlugin(
       },
       servers: [
         {
-          url: 'http://localhost:3001',
-          description: 'Servidor de desenvolvimento'
+          url: `http://localhost:${process.env.PORT || 3001}`,
+          description: 'Development server'
+        },
+        {
+          url: 'https://api.example.com',
+          description: 'Production server'
         }
+      ],
+      tags: [
+        { name: 'Auth', description: 'Authentication endpoints' },
+        { name: 'Health', description: 'Health check endpoints' },
+        { name: 'Test', description: 'Test endpoints' }
       ],
       components: {
         securitySchemes: {
@@ -44,7 +55,27 @@ export default async function swaggerPlugin(
             type: 'http',
             scheme: 'bearer',
             bearerFormat: 'JWT',
-            description: 'Token JWT de autenticação'
+            description: 'JWT Authorization header using the Bearer scheme'
+          }
+        },
+        schemas: {
+          Error: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean', example: false },
+              message: { type: 'string', example: 'Error message' },
+              code: { type: 'number', example: 400 },
+              error: { type: 'string', example: 'Error details' }
+            }
+          },
+          Success: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean', example: true },
+              message: { type: 'string', example: 'Operation successful' },
+              code: { type: 'number', example: 200 },
+              data: { type: 'object', description: 'Response data' }
+            }
           }
         }
       },
@@ -52,21 +83,7 @@ export default async function swaggerPlugin(
         {
           bearerAuth: []
         }
-      ],
-      tags: [
-        { name: 'Auth', description: 'Operações de autenticação' },
-        { name: 'Health', description: 'Verificação de saúde da aplicação' }
       ]
-    },
-    transform: ({ schema, url }) => {
-      const parsed = url.split('/');
-      const tag = parsed[1] || 'Default';
-
-      return {
-        schema,
-        url,
-        operationId: `${tag}_${parsed[parsed.length - 1] || 'default'}`
-      };
     }
   });
 
@@ -76,14 +93,18 @@ export default async function swaggerPlugin(
     uiConfig: {
       docExpansion: 'list',
       deepLinking: false,
-      filter: true,
-      showExtensions: true,
-      showCommonExtensions: true,
-      displayRequestDuration: true,
-      tryItOutEnabled: true
+      tryItOutEnabled: true,
+      requestInterceptor: (req: any) => {
+        // Adicionar headers customizados se necessário
+        return req;
+      },
+      responseInterceptor: (res: any) => {
+        // Processar respostas se necessário
+        return res;
+      }
     },
     staticCSP: true,
-    transformStaticCSP: (header) => header
+    transformStaticCSP: (header: string) => header
   });
 
   fastify.log.info('Swagger registrado em /docs - Ambiente de desenvolvimento');

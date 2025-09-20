@@ -38,6 +38,7 @@ docker-compose up -d --build
 - **App** (Fastify): http://localhost:3001
 - **MongoDB**: localhost:27017
 - **Redis**: localhost:6379
+- **Swagger UI** (desenvolvimento): http://localhost:3001/docs
 
 ### Comandos Úteis
 
@@ -64,36 +65,59 @@ docker-compose ps
 ## 📚 Documentação da API
 
 ### Swagger UI (Desenvolvimento)
-A documentação interativa da API está disponível apenas em ambiente de desenvolvimento:
 
-- **URL**: `http://localhost:3001/docs`
-- **Ambiente**: `NODE_ENV=development`
-- **Funcionalidades**: Testes interativos, schemas, autenticação
+A aplicação inclui documentação interativa da API através do Swagger UI, disponível apenas em ambiente de desenvolvimento:
 
-Para acessar:
-```bash
-# Definir ambiente de desenvolvimento
-export NODE_ENV=development
+- **URL**: http://localhost:3001/docs
+- **Formato**: OpenAPI 3.0
+- **Ambiente**: Apenas quando `NODE_ENV=development`
 
-# Iniciar aplicação
-docker-compose -f docker-compose.dev.yml up --build
-```
+**Funcionalidades:**
+- Documentação completa de todos os endpoints
+- Interface interativa para testar APIs
+- Schemas de request/response detalhados  
+- Autenticação JWT integrada (Bearer token)
+- Organização por tags (Auth, Health)
 
-Em seguida, acesse: `http://localhost:3001/docs`
+**Para acessar:**
+1. Inicie a aplicação em modo desenvolvimento:
+   ```bash
+   docker-compose -f docker-compose.dev.yml up --build
+   ```
+2. Acesse: http://localhost:3001/docs
+
+**Observação:** A documentação Swagger é desabilitada automaticamente em produção por questões de segurança.
 
 ### Arquivos de Documentação
 - `http-docs/auth.http` - Testes HTTP para autenticação
 - `src/lib/response/README.md` - Documentação da classe ApiResponseHandler
 
+### Endpoints Principais
+
+**Health Check:**
+- `GET /health` - Status da aplicação
+
+**Autenticação:**
+- `POST /auth/register` - Registro de usuário
+- `POST /auth/login` - Login e obtenção de token JWT
+- `GET /auth/me` - Perfil do usuário autenticado (requer token)
+
+Todos os endpoints estão documentados no Swagger UI com schemas completos e exemplos de uso.
+
 ### Scripts de Desenvolvimento
 
 ```bash
-# Executar em modo desenvolvimento (com Swagger se NODE_ENV=development)
+# Executar em modo desenvolvimento (com Swagger)
 pnpm dev
 
-# Para habilitar Swagger, defina a variável de ambiente:
-NODE_ENV=development pnpm dev
+# Build para produção
+pnpm build
+
+# Executar em produção (sem Swagger)
+pnpm start
 ```
+
+**Nota:** O Swagger UI é habilitado automaticamente em ambiente de desenvolvimento (`NODE_ENV=development`).
 
 ### Health Checks
 
@@ -120,13 +144,13 @@ Para desenvolvimento local sem Docker:
 # Instalar dependências
 pnpm install
 
-# Executar em modo desenvolvimento
+# Executar em modo desenvolvimento (com Swagger)
 pnpm run dev
 
 # Build para produção
 pnpm run build
 
-# Executar em produção
+# Executar em produção (sem Swagger)
 pnpm run start
 ```
 

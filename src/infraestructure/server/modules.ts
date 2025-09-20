@@ -1,12 +1,12 @@
 import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
 
-export function registerModule(
+export async function registerModule(
   fastify: FastifyInstance,
   plugin: FastifyPluginAsync,
   prefix: string,
   moduleName: string
 ) {
-  fastify.register(plugin, { prefix })
+  await fastify.register(plugin, { prefix })
   fastify.log.info(`Module registered: ${moduleName}`)
 }
 
