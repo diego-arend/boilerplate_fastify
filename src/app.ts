@@ -4,21 +4,37 @@ import { registerModule } from './infraestructure/server/modules.js'
 import MongoConnection from './infraestructure/mongo/connection.js'
 
 export default async function app(fastify: FastifyInstance, opts: FastifyPluginOptions) {
+  // Health check route
+  fastify.get('/health', async (request, reply) => {
+    const healthCheck = {
+      status: 'UP',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      version: process.env.npm_package_version || '1.0.0',
+      service: 'boilerplate-fastify'
+    };
 
-  // Connect to MongoDB
-  const mongoConnection = MongoConnection.getInstance();
-  await mongoConnection.connect();
-
-  // Decorate fastify with mongo connection for potential use
-  fastify.decorate('mongo', mongoConnection);
+    // Return 200 OK - application is healthy
+    return reply.code(200).send(healthCheck);
+  });
 
   // Register modules automatically with logging
   registerModule(fastify, authPlugin, '/auth', 'auth')
 
+  // MongoDB connection will be handled in server.ts
+  fastify.addHook('onReady', async () => {
+    const mongoConnection = MongoConnection.getInstance();
+    await mongoConnection.connect();
+    fastify.decorate('mongo', mongoConnection);
+  });
+
   // Graceful shutdown for MongoDB
   fastify.addHook('onClose', async () => {
+    const mongoConnection = MongoConnection.getInstance();
     await mongoConnection.disconnect();
   });
 }
 
-export const options = {}
+export const options = {
+  name: 'app'
+}

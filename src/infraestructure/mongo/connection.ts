@@ -21,7 +21,12 @@ class MongoConnection {
     }
 
     try {
-      await mongoose.connect(config.MONGO_URI);
+      await mongoose.connect(config.MONGO_URI, {
+        serverSelectionTimeoutMS: 5000, // Timeout para seleção do servidor
+        socketTimeoutMS: 45000, // Timeout do socket
+        bufferCommands: false, // Desabilitar buffering de comandos
+        maxPoolSize: 10, // Tamanho máximo do pool de conexões
+      });
       this.isConnected = true;
       console.log('Conectado ao MongoDB');
     } catch (error) {

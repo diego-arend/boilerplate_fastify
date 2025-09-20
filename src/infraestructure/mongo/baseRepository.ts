@@ -2,7 +2,7 @@ import { Model, Document } from 'mongoose';
 import type { FilterQuery, UpdateQuery } from 'mongoose';
 
 export class BaseRepository<T extends Document> {
-  constructor(private model: Model<T>) {}
+  constructor(protected model: Model<T>) {}
 
   async create(data: Partial<T>): Promise<T> {
     const document = new this.model(data);

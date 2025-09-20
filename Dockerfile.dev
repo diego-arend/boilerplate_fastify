@@ -14,18 +14,20 @@ RUN adduser -S fastify -u 1001
 # Set working directory
 WORKDIR /app
 
-# Change ownership
-RUN chown -R fastify:nodejs /app
-USER fastify
-
 # Copy package files
-COPY --chown=fastify:nodejs package.json pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml ./
 
-# Install all dependencies (including dev dependencies)
+# Install all dependencies (including dev dependencies) as root
 RUN pnpm install
 
 # Copy source code
-COPY --chown=fastify:nodejs . .
+COPY . .
+
+# Change ownership of the app directory to fastify user
+RUN chown -R fastify:nodejs /app
+
+# Switch to fastify user
+USER fastify
 
 # Expose port
 EXPOSE 3001

@@ -11,6 +11,7 @@ const config: FastifyServerOptions = {
       },
     },
   },
+  pluginTimeout: 30000, // 30 seconds timeout for plugins
 }
 
 export default config
