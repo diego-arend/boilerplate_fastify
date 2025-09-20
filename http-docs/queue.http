@@ -1,0 +1,239 @@
+### Queue Management API Tests
+###
+### This file contains HTTP requests for testing the BullMQ queue system
+### Use with REST Client extension in VS Code or similar HTTP client
+
+###
+
+# Variables
+@baseUrl = http://localhost:3000/api
+@authToken = Bearer your_auth_token_here
+
+###
+
+# 1. Add a job to the queue - Email Send
+POST {{baseUrl}}/queue/jobs
+Content-Type: application/json
+
+{
+  "type": "EMAIL_SEND",
+  "data": {
+    "to": "user@example.com",
+    "subject": "Welcome to our platform",
+    "template": "welcome",
+    "variables": {
+      "name": "John Doe",
+      "link": "https://example.com/welcome"
+    },
+    "priority": "HIGH",
+    "timestamp": 1703174400000
+  },
+  "options": {
+    "priority": 10,
+    "attempts": 3,
+    "jobId": "email_welcome_123"
+  }
+}
+
+###
+
+# 2. Add a job to the queue - User Notification
+POST {{baseUrl}}/queue/jobs
+Content-Type: application/json
+Authorization: {{authToken}}
+
+{
+  "type": "USER_NOTIFICATION",
+  "data": {
+    "userId": "user123",
+    "title": "New message received",
+    "body": "You have received a new message from John",
+    "type": "message",
+    "metadata": {
+      "senderId": "sender456",
+      "messageId": "msg789"
+    }
+  },
+  "options": {
+    "priority": 5,
+    "delay": 5000
+  }
+}
+
+###
+
+# 3. Add a job to the queue - Data Export
+POST {{baseUrl}}/queue/jobs
+Content-Type: application/json
+
+{
+  "type": "DATA_EXPORT",
+  "data": {
+    "userId": "user123",
+    "exportType": "csv",
+    "filters": {
+      "startDate": "2023-01-01",
+      "endDate": "2023-12-31",
+      "categories": ["sales", "marketing"]
+    },
+    "columns": ["id", "name", "email", "date", "amount"]
+  },
+  "options": {
+    "priority": 3,
+    "attempts": 2
+  }
+}
+
+###
+
+# 4. Add a job to the queue - File Processing
+POST {{baseUrl}}/queue/jobs
+Content-Type: application/json
+
+{
+  "type": "FILE_PROCESS",
+  "data": {
+    "filePath": "/uploads/documents/report.pdf",
+    "operation": "extract_text",
+    "options": {
+      "format": "plain",
+      "includeMetadata": true
+    },
+    "userId": "user123"
+  }
+}
+
+###
+
+# 5. Add a job to the queue - Cache Warming
+POST {{baseUrl}}/queue/jobs
+Content-Type: application/json
+
+{
+  "type": "CACHE_WARM",
+  "data": {
+    "cacheKey": "user_dashboard_data",
+    "userId": "user123",
+    "dataSource": "analytics_api",
+    "ttl": 3600
+  },
+  "options": {
+    "priority": 1,
+    "delay": 10000
+  }
+}
+
+###
+
+# 6. Add a job to the queue - Cleanup Task
+POST {{baseUrl}}/queue/jobs
+Content-Type: application/json
+
+{
+  "type": "CLEANUP",
+  "data": {
+    "targetType": "temp_files",
+    "olderThan": 86400000,
+    "path": "/tmp/uploads",
+    "pattern": "*.tmp"
+  },
+  "options": {
+    "priority": 1,
+    "attempts": 1
+  }
+}
+
+###
+
+# 7. Get job status
+@jobId = job_id_here
+GET {{baseUrl}}/queue/jobs/{{jobId}}
+
+###
+
+# 8. Get queue statistics
+GET {{baseUrl}}/queue/stats
+
+###
+
+# 9. Remove a job from queue
+@jobIdToRemove = job_id_here
+DELETE {{baseUrl}}/queue/jobs/{{jobIdToRemove}}
+
+###
+
+# 10. Pause queue processing
+POST {{baseUrl}}/queue/pause
+
+###
+
+# 11. Resume queue processing
+POST {{baseUrl}}/queue/resume
+
+###
+
+# 12. Clean completed jobs (older than 1 hour)
+POST {{baseUrl}}/queue/clean/completed
+Content-Type: application/json
+
+{
+  "gracePeriod": 3600000,
+  "limit": 50
+}
+
+###
+
+# 13. Clean failed jobs (older than 24 hours)
+POST {{baseUrl}}/queue/clean/failed
+Content-Type: application/json
+
+{
+  "gracePeriod": 86400000,
+  "limit": 100
+}
+
+###
+
+# 14. Add job with delay (process in 30 seconds)
+POST {{baseUrl}}/queue/jobs
+Content-Type: application/json
+
+{
+  "type": "USER_NOTIFICATION",
+  "data": {
+    "userId": "user456",
+    "title": "Delayed notification",
+    "body": "This notification was delayed by 30 seconds",
+    "type": "info"
+  },
+  "options": {
+    "delay": 30000,
+    "attempts": 1
+  }
+}
+
+###
+
+# 15. Add high priority job
+POST {{baseUrl}}/queue/jobs
+Content-Type: application/json
+
+{
+  "type": "EMAIL_SEND",
+  "data": {
+    "to": "urgent@example.com",
+    "subject": "URGENT: Account Security Alert",
+    "template": "security_alert",
+    "variables": {
+      "alertType": "suspicious_login",
+      "location": "New York, USA"
+    }
+  },
+  "options": {
+    "priority": 20,
+    "attempts": 5,
+    "jobId": "urgent_security_alert"
+  }
+}
+
+###

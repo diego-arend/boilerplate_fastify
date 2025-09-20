@@ -8,6 +8,7 @@ Boilerplate for Fastify applications with TypeScript, MongoDB and Redis cache sy
 - **TypeScript**: Type-safe development
 - **MongoDB**: Database with Mongoose ODM
 - **Redis Cache**: In-memory caching system
+- **BullMQ Queue System**: Background job processing with worker separation
 - **JWT Authentication**: Secure authentication with RBAC
 - **Docker**: Containerized development and production
 - **Swagger UI**: Interactive API documentation (dev only)
@@ -47,8 +48,9 @@ docker-compose up -d --build
 ### Available Services
 
 - **App** (Fastify): http://localhost:3001
+- **Queue Worker** (BullMQ): Background job processing
 - **MongoDB**: localhost:27017
-- **Redis**: localhost:6379
+- **Redis**: localhost:6379 (shared by cache and queue)
 - **Swagger UI** (development): http://localhost:3001/docs
 
 ### Useful Commands
@@ -56,6 +58,9 @@ docker-compose up -d --build
 ```bash
 # View application logs
 docker-compose logs app
+
+# View queue worker logs
+docker-compose logs queue-worker
 
 # View all services logs
 docker-compose logs
@@ -69,8 +74,17 @@ docker-compose down -v
 # Execute commands in the application container
 docker-compose exec app sh
 
+# Execute commands in the queue worker container
+docker-compose exec queue-worker sh
+
 # Check services status
 docker-compose ps
+
+# Start only queue worker
+docker-compose up queue-worker
+
+# Restart queue worker
+docker-compose restart queue-worker
 ```
 
 ## 📚 API Documentation
@@ -101,6 +115,7 @@ The application includes interactive API documentation through Swagger UI, avail
 
 ### Documentation Files
 - `http-docs/auth.http` - HTTP tests for authentication
+- `http-docs/queue.http` - HTTP tests for queue system
 - `http-docs/cache.http` - HTTP tests for cache behavior
 - `src/infraestructure/cache/README.md` - Cache system documentation
 - `src/modules/auth/README.md` - Authentication and RBAC documentation
@@ -116,6 +131,16 @@ The application includes interactive API documentation through Swagger UI, avail
 - `POST /auth/login` - Login and JWT token retrieval
 - `GET /auth/me` - Authenticated user profile (requires token, **cached**)
 
+**Queue Management:**
+- `POST /api/queue/jobs` - Add job to queue
+- `GET /api/queue/jobs/:jobId` - Get job status and details
+- `DELETE /api/queue/jobs/:jobId` - Remove job from queue
+- `GET /api/queue/stats` - Get queue statistics
+- `POST /api/queue/pause` - Pause job processing
+- `POST /api/queue/resume` - Resume job processing
+- `POST /api/queue/clean/completed` - Clean old completed jobs
+- `POST /api/queue/clean/failed` - Clean old failed jobs
+
 **Cache Testing:**
 - Use `http-docs/cache.http` for cache hit/miss testing
 - Headers `X-Cache`, `X-Cache-Key`, `X-Cache-TTL` for debugging
@@ -127,6 +152,9 @@ All endpoints are documented in Swagger UI with complete schemas and usage examp
 ```bash
 # Run in development mode (with Swagger)
 pnpm dev
+
+# Run queue worker separately 
+pnpm worker:queue
 
 # Build for production
 pnpm build
@@ -207,6 +235,147 @@ Use the `http-docs/cache.http` file to test cache behavior:
 - Cache statistics available via `fastify.cache.getStats()`
 - Connection status logged on startup
 
+### BullMQ Queue System
+
+The application includes a robust job queue system with BullMQ and Redis:
+
+**Features:**
+- ✅ **Background job processing** with separate worker containers
+- ✅ **Job prioritization** and delayed execution
+- ✅ **Retry mechanisms** with configurable attempts
+- ✅ **Job status tracking** and result storage
+- ✅ **Queue management** (pause, resume, cleanup)
+- ✅ **Multiple job types** with specific handlers
+- ✅ **Graceful worker shutdown** and error handling
+
+**Architecture:**
+- **API Server**: Handles job submission and status queries
+- **Queue Worker**: Separate process/container for job processing
+- **Redis**: Shared storage for job queues and results
+
+**Available Job Types:**
+1. **EMAIL_SEND** - Email notifications and campaigns
+2. **USER_NOTIFICATION** - In-app user notifications
+3. **DATA_EXPORT** - Large data export operations
+4. **FILE_PROCESS** - File upload processing and transformations
+5. **CACHE_WARM** - Cache warming operations
+6. **CLEANUP** - System maintenance and cleanup tasks
+
+**Job Priority Levels:**
+- **LOW**: 1 (cleanup, non-urgent tasks)
+- **NORMAL**: 5 (default priority)
+- **HIGH**: 10 (important notifications)
+- **URGENT**: 20 (security alerts, critical operations)
+
+**Queue Management API:**
+
+*Add Job to Queue:*
+```bash
+POST /api/queue/jobs
+{
+  "type": "EMAIL_SEND",
+  "data": {
+    "to": "user@example.com",
+    "subject": "Welcome",
+    "template": "welcome"
+  },
+  "options": {
+    "priority": 10,
+    "delay": 5000,
+    "attempts": 3,
+    "jobId": "custom-job-id"
+  }
+}
+```
+
+*Get Job Status:*
+```bash
+GET /api/queue/jobs/{jobId}
+# Returns: status, data, result, attempts, timestamps
+```
+
+*Queue Statistics:*
+```bash
+GET /api/queue/stats
+# Returns: waiting, active, completed, failed, delayed counts
+```
+
+*Queue Control:*
+```bash
+POST /api/queue/pause    # Pause job processing
+POST /api/queue/resume   # Resume job processing
+POST /api/queue/clean/completed  # Clean old completed jobs
+POST /api/queue/clean/failed     # Clean old failed jobs
+```
+
+**Worker Configuration:**
+
+The queue worker runs in a separate container/process:
+
+```bash
+# Run worker locally
+pnpm run worker:queue
+
+# Docker worker service
+docker-compose up queue-worker
+
+# View worker logs
+docker-compose logs -f queue-worker
+```
+
+**Job Handler Implementation:**
+
+Each job type has its own handler in `src/modules/queue/queue.worker.ts`:
+
+```typescript
+// Example job handler
+private async handleEmailSend(jobData: EmailJobData): Promise<JobResult> {
+  // Simulate email sending
+  await new Promise(resolve => setTimeout(resolve, 2000));
+  
+  return {
+    success: true,
+    message: `Email sent to ${jobData.to}`,
+    data: { messageId: 'msg_123', timestamp: Date.now() }
+  };
+}
+```
+
+**Queue Testing:**
+
+Use the `http-docs/queue.http` file for comprehensive testing:
+1. Add jobs with different types and priorities
+2. Check job status and results
+3. Test queue management operations
+4. Monitor queue statistics
+
+**Error Handling:**
+- Failed jobs are automatically retried based on `attempts` setting
+- Worker gracefully handles shutdown signals (SIGTERM, SIGINT)
+- Redis connection issues are logged and handled
+- Job failures include detailed error information
+
+**Monitoring and Debugging:**
+```bash
+# Monitor queue worker
+docker-compose logs -f queue-worker
+
+# Check Redis queue data
+docker-compose exec redis redis-cli
+> KEYS bull:jobs:*
+> HGETALL bull:jobs:waiting
+
+# Queue statistics
+curl http://localhost:3001/api/queue/stats
+```
+
+**Production Considerations:**
+- Worker containers can be scaled independently
+- Job data should be kept minimal (use references to large data)
+- Set appropriate retry limits to avoid infinite loops
+- Regular cleanup of old completed/failed jobs
+- Monitor Redis memory usage for queue data
+
 ### Local Development
 
 For local development without Docker:
@@ -260,10 +429,17 @@ src/
 ├── entities/                # Entity schemas
 ├── modules/                 # Business modules
 │   ├── auth/               # Authentication system with RBAC
-│   └── health/             # Health check endpoints
+│   ├── health/             # Health check endpoints
+│   └── queue/              # BullMQ job queue system
+│       ├── queue.types.ts       # Job types and interfaces
+│       ├── queue.manager.ts     # Queue management operations
+│       ├── queue.worker.ts      # Background worker process
+│       ├── queue.controller.ts  # Queue API endpoints
+│       └── queue.plugin.ts      # Fastify queue plugin
 ├── lib/                    # Utilities and helpers
 └── http-docs/              # HTTP test files
     ├── auth.http          # Authentication tests
+    ├── queue.http         # Queue system tests
     └── cache.http         # Cache testing examples
 ```
 
@@ -281,6 +457,33 @@ The project includes multiple security layers:
 For more details about security, see the `PlanTask.chatmode.md` file.
 
 ## 🔧 Troubleshooting
+
+### Queue Worker Issues
+
+If you see queue processing problems:
+
+```bash
+# Check queue worker status
+docker-compose -f docker-compose.dev.yml ps queue-worker
+
+# View queue worker logs
+docker-compose -f docker-compose.dev.yml logs -f queue-worker
+
+# Restart queue worker
+docker-compose -f docker-compose.dev.yml restart queue-worker
+
+# Check queue statistics
+curl http://localhost:3001/api/queue/stats
+
+# Monitor Redis queue data
+docker-compose -f docker-compose.dev.yml exec redis redis-cli
+```
+
+**Common Queue Issues:**
+- **Worker not processing jobs**: Check if worker container is running
+- **Jobs stuck in waiting**: Verify Redis connection and worker status  
+- **High failed job count**: Review job handler logic and retry settings
+- **Memory issues**: Clean old jobs regularly and monitor Redis usage
 
 ### Redis Connection Issues
 

@@ -1,0 +1,30 @@
+# Development Dockerfile for Queue Worker
+FROM node:22-alpine
+
+# Install pnpm globally
+RUN npm install -g pnpm@10.13.1
+
+# Create app user
+RUN addgroup -g 1001 -S nodejs
+RUN adduser -S worker -u 1001
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY package.json pnpm-lock.yaml ./
+
+# Install all dependencies (including dev dependencies) as root
+RUN pnpm install
+
+# Copy source code
+COPY . .
+
+# Change ownership of the app directory to worker user
+RUN chown -R worker:nodejs /app
+
+# Switch to worker user
+USER worker
+
+# Default command for worker
+CMD ["pnpm", "run", "worker:queue"]

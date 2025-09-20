@@ -23,15 +23,39 @@ services:
       - redis
     networks:
       - boilerplate_network
-    volumes:
-      - .:/app
-      - /app/node_modules
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
+
+  queue-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    container_name: boilerplate_queue_worker
+    restart: unless-stopped
+    environment:
+      - MONGO_URI=mongodb://admin:password@mongodb:27017/boilerplate?authSource=admin
+      - JWT_SECRET=hjsgddgdbnasbd23yeasdfb2iq3u1esdKJHSzjdcbs8eho2w12wjasJK
+      - NODE_ENV=production
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=
+      - REDIS_DB=0
+      - QUEUE_NAME=main
+    depends_on:
+      - mongodb
+      - redis
+    networks:
+      - boilerplate_network
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "queue.worker.js"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
 
   mongodb:
     image: mongo:latest
