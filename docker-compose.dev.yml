@@ -4,8 +4,8 @@ services:
   app:
     build:
       context: .
-      dockerfile: Dockerfile
-    container_name: boilerplate_app
+      dockerfile: Dockerfile.dev
+    container_name: boilerplate_app_dev
     restart: unless-stopped
     ports:
       - "3001:3001"
@@ -13,7 +13,7 @@ services:
       - PORT=3001
       - MONGO_URI=mongodb://admin:password@mongodb:27017/boilerplate?authSource=admin
       - JWT_SECRET=hjsgddgdbnasbd23yeasdfb2iq3u1esdKJHSzjdcbs8eho2w12wjasJK
-      - NODE_ENV=production
+      - NODE_ENV=development
     depends_on:
       - mongodb
       - redis
@@ -22,6 +22,7 @@ services:
     volumes:
       - .:/app
       - /app/node_modules
+    command: pnpm run dev
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
       interval: 30s
@@ -31,7 +32,7 @@ services:
 
   mongodb:
     image: mongo:latest
-    container_name: boilerplate_mongodb
+    container_name: boilerplate_mongodb_dev
     restart: unless-stopped
     ports:
       - "27017:27017"
@@ -52,7 +53,7 @@ services:
 
   redis:
     image: redis:latest
-    container_name: boilerplate_redis
+    container_name: boilerplate_redis_dev
     restart: unless-stopped
     ports:
       - "6379:6379"

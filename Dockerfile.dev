@@ -1,0 +1,34 @@
+# Development Dockerfile with hot reload
+FROM node:20-alpine
+
+# Install pnpm globally
+RUN npm install -g pnpm@10.13.1
+
+# Install curl for health checks
+RUN apk add --no-cache curl
+
+# Create app user
+RUN addgroup -g 1001 -S nodejs
+RUN adduser -S fastify -u 1001
+
+# Set working directory
+WORKDIR /app
+
+# Change ownership
+RUN chown -R fastify:nodejs /app
+USER fastify
+
+# Copy package files
+COPY --chown=fastify:nodejs package.json pnpm-lock.yaml ./
+
+# Install all dependencies (including dev dependencies)
+RUN pnpm install
+
+# Copy source code
+COPY --chown=fastify:nodejs . .
+
+# Expose port
+EXPOSE 3001
+
+# Default command (can be overridden in docker-compose)
+CMD ["pnpm", "run", "dev"]
