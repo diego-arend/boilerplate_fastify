@@ -5,6 +5,11 @@ const envSchema = z.object({
   JWT_SECRET: z.string().min(32),
   PORT: z.coerce.number(),
   MONGO_URI: z.string().url(),
+  // Redis configuration
+  REDIS_HOST: z.string().default('localhost'),
+  REDIS_PORT: z.coerce.number().default(6379),
+  REDIS_PASSWORD: z.string().optional(),
+  REDIS_DB: z.coerce.number().default(0).optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);

@@ -14,6 +14,10 @@ services:
       - MONGO_URI=mongodb://admin:password@mongodb:27017/boilerplate?authSource=admin
       - JWT_SECRET=hjsgddgdbnasbd23yeasdfb2iq3u1esdKJHSzjdcbs8eho2w12wjasJK
       - NODE_ENV=production
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=
+      - REDIS_DB=0
     depends_on:
       - mongodb
       - redis

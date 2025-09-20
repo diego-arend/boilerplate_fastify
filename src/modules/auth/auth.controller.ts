@@ -284,22 +284,48 @@ export default async function authController(fastify: FastifyInstance) {
         return ApiResponseHandler.authError(reply, 'User not authenticated');
       }
 
-      // Find updated user data
-      const user = await authRepository.findById(request.authenticatedUser.id.toString());
+      const userId = request.authenticatedUser.id.toString();
+      const cacheKey = `user:profile:${userId}`;
 
-      if (!user) {
-        return ApiResponseHandler.notFound(reply, 'User not found');
-      }
+      // Try to get user data from cache first
+      let userData = await fastify.cache.get<{
+        id: string;
+        name: string;
+        email: string;
+        role: string;
+        status: string;
+        createdAt: Date;
+      }>(cacheKey);
 
-      return ApiResponseHandler.success(reply, 'User data returned', {
-        user: {
-          id: user._id,
+      if (!userData) {
+        // Cache miss - fetch from database
+        const user = await authRepository.findById(userId);
+
+        if (!user) {
+          return ApiResponseHandler.notFound(reply, 'User not found');
+        }
+
+        userData = {
+          id: String(user._id),
           name: user.name,
           email: user.email,
           role: user.role,
           status: user.status,
           createdAt: user.createdAt
-        }
+        };
+
+        // Cache user data for 15 minutes
+        await fastify.cache.set(cacheKey, userData, { ttl: 900 });
+        
+        // Add cache header for debugging
+        reply.header('X-Data-Source', 'DATABASE');
+      } else {
+        // Cache hit
+        reply.header('X-Data-Source', 'CACHE');
+      }
+
+      return ApiResponseHandler.success(reply, 'User data returned', {
+        user: userData
       });
     } catch (error) {
       console.error('Error fetching user:', error);
