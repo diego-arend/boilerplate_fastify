@@ -4,8 +4,7 @@ import type {
   FastifyRequest,
   FastifyReply,
 } from "fastify";
-import { JwtStrategy } from "./strategy.js";
-import { AuthenticateCommand } from "./command.js";
+import { JwtStrategy, AuthenticateCommand } from "./services/index.js";
 import authController from "./auth.controller.js";
 
 export default async function (

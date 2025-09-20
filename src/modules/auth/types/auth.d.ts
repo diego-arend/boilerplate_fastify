@@ -1,4 +1,4 @@
-import type { AuthenticatedUser } from '../strategy.ts';
+import type { AuthenticatedUser } from '../services/strategy.ts';
 import 'fastify';
 
 declare module 'fastify' {

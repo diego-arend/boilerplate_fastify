@@ -3,6 +3,9 @@ import type { FilterQuery, UpdateQuery } from 'mongoose';
 import { BaseRepository } from '../../../infraestructure/mongo/baseRepository.js';
 import { UserModel, type IUser } from '../../../entities/user/index.js';
 import { SecurityValidators } from '../../../entities/user/index.js';
+import { EmailSchema, PasswordSchema } from '../../../lib/validators/index.js';
+import { PasswordService } from '../services/index.js';
+import { z } from 'zod';
 
 export class AuthRepository extends BaseRepository<IUser> {
   constructor() {
@@ -13,26 +16,32 @@ export class AuthRepository extends BaseRepository<IUser> {
    * Find user by email for authentication
    */
   async findByEmail(email: string): Promise<IUser | null> {
-    const sanitizedEmail = SecurityValidators.sanitizeInput(email).toLowerCase();
-
-    if (!SecurityValidators.isValidEmail(sanitizedEmail)) {
-      throw new Error('Invalid email');
+    try {
+      // Validate and sanitize email using Zod
+      const validEmail = EmailSchema.parse(email.toLowerCase());
+      return await this.findOne({ email: validEmail });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        throw new Error('Invalid email format');
+      }
+      throw error;
     }
-
-    return await this.findOne({ email: sanitizedEmail });
   }
 
   /**
    * Find user by email including password (for login)
    */
   async findByEmailWithPassword(email: string): Promise<IUser | null> {
-    const sanitizedEmail = SecurityValidators.sanitizeInput(email).toLowerCase();
-
-    if (!SecurityValidators.isValidEmail(sanitizedEmail)) {
-      throw new Error('Invalid email');
+    try {
+      // Validate and sanitize email using Zod
+      const validEmail = EmailSchema.parse(email.toLowerCase());
+      return await this.model.findOne({ email: validEmail }).select('+password').exec();
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        throw new Error('Invalid email format');
+      }
+      throw error;
     }
-
-    return await this.model.findOne({ email: sanitizedEmail }).select('+password').exec();
   }
 
   /**
@@ -44,27 +53,37 @@ export class AuthRepository extends BaseRepository<IUser> {
     password: string;
     role?: 'user' | 'admin';
   }): Promise<IUser> {
-    const sanitizedData = {
-      name: SecurityValidators.sanitizeInput(userData.name),
-      email: SecurityValidators.sanitizeInput(userData.email).toLowerCase(),
-      password: userData.password,
-      role: userData.role || 'user'
-    };
+    try {
+      // Validate user registration data using Zod schema
+      const validatedData = SecurityValidators.validateUserRegistration({
+        name: userData.name,
+        email: userData.email.toLowerCase(),
+        password: userData.password,
+        role: userData.role || 'user'
+      });
 
-    if (!SecurityValidators.isValidEmail(sanitizedData.email)) {
-      throw new Error('Invalid email');
+      // Check if email already exists
+      const existingUser = await this.findByEmail(validatedData.email);
+      if (existingUser) {
+        throw new Error('Email already registered');
+      }
+
+      // Hash the password before saving
+      const hashedPassword = await PasswordService.hashPassword(validatedData.password);
+
+      // Create user data with hashed password
+      const userDataToSave = {
+        ...validatedData,
+        password: hashedPassword
+      };
+
+      return await this.create(userDataToSave as Partial<IUser>);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        throw new Error(`Validation failed: ${error.issues.map((e) => e.message).join(', ')}`);
+      }
+      throw error;
     }
-
-    if (!SecurityValidators.isStrongPassword(userData.password)) {
-      throw new Error('Password does not meet security requirements');
-    }
-
-    const existingUser = await this.findByEmail(sanitizedData.email);
-    if (existingUser) {
-      throw new Error('Email already registered');
-    }
-
-    return await this.create(sanitizedData as Partial<IUser>);
   }
 
   /**
@@ -78,14 +97,17 @@ export class AuthRepository extends BaseRepository<IUser> {
    * Check if email exists (for registration)
    */
   async emailExists(email: string): Promise<boolean> {
-    const sanitizedEmail = SecurityValidators.sanitizeInput(email).toLowerCase();
-
-    if (!SecurityValidators.isValidEmail(sanitizedEmail)) {
-      return false;
+    try {
+      // Validate email using Zod schema
+      const validEmail = EmailSchema.parse(email.toLowerCase());
+      const count = await this.count({ email: validEmail });
+      return count > 0;
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return false; // Invalid email format, consider as not existing
+      }
+      throw error;
     }
-
-    const count = await this.count({ email: sanitizedEmail });
-    return count > 0;
   }
 
   /**

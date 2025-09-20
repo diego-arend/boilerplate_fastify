@@ -3,6 +3,8 @@ import jwt from 'jsonwebtoken';
 import { AuthRepository } from './repository/index.js';
 import { SecurityValidators } from '../../entities/user/index.js';
 import { ApiResponseHandler } from '../../lib/response/index.js';
+import { PasswordService } from './services/index.js';
+import { z } from 'zod';
 
 interface LoginRequest {
   email: string;
@@ -75,51 +77,49 @@ export default async function authController(fastify: FastifyInstance) {
     try {
       const { name, email, password } = request.body as RegisterRequest;
 
-      // Basic input validations
-      if (!name || !email || !password) {
-        return ApiResponseHandler.validationError(reply, 'Name, email and password are required');
+      // Validate using Zod schemas
+      try {
+        const validatedData = SecurityValidators.validateUserRegistration({
+          name,
+          email,
+          password,
+          role: 'user'
+        });
+
+        // Create user using repository (validation already done)
+        const newUser = await authRepository.createUser({
+          name: validatedData.name,
+          email: validatedData.email,
+          password: validatedData.password // Will be hashed in repository
+        });
+
+        // Generate JWT token
+        const token = jwt.sign(
+          { id: newUser._id, name: newUser.name, role: newUser.role },
+          fastify.config.JWT_SECRET,
+          { expiresIn: '24h' }
+        );
+
+        return ApiResponseHandler.created(reply, 'User registered successfully', {
+          user: {
+            id: newUser._id,
+            name: newUser.name,
+            email: newUser.email,
+            role: newUser.role,
+            status: newUser.status
+          },
+          token
+        });
+      } catch (validationError) {
+        if (validationError instanceof z.ZodError) {
+          const errorMessages = validationError.issues.map((issue) => issue.message).join(', ');
+          return ApiResponseHandler.validationError(reply, `Validation failed: ${errorMessages}`);
+        }
+        throw validationError;
       }
-
-      // Sanitiza os dados de entrada
-      const sanitizedData = {
-        name: SecurityValidators.sanitizeInput(name),
-        email: SecurityValidators.sanitizeInput(email).toLowerCase(),
-        password
-      };
-
-      // Security validations
-      if (SecurityValidators.hasInjectionAttempt(sanitizedData.name) ||
-          SecurityValidators.hasInjectionAttempt(sanitizedData.email)) {
-        return ApiResponseHandler.validationError(reply, 'Invalid data detected');
-      }
-
-      // Create user using repository
-      const newUser = await authRepository.createUser({
-        name: sanitizedData.name,
-        email: sanitizedData.email,
-        password: sanitizedData.password // Will be hashed in service later
-      });
-
-      // Generate JWT token
-      const token = jwt.sign(
-        { id: newUser._id, name: newUser.name, role: newUser.role },
-        fastify.config.JWT_SECRET,
-        { expiresIn: '24h' }
-      );
-
-      return ApiResponseHandler.created(reply, 'User registered successfully', {
-        user: {
-          id: newUser._id,
-          name: newUser.name,
-          email: newUser.email,
-          role: newUser.role,
-          status: newUser.status
-        },
-        token
-      });
     } catch (error) {
-      console.error('Erro no registro:', error);
-      const message = error instanceof Error ? error.message : 'Erro interno do servidor';
+      console.error('Registration error:', error);
+      const message = error instanceof Error ? error.message : 'Internal server error';
       return ApiResponseHandler.validationError(reply, message);
     }
   });
@@ -178,51 +178,57 @@ export default async function authController(fastify: FastifyInstance) {
     try {
       const { email, password } = request.body as LoginRequest;
 
-      // Basic validations
-      if (!email || !password) {
-        return ApiResponseHandler.validationError(reply, 'Email and password are required');
+      // Validate using Zod schemas
+      try {
+        const validatedData = SecurityValidators.validateUserLogin({
+          email,
+          password
+        });
+
+        // Find user with password (validation already done in repository)
+        const user = await authRepository.findByEmailWithPassword(validatedData.email);
+
+        if (!user) {
+          return ApiResponseHandler.authError(reply, 'Invalid credentials');
+        }
+
+        // Check if user is active
+        if (user.status !== 'active') {
+          return ApiResponseHandler.authError(reply, 'Account deactivated');
+        }
+
+        // Compare password using bcrypt
+        const isPasswordValid = await PasswordService.comparePassword(password, user.password);
+        
+        if (!isPasswordValid) {
+          return ApiResponseHandler.authError(reply, 'Invalid credentials');
+        }
+
+        // Generate JWT token
+        const token = jwt.sign(
+          { id: user._id, name: user.name, role: user.role },
+          fastify.config.JWT_SECRET,
+          { expiresIn: '24h' }
+        );
+
+        return ApiResponseHandler.success(reply, 'Login successful', {
+          user: {
+            id: user._id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            status: user.status
+          },
+          token
+        });
+      } catch (validationError) {
+        if (validationError instanceof z.ZodError) {
+          return ApiResponseHandler.authError(reply, 'Invalid email or password format');
+        }
+        throw validationError;
       }
-
-      // Sanitize email
-      const sanitizedEmail = SecurityValidators.sanitizeInput(email).toLowerCase();
-
-      // Find user with password (for comparison)
-      const user = await authRepository.findByEmailWithPassword(sanitizedEmail);
-
-      if (!user) {
-        return ApiResponseHandler.authError(reply, 'Invalid credentials');
-      }
-
-      // Check if user is active
-      if (user.status !== 'active') {
-        return ApiResponseHandler.authError(reply, 'Account deactivated');
-      }
-
-      // TODO: Compare hashed password (implement in service)
-      // For now, simple comparison (DO NOT use in production)
-      if (password !== user.password) {
-        return ApiResponseHandler.authError(reply, 'Invalid credentials');
-      }
-
-      // Generate JWT token
-      const token = jwt.sign(
-        { id: user._id, name: user.name, role: user.role },
-        fastify.config.JWT_SECRET,
-        { expiresIn: '24h' }
-      );
-
-      return ApiResponseHandler.success(reply, 'Login successful', {
-        user: {
-          id: user._id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-          status: user.status
-        },
-        token
-      });
     } catch (error) {
-      console.error('Erro no login:', error);
+      console.error('Login error:', error);
       return ApiResponseHandler.internalError(reply, error instanceof Error ? error : String(error));
     }
   });

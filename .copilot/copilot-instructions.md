@@ -1,100 +1,102 @@
-# Boilerplate Fastify - Instruções para Copilot
+````instructions
+# Boilerplate Fastify - Copilot Instructions
 
-## Visão Geral do Projeto
+## Project Overview
 
-Este é um boilerplate moderno para APIs backend utilizando **Fastify v5.5.0** com **TypeScript**, seguindo uma arquitetura modular e escalável. O projeto utiliza **ES Modules**, **MongoDB** como banco de dados principal, e está preparado para desenvolvimento com **Docker**.
+This is a modern boilerplate for backend APIs using **Fastify v5.5.0** with **TypeScript**, following a modular and scalable architecture. The project uses **ES Modules**, **MongoDB** as the primary database, and is ready for development with **Docker**.
 
-## Tecnologias Principais
+## Main Technologies
 
-- **Runtime**: Node.js com ES Modules
-- **Framework**: Fastify v5.5.0 (Framework web de alta performance)
-- **Linguagem**: TypeScript v5.9.2 com configurações strict
-- **Banco de Dados**: MongoDB v8.18.1 com Mongoose
-- **Validação**: Zod v4.1.5 para schemas e validação de dados
-- **Autenticação**: JWT (jsonwebtoken v9.0.2)
-- **Gerenciamento de Pacotes**: pnpm v10.13.1
-- **Desenvolvimento**: tsx v4.19.1 para hot reload
-- **Containerização**: Docker + Docker Compose
+- **Runtime**: Node.js with ES Modules
+- **Framework**: Fastify v5.5.0 (High-performance web framework)
+- **Language**: TypeScript v5.9.2 with strict configurations
+- **Database**: MongoDB v8.18.1 with Mongoose
+- **Validation**: Zod v4.1.5 for schemas and data validation
+- **Authentication**: JWT (jsonwebtoken v9.0.2)
+- **Package Management**: pnpm v10.13.1
+- **Development**: tsx v4.19.1 for hot reload
+- **Containerization**: Docker + Docker Compose
 
-## Estrutura Arquitetural
+## Architectural Structure
 
-### Diretórios Principais
+### Main Directories
 
 ```
 src/
-├── app.ts                    # Plugin principal da aplicação
-├── server.ts                 # Ponto de entrada do servidor
-├── entities/                 # Entidades de domínio (opcional)
-├── infraestructure/          # Camada de infraestrutura
-│   ├── mongo/               # Conexão e configurações MongoDB
-│   │   ├── connection.ts    # Singleton de conexão MongoDB
+├── app.ts                    # Main application plugin
+├── server.ts                 # Server entry point
+├── entities/                 # Domain entities (optional)
+├── infraestructure/          # Infrastructure layer
+│   ├── mongo/               # MongoDB connection and configurations
+│   │   ├── connection.ts    # MongoDB connection singleton
 │   │   └── connection.test.ts
-│   └── server/              # Configurações do servidor
-│       ├── fastify.config.ts # Configuração Fastify (logger, etc.)
-│       ├── fastify.d.ts     # Tipos customizados Fastify
-│       └── modules.ts       # Sistema de registro de módulos
-├── lib/                     # Utilitários e bibliotecas compartilhadas
-│   └── validateEnv.ts       # Validação de variáveis ambiente com Zod
-└── modules/                 # Módulos de domínio (DDD)
-    └── auth/                # Módulo de autenticação
-        ├── auth.controller.ts    # Controladores e rotas
-        ├── auth.plugin.ts        # Plugin Fastify do módulo
-        ├── repository/           # Camada de persistência
+│   └── server/              # Server configurations
+│       ├── fastify.config.ts # Fastify configuration (logger, etc.)
+│       ├── fastify.d.ts     # Custom Fastify types
+│       └── modules.ts       # Module registration system
+├── lib/                     # Shared utilities and libraries
+│   └── validateEnv.ts       # Environment variable validation with Zod
+└── modules/                 # Domain modules (DDD)
+    └── auth/                # Authentication module
+        ├── auth.controller.ts    # Controllers and routes
+        ├── auth.plugin.ts        # Module Fastify plugin
+        ├── repository/           # Persistence layer
         │   ├── userAuth.repository.ts
         │   └── index.ts
-        ├── strategy.ts           # Estratégias de autenticação
-        ├── command.ts            # Comandos CLI (opcional)
-        ├── types/                # Tipos específicos do módulo
+        ├── strategy.ts           # Authentication strategies
+        ├── command.ts            # CLI commands (optional)
+        ├── types/                # Module-specific types
         │   └── auth.d.ts
-        └── README.md             # Documentação do módulo
+        └── README.md             # Module documentation
 ```
 
-### Arquivos de Configuração (Raiz)
+### Configuration Files (Root)
 
-- **package.json**: Scripts npm/pnpm, dependências e metadados
-- **tsconfig.json**: Configuração TypeScript com NodeNext e ESNext
-- **fastify.config.ts**: Configurações globais do Fastify (logger, etc.)
-- **docker-compose.yml**: Orquestração para produção
-- **docker-compose.dev.yml**: Ambiente de desenvolvimento
-- **Dockerfile**: Imagem para produção
-- **Dockerfile.dev**: Imagem otimizada para desenvolvimento
+- **package.json**: npm/pnpm scripts, dependencies and metadata
+- **tsconfig.json**: TypeScript configuration with NodeNext and ESNext
+- **fastify.config.ts**: Global Fastify configurations (logger, etc.)
+- **docker-compose.yml**: Production orchestration
+- **docker-compose.dev.yml**: Development environment
+- **Dockerfile**: Production image
+- **Dockerfile.dev**: Development-optimized image
 
-## Padrões de Desenvolvimento
+## Development Patterns
 
-### Arquitetura Modular (DDD)
-- Cada domínio de negócio em seu próprio módulo
-- Separação clara entre controllers, repositories e business logic
-- Plugins Fastify para isolamento e reusabilidade
-- Sistema de registro automático de módulos
+### Modular Architecture (DDD)
+- Each business domain in its own module
+- Clear separation between controllers, repositories and business logic
+- Fastify plugins for isolation and reusability
+- Automatic module registration system
 
-### Configuração e Ambiente
-- Validação rigorosa de variáveis ambiente com Zod
-- Configuração imutável via `Object.freeze()`
-- Decorator global `fastify.config` para acesso às configurações
-- Suporte a múltiplos ambientes (dev, prod, test)
+### Configuration and Environment
+- Strict environment variable validation with Zod
+- Immutable configuration via `Object.freeze()`
+- Global `fastify.config` decorator for configuration access
+- Multi-environment support (dev, prod, test)
 
-### Desenvolvimento Moderno
-- **Hot Reload**: tsx para desenvolvimento com recarregamento automático
-- **ES Modules**: Import/export nativo do Node.js
-- **TypeScript Strict**: Configurações rigorosas de tipagem
-- **Docker Development**: Ambiente isolado e consistente
+### Modern Development
+- **Hot Reload**: tsx for development with automatic reloading
+- **ES Modules**: Native Node.js import/export
+- **TypeScript Strict**: Rigorous typing configurations
+- **Docker Development**: Isolated and consistent environment
 
-### Segurança e Qualidade
-- Sanitização de entrada com Zod
-- Validação de tipos em tempo de compilação
-- Autenticação JWT com refresh tokens
-- Logs estruturados com Pino
-- Health checks automáticos
+### Security and Quality
+- Input sanitization with Zod
+- Compile-time type validation
+- JWT authentication with refresh tokens
+- Structured logging with Pino
+- Automatic health checks
 
-## Documentação e Comentários
+## Documentation and Comments
 
-### Padrão de Comentários
-- **Idioma**: Todos os comentários devem ser escritos em **inglês**
-- **Formato**: Utilizar **JSDoc** para documentação estruturada
-- **Cobertura**: Todo arquivo de lógica deve ter comentários adequados
-- **Consistência**: Seguir padrões estabelecidos em todo o projeto
+### Comment Standards
+- **Language**: All comments must be written in **English**
+- **Format**: Use **JSDoc** for structured documentation
+- **Coverage**: All logic files must have adequate comments
+- **Consistency**: Follow established patterns throughout the project
+- **Example Files**: **DO NOT** create example files (examples.ts, examples.js) at the end of implementations. Documentation should be included directly in main files or in specific README.md files.
 
-### Estrutura JSDoc Obrigatória
+### Mandatory JSDoc Structure
 ```typescript
 /**
  * Brief description of what the function/class does
@@ -104,7 +106,7 @@ src/
  */
 ```
 
-### Exemplos de Documentação
+### Documentation Examples
 ```typescript
 /**
  * Validates user email format and security requirements
@@ -132,119 +134,119 @@ export class AuthRepository extends BaseRepository<IUser> {
 }
 ```
 
-### Tipos de Comentários
-- **JSDoc Functions**: Para todas as funções públicas e métodos
-- **Class Documentation**: Para todas as classes e interfaces
-- **Inline Comments**: Para lógica complexa (em inglês)
-- **TODO/FIXME**: Para melhorias futuras (em inglês)
-- **Error Messages**: Todas as mensagens devem ser em inglês
+### Types of Comments
+- **JSDoc Functions**: For all public functions and methods
+- **Class Documentation**: For all classes and interfaces
+- **Inline Comments**: For complex logic (in English)
+- **TODO/FIXME**: For future improvements (in English)
+- **Error Messages**: All messages must be in English
 
-## Scripts Disponíveis
+## Available Scripts
 
 ```bash
-# Desenvolvimento
-pnpm dev                    # Inicia servidor com hot reload
-pnpm build                  # Compila TypeScript para JavaScript
-pnpm start                  # Executa versão compilada
+# Development
+pnpm dev                    # Start server with hot reload
+pnpm build                  # Compile TypeScript to JavaScript
+pnpm start                  # Run compiled version
 
 # Docker
-pnpm docker:dev            # Inicia containers de desenvolvimento
-pnpm docker:dev:down       # Para containers de desenvolvimento
-pnpm docker:prod           # Inicia containers de produção
-pnpm docker:prod:down      # Para containers de produção
-pnpm docker:logs           # Visualiza logs dos containers
-pnpm docker:build          # Constrói imagem Docker
+pnpm docker:dev            # Start development containers
+pnpm docker:dev:down       # Stop development containers
+pnpm docker:prod           # Start production containers
+pnpm docker:prod:down      # Stop production containers
+pnpm docker:logs           # View container logs
+pnpm docker:build          # Build Docker image
 ```
 
-## Configurações Técnicas
+## Technical Configurations
 
 ### TypeScript (tsconfig.json)
-- **Module Resolution**: NodeNext para compatibilidade com ES Modules
-- **Target**: ESNext para features modernas
-- **Strict Mode**: Habilitado com validações rigorosas
-- **Source Maps**: Para debugging em desenvolvimento
-- **Declaration Files**: Geração automática de tipos
+- **Module Resolution**: NodeNext for ES Modules compatibility
+- **Target**: ESNext for modern features
+- **Strict Mode**: Enabled with rigorous validations
+- **Source Maps**: For development debugging
+- **Declaration Files**: Automatic type generation
 
 ### Fastify Configuration
-- **Logger**: Pino com pretty printing em desenvolvimento
-- **Plugins**: Sistema modular de plugins
-- **Hooks**: Lifecycle hooks para inicialização e shutdown
-- **Decorators**: Extensões customizadas da instância Fastify
+- **Logger**: Pino with pretty printing in development
+- **Plugins**: Modular plugin system
+- **Hooks**: Lifecycle hooks for initialization and shutdown
+- **Decorators**: Custom Fastify instance extensions
 
 ### MongoDB Integration
-- **Connection**: Singleton pattern para conexão única
-- **Mongoose**: ODM para modelagem de dados
-- **Graceful Shutdown**: Desconexão automática no encerramento
-- **Health Checks**: Verificação automática de conectividade
+- **Connection**: Singleton pattern for single connection
+- **Mongoose**: ODM for data modeling
+- **Graceful Shutdown**: Automatic disconnection on termination
+- **Health Checks**: Automatic connectivity verification
 
-## Boas Práticas Implementadas
+## Implemented Best Practices
 
-### Código
-- **TypeScript Strict**: Zero any, tipos explícitos
-- **ESLint/Prettier**: Padronização de código (configurar se necessário)
-- **Error Handling**: Tratamento consistente de erros
-- **Logging**: Logs estruturados em todos os níveis
+### Code
+- **TypeScript Strict**: Zero any, explicit types
+- **ESLint/Prettier**: Code standardization (configure if needed)
+- **Error Handling**: Consistent error treatment
+- **Logging**: Structured logs at all levels
 
-### Segurança
-- **Input Validation**: Zod schemas para todas as entradas
-- **JWT Authentication**: Tokens seguros com expiração
-- **Environment Variables**: Validação rigorosa de configs
-- **CORS**: Configuração adequada para APIs
+### Security
+- **Input Validation**: Zod schemas for all inputs
+- **JWT Authentication**: Secure tokens with expiration
+- **Environment Variables**: Strict config validation
+- **CORS**: Proper API configuration
 
 ### Performance
-- **Fastify**: Framework otimizado para performance
-- **Connection Pooling**: MongoDB com pool de conexões
-- **Caching**: Preparado para Redis (container disponível)
-- **Health Checks**: Monitoramento contínuo da saúde
+- **Fastify**: Performance-optimized framework
+- **Connection Pooling**: MongoDB with connection pool
+- **Caching**: Ready for Redis (container available)
+- **Health Checks**: Continuous health monitoring
 
-## Desenvolvimento com Docker
+## Docker Development
 
-### Ambiente de Desenvolvimento
-- **Hot Reload**: Recarregamento automático sem restart
-- **Volume Mounting**: Código sincronizado em tempo real
-- **Debugging**: Porta de debug exposta
-- **Dependencies**: Cache otimizado para rebuilds rápidos
+### Development Environment
+- **Hot Reload**: Automatic reloading without restart
+- **Volume Mounting**: Real-time code synchronization
+- **Debugging**: Debug port exposed
+- **Dependencies**: Optimized cache for fast rebuilds
 
-### Produção
-- **Multi-stage Build**: Imagem otimizada e leve
-- **Security**: Usuário não-root em produção
-- **Health Checks**: Verificações automáticas de saúde
-- **Logging**: Configuração apropriada para produção
+### Production
+- **Multi-stage Build**: Optimized and lightweight image
+- **Security**: Non-root user in production
+- **Health Checks**: Automatic health verifications
+- **Logging**: Production-appropriate configuration
 
-## Extensões e Ferramentas
+## Extensions and Tools
 
-### VS Code Extensions Recomendadas
-- **TypeScript Importer**: Auto-import inteligente
-- **Prettier**: Formatação automática
-- **ESLint**: Linting e correção automática
-- **Docker**: Suporte completo a containers
+### Recommended VS Code Extensions
+- **TypeScript Importer**: Intelligent auto-import
+- **Prettier**: Automatic formatting
+- **ESLint**: Linting and automatic correction
+- **Docker**: Complete container support
 
-### Testes e Verificações de Rotas
-- **Playwright MCP**: Para verificações de rotas e interações de teste HTTP, utilize o MCP (Model Context Protocol) do Playwright. Este servidor permite executar testes automatizados de API, verificar endpoints e validar respostas HTTP de forma programática e integrada ao ambiente de desenvolvimento.
+### Testing and Route Verification
+- **Playwright MCP**: For route verification and HTTP testing interactions, use the Playwright MCP (Model Context Protocol). This server allows executing automated API tests, verifying endpoints and validating HTTP responses programmatically and integrated with the development environment.
 
-### Dependências de Desenvolvimento
-- **tsx**: TypeScript execution com hot reload
-- **@types/node**: Tipos para Node.js
-- **@types/jsonwebtoken**: Tipos para JWT
+### Development Dependencies
+- **tsx**: TypeScript execution with hot reload
+- **@types/node**: Types for Node.js
+- **@types/jsonwebtoken**: Types for JWT
 
-## Próximos Passos e Expansão
+## Next Steps and Expansion
 
-### Funcionalidades Planejadas
-- Sistema de cache com Redis
-- Rate limiting e proteção DDoS
-- Documentação automática da API
-- Testes automatizados (Jest/Vitest)
+### Planned Features
+- Redis cache system
+- Rate limiting and DDoS protection
+- Automatic API documentation
+- Automated testing (Jest/Vitest)
 - CI/CD pipeline
-- Monitoring e observabilidade
+- Monitoring and observability
 
-### Estrutura para Novos Módulos
-1. Criar diretório em `src/modules/`
-2. Implementar controller, plugin e repository
-3. Registrar no `app.ts` via `registerModule()`
-4. Adicionar tipos específicos se necessário
-5. Documentar no README do módulo
+### Structure for New Modules
+1. Create directory in `src/modules/`
+2. Implement controller, plugin and repository
+3. Register in `app.ts` via `registerModule()`
+4. Add specific types if needed
+5. Document in module README
 
-## Referências e Documentação
+## References and Documentation
 
 - [Fastify Documentation](https://fastify.dev/docs/latest/)
 - [TypeScript Handbook](https://www.typescriptlang.org/docs/)
@@ -254,4 +256,4 @@ pnpm docker:build          # Constrói imagem Docker
 
 ---
 
-**Nota**: Este boilerplate segue as melhores práticas atuais de desenvolvimento Node.js/TypeScript, com foco em performance, segurança e manutenibilidade.
+**Note**: This boilerplate follows current best practices for Node.js/TypeScript development, focusing on performance, security and maintainability.
