@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: boilerplate_mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+      MONGO_INITDB_DATABASE: boilerplate
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - boilerplate_network
+
+  redis:
+    image: redis:latest
+    container_name: boilerplate_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - boilerplate_network
+
+volumes:
+  mongodb_data:
+  redis_data:
+
+networks:
+  boilerplate_network:
+    driver: bridge
