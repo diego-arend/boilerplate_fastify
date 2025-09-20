@@ -53,4 +53,71 @@ Criar um módulo de autenticação para a API Fastify, seguindo boas práticas d
 
 ---
 
-Sempre defina as tarefas com uma descrição clara do contexto, informando explicitamente o que o usuário pediu no prompt, e etapas sequenciais para facilitar o entendimento e execução pelo agent ou pelo modo ask do GitHub Copilot. O resultado gerado deve ser sempre exibido em markdown, facilitando a leitura e documentação.
+## Recomendações Específicas para Implementação de Entidades
+
+### Segurança em Schemas de Entidades
+
+Quando a tarefa envolver implementação ou modificação de entidades/schemas (MongoDB/Mongoose), **SEMPRE** inclua estas validações de segurança obrigatórias:
+
+#### 1. Validações de Schema Aprimoradas:
+- **Sanitização de entrada**: Remover caracteres HTML/JavaScript (`<script>`, `javascript:`, event handlers)
+- **Regex rigoroso para emails**: Usar padrão seguro que previne emails maliciosos
+- **Validação de senha forte**: Mínimo 8 caracteres, maiúscula, minúscula, número, caractere especial
+- **Limites de tamanho realistas**: Máximo 254 chars para email, 100 para nomes
+- **Strict mode**: `strict: true` para impedir campos não definidos
+
+#### 2. Hooks de Segurança (Pre-save/Update):
+- **Sanitização automática** antes de salvar/atualizar
+- **Validações adicionais** em tempo real
+- **Proteção contra mass assignment** vulnerável
+
+#### 3. Proteções Contra Ataques Comuns:
+- **XSS (Cross-Site Scripting)**: Sanitizar HTML/JS em campos de texto
+- **NoSQL Injection**: Validar queries e operadores MongoDB
+- **Path Traversal**: Prevenir `../../../etc/passwd`
+- **Email Spoofing**: Regex rigoroso para validação
+- **Weak Passwords**: Requisitos de complexidade obrigatórios
+
+#### 4. Utilitários de Segurança:
+- Criar classe `SecurityValidators` com métodos:
+  - `sanitizeInput()`: Limpeza geral de entrada
+  - `isValidEmail()`: Validação segura de email
+  - `isStrongPassword()`: Verificação de senha forte
+  - `hasInjectionAttempt()`: Detecção de tentativas de injeção
+  - `sanitizeMongoQuery()`: Limpeza de queries MongoDB
+
+#### 5. Método toJSON Seguro:
+- Remover campos sensíveis (password, __v)
+- Sanitizar dados antes de retornar
+- Evitar vazamento de informações
+
+#### 6. Índices e Performance:
+- Criar índices para campos de busca frequente
+- Considerar índices compostos para queries complexas
+- Evitar índices desnecessários
+
+#### 7. Validações Adicionais no Código:
+- **Rate limiting** nas rotas de API
+- **Validação no controller** ANTES de chegar ao model
+- **Logging de segurança** para tentativas suspeitas
+- **HTTPS obrigatório** em produção
+
+### Exemplo de Implementação Segura:
+
+```typescript
+// NO SCHEMA - Validações obrigatórias
+name: {
+  type: String,
+  validate: {
+    validator: (v) => !/<script|javascript:|on\w+=/i.test(v),
+    message: 'Nome contém caracteres não permitidos'
+  }
+}
+
+// NO CONTROLLER - Validação adicional
+if (SecurityValidators.hasInjectionAttempt(userInput)) {
+  throw new Error('Tentativa de injeção detectada');
+}
+```
+
+**IMPORTANTE**: Segurança é defesa em camadas. Sempre valide em múltiplos pontos: Controller → Schema → Database.
