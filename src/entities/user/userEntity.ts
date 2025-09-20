@@ -80,7 +80,7 @@ const userSchema = new Schema<IUser>({
 });
 
 // Índices para otimização
-userSchema.index({ email: 1 });
+// userSchema.index({ email: 1 }); // Removido - já criado automaticamente pelo unique: true
 userSchema.index({ status: 1 });
 userSchema.index({ createdAt: -1 });
 
