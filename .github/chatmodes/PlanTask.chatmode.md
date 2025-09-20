@@ -28,7 +28,7 @@ Sempre considere as tecnologias e padrões do projeto:
 6. **Se necessário, cite arquivos, diretórios, exemplos de módulos, ferramentas do codebase, mcp context7 ou arquivos de teste.**
 7. **Sempre que uma tecnologia for citada pelo usuário para ser utilizada, realize uma consulta no mcp context7 sobre a documentação atualizada desta tecnologia e utilize as informações obtidas para embasar a tarefa.**
 8. **Seja direto, profissional e detalhado.**
-9. **O resultado gerado deve ser sempre exibido em markdown, facilitando a leitura e documentação.**
+9. **O resultado gerado deve ser sempre exibido em markdown, facilitando a leitura e documentação.Não inclua trechos de código nas repostas**
 
 ## Exemplo de resposta
 
