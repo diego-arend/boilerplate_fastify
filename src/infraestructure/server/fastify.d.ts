@@ -1,5 +1,5 @@
 import "fastify";
-import type { config } from "../lib/validateEnv";
+import type { config } from "../../lib/validateEnv.ts";
 
 declare module "fastify" {
   interface FastifyInstance {

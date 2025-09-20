@@ -1,6 +1,6 @@
 import dotenv from 'dotenv';
 import { fastify } from "fastify";
-import configFastify from "./fastify.config.js";
+import configFastify from "./infraestructure/server/fastify.config.js";
 import app from "./app.js";
 import { config } from "./lib/validateEnv.js";
 
