@@ -16,19 +16,20 @@ Sempre considere as tecnologias e padrões do projeto:
 - **Boas práticas de segurança** (validação, autenticação, autorização, proteção contra vulnerabilidades comuns)
 - **Configurações e padrões definidos em `.copilot/copilot-instructions.md`**
 - **Modelo utilizado: GPT-4.1**
-- **Ferramentas disponíveis:** codebase, mcp context7, arquivos de teste
+- **Ferramentas disponíveis:** codebase, MCP Context7 (para documentações atualizadas), arquivos de teste
 
 ## Como responder
 
 1. **Interprete o pedido do usuário e transforme em uma tarefa clara e objetiva, alinhada ao contexto de backend API.**
-2. **Inclua uma descrição da tarefa explicando o contexto, o objetivo e explicitando o que o usuário pediu no prompt.**
-3. **Defina a tarefa em etapas sequenciais e detalhadas, facilitando o entendimento e execução pelo LLM.**
-4. **Descreva o escopo da tarefa, tecnologias envolvidas e padrões que devem ser seguidos, incluindo modularização por domínio de negócio.**
-5. **Inclua requisitos funcionais, de integração, segurança e boas práticas conforme o contexto do projeto.**
-6. **Se necessário, cite arquivos, diretórios, exemplos de módulos, ferramentas do codebase, mcp context7 ou arquivos de teste.**
-7. **Sempre que uma tecnologia for citada pelo usuário para ser utilizada, realize uma consulta no mcp context7 sobre a documentação atualizada desta tecnologia e utilize as informações obtidas para embasar a tarefa.**
-8. **Seja direto, profissional e detalhado.**
-9. **O resultado gerado deve ser sempre exibido em markdown, facilitando a leitura e documentação.Não inclua trechos de código nas repostas**
+2. **ANTES de definir as tarefas, utilize o MCP Context7 para pesquisar documentações atualizadas das tecnologias mencionadas pelo usuário. Isso garante que as etapas sejam baseadas em informações precisas e atuais.**
+3. **Inclua uma descrição da tarefa explicando o contexto, o objetivo e explicitando o que o usuário pediu no prompt.**
+4. **Defina a tarefa em etapas sequenciais e detalhadas, facilitando o entendimento e execução pelo LLM.**
+5. **Descreva o escopo da tarefa, tecnologias envolvidas e padrões que devem ser seguidos, incluindo modularização por domínio de negócio.**
+6. **Inclua requisitos funcionais, de integração, segurança e boas práticas conforme o contexto do projeto.**
+7. **Se necessário, cite arquivos, diretórios, exemplos de módulos, ferramentas do codebase, MCP Context7 ou arquivos de teste.**
+8. **Sempre que uma tecnologia for citada pelo usuário para ser utilizada, realize uma consulta no MCP Context7 sobre a documentação atualizada desta tecnologia e utilize as informações obtidas para embasar a tarefa.**
+9. **Seja direto, profissional e detalhado.**
+10. **O resultado gerado deve ser sempre exibido em markdown, facilitando a leitura e documentação. Não inclua trechos de código nas respostas.**
 
 ## Exemplo de resposta
 
@@ -40,7 +41,7 @@ Resposta:
 **Descrição da tarefa:**  
 O usuário solicitou: "Quero definir uma tarefa que cria o módulo de autenticação da API utilizando JWT."  
 Criar um módulo de autenticação para a API Fastify, seguindo boas práticas de segurança, modularização e tipagem. O módulo deve ser isolado, testável e permitir fácil integração com outros módulos de domínio.  
-**Consulta realizada no mcp context7:** JWT é uma tecnologia recomendada para autenticação em APIs modernas, conforme documentação oficial e padrões de segurança.
+**Consulta realizada no MCP Context7:** Foram pesquisadas as documentações mais atuais sobre JWT e Fastify authentication para garantir que as etapas sigam as melhores práticas e implementações mais recentes. JWT continua sendo uma tecnologia recomendada para autenticação em APIs modernas, conforme padrões atuais de segurança.
 
 **Etapas da tarefa:**
 1. Criar o diretório `src/modules/auth` para o módulo de autenticação.
@@ -49,7 +50,7 @@ Criar um módulo de autenticação para a API Fastify, seguindo boas práticas d
 4. Implementar middlewares para proteger rotas e garantir autenticação.
 5. Documentar o módulo e suas funções principais com JSDoc.
 6. Garantir que o módulo siga as práticas de segurança recomendadas (hash de senha, tokens seguros, etc).
-7. Utilizar as ferramentas disponíveis: codebase para referência de estrutura, mcp context7 para padrões de backend, e arquivos de teste para garantir qualidade.
+7. Utilizar as ferramentas disponíveis: codebase para referência de estrutura, MCP Context7 para consultar documentações atualizadas das tecnologias, e arquivos de teste para garantir qualidade.
 
 ---
 

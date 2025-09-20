@@ -221,8 +221,76 @@ pnpm docker:build          # Build Docker image
 - **ESLint**: Linting and automatic correction
 - **Docker**: Complete container support
 
-### Testing and Route Verification
-- **Playwright MCP**: For route verification and HTTP testing interactions, use the Playwright MCP (Model Context Protocol). This server allows executing automated API tests, verifying endpoints and validating HTTP responses programmatically and integrated with the development environment.
+### Model Context Protocol (MCP) Servers
+This project benefits from MCP servers integration for enhanced development workflow:
+
+#### Context7 MCP Server
+- **Purpose**: Real-time access to library documentation and code examples
+- **Usage**: Get up-to-date documentation for any technology in the stack
+- **Benefits**: 
+  - Instant access to current API documentation
+  - Contextual code examples
+  - Version-specific information
+  - Reduced context switching
+
+**Example Usage:**
+```typescript
+// When implementing Fastify routes, get specific documentation:
+// "fastify request validation"
+// "fastify async handlers" 
+// "fastify plugin development"
+
+// For MongoDB operations:
+// "mongoose model methods"
+// "mongodb aggregation pipeline"
+// "mongoose typescript integration"
+
+// For authentication:
+// "jsonwebtoken typescript"
+// "jwt security best practices"
+```
+
+#### Playwright MCP Server  
+- **Purpose**: Automated browser testing and HTTP API verification
+- **Usage**: Test endpoints, validate responses, simulate user interactions
+- **Benefits**:
+  - Programmatic API testing
+  - Response validation
+  - Authentication flow testing
+  - End-to-end route verification
+
+**Example Usage:**
+```typescript
+// Test authentication endpoints
+// 1. Navigate to login endpoint
+// 2. Submit credentials via HTTP POST
+// 3. Validate JWT token response
+// 4. Test protected route access with token
+// 5. Verify RBAC permissions
+
+// API testing workflow:
+// - Test all CRUD operations
+// - Validate input sanitization  
+// - Verify error responses
+// - Check rate limiting
+// - Test authentication flows
+```
+
+### Integration Guidelines
+
+#### When to use Context7 MCP:
+- Implementing new features with unfamiliar libraries
+- Resolving TypeScript compilation issues
+- Understanding complex API methods
+- Getting version-specific documentation
+- Learning best practices for specific libraries
+
+#### When to use Playwright MCP:
+- Testing new API endpoints after implementation
+- Validating authentication and authorization
+- End-to-end testing of complex workflows  
+- Simulating real user interactions
+- Regression testing after changes
 
 ### Development Dependencies
 - **tsx**: TypeScript execution with hot reload
