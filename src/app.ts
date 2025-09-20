@@ -2,8 +2,13 @@ import type { FastifyInstance, FastifyPluginOptions } from 'fastify'
 import authPlugin from './modules/auth/auth.plugin.js'
 import { registerModule } from './infraestructure/server/modules.js'
 import MongoConnection from './infraestructure/mongo/connection.js'
+import { errorHandler, notFoundHandler } from './lib/response/index.js'
 
 export default async function app(fastify: FastifyInstance, opts: FastifyPluginOptions) {
+  // Configurar middlewares globais de tratamento de resposta
+  errorHandler(fastify);
+  notFoundHandler(fastify);
+
   // Health check route
   fastify.get('/health', async (request, reply) => {
     const healthCheck = {

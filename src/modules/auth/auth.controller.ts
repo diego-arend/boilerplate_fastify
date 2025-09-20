@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import jwt from 'jsonwebtoken';
 import { AuthRepository } from './repository/index.js';
 import { SecurityValidators } from '../../entities/user/index.js';
+import { ApiResponseHandler } from '../../lib/response/index.js';
 
 interface LoginRequest {
   email: string;
@@ -26,7 +27,7 @@ export default async function authController(fastify: FastifyInstance) {
 
       // Validações básicas de entrada
       if (!name || !email || !password) {
-        return reply.code(400).send({ error: 'Nome, email e senha são obrigatórios' });
+        return ApiResponseHandler.validationError(reply, 'Nome, email e senha são obrigatórios');
       }
 
       // Sanitiza os dados de entrada
@@ -39,7 +40,7 @@ export default async function authController(fastify: FastifyInstance) {
       // Validações de segurança
       if (SecurityValidators.hasInjectionAttempt(sanitizedData.name) ||
           SecurityValidators.hasInjectionAttempt(sanitizedData.email)) {
-        return reply.code(400).send({ error: 'Dados inválidos detectados' });
+        return ApiResponseHandler.validationError(reply, 'Dados inválidos detectados');
       }
 
       // Cria o usuário usando o repositório
@@ -56,7 +57,7 @@ export default async function authController(fastify: FastifyInstance) {
         { expiresIn: '24h' }
       );
 
-      return reply.code(201).send({
+      return ApiResponseHandler.created(reply, 'Usuário registrado com sucesso', {
         user: {
           id: newUser._id,
           name: newUser.name,
@@ -69,7 +70,7 @@ export default async function authController(fastify: FastifyInstance) {
     } catch (error) {
       console.error('Erro no registro:', error);
       const message = error instanceof Error ? error.message : 'Erro interno do servidor';
-      return reply.code(400).send({ error: message });
+      return ApiResponseHandler.validationError(reply, message);
     }
   });
 
@@ -80,7 +81,7 @@ export default async function authController(fastify: FastifyInstance) {
 
       // Validações básicas
       if (!email || !password) {
-        return reply.code(400).send({ error: 'Email e senha são obrigatórios' });
+        return ApiResponseHandler.validationError(reply, 'Email e senha são obrigatórios');
       }
 
       // Sanitiza email
@@ -90,18 +91,18 @@ export default async function authController(fastify: FastifyInstance) {
       const user = await authRepository.findByEmailWithPassword(sanitizedEmail);
 
       if (!user) {
-        return reply.code(401).send({ error: 'Credenciais inválidas' });
+        return ApiResponseHandler.authError(reply, 'Credenciais inválidas');
       }
 
       // Verifica se usuário está ativo
       if (user.status !== 'active') {
-        return reply.code(401).send({ error: 'Conta desativada' });
+        return ApiResponseHandler.authError(reply, 'Conta desativada');
       }
 
       // TODO: Comparar senha hasheada (implementar no service)
       // Por enquanto, comparação simples (NÃO usar em produção)
       if (password !== user.password) {
-        return reply.code(401).send({ error: 'Credenciais inválidas' });
+        return ApiResponseHandler.authError(reply, 'Credenciais inválidas');
       }
 
       // Generate JWT token
@@ -111,7 +112,7 @@ export default async function authController(fastify: FastifyInstance) {
         { expiresIn: '24h' }
       );
 
-      return reply.send({
+      return ApiResponseHandler.success(reply, 'Login realizado com sucesso', {
         user: {
           id: user._id,
           name: user.name,
@@ -123,7 +124,7 @@ export default async function authController(fastify: FastifyInstance) {
       });
     } catch (error) {
       console.error('Erro no login:', error);
-      return reply.code(500).send({ error: 'Erro interno do servidor' });
+      return ApiResponseHandler.internalError(reply, error instanceof Error ? error : String(error));
     }
   });
 
@@ -134,17 +135,17 @@ export default async function authController(fastify: FastifyInstance) {
     try {
       // Verifica se usuário está autenticado
       if (!request.authenticatedUser) {
-        return reply.code(401).send({ error: 'Usuário não autenticado' });
+        return ApiResponseHandler.authError(reply, 'Usuário não autenticado');
       }
 
       // Busca dados atualizados do usuário
       const user = await authRepository.findById(request.authenticatedUser.id.toString());
 
       if (!user) {
-        return reply.code(404).send({ error: 'Usuário não encontrado' });
+        return ApiResponseHandler.notFound(reply, 'Usuário não encontrado');
       }
 
-      return reply.send({
+      return ApiResponseHandler.success(reply, 'Dados do usuário retornados', {
         user: {
           id: user._id,
           name: user.name,
@@ -156,7 +157,7 @@ export default async function authController(fastify: FastifyInstance) {
       });
     } catch (error) {
       console.error('Erro ao buscar usuário:', error);
-      return reply.code(500).send({ error: 'Erro interno do servidor' });
+      return ApiResponseHandler.internalError(reply, error instanceof Error ? error : String(error));
     }
   });
 };

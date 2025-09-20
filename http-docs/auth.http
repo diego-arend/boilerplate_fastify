@@ -1,18 +1,183 @@
-POST http://localhost:3001/auth/register
+# =============================================================================
+# AUTENTICAÇÃO - Testes da API (Respostas Padronizadas)
+# =============================================================================
+# Base URL: http://localhost:3001
+# Prefixo: /auth
+# Estrutura de resposta: { success, message, code, data?, error? }
+# =============================================================================
+
+@baseUrl = http://localhost:3001
+@authPrefix = /auth
+
+# =============================================================================
+# 1. REGISTRO DE USUÁRIOS
+# =============================================================================
+
+### Registro - Usuário válido
+POST {{baseUrl}}{{authPrefix}}/register
 Content-Type: application/json
 
 {
-  "name": "Test User",
-  "email": "test@example.com",
-  "password": "senha123"
+  "name": "João Silva",
+  "email": "joao.silva@example.com",
+  "password": "MinhaSenha123!"
 }
 
-###
-
-POST http://localhost:3001/auth/login
+### Registro - Dados inválidos (sem nome)
+POST {{baseUrl}}{{authPrefix}}/register
 Content-Type: application/json
 
 {
-  "email": "test@example.com",
+  "email": "teste@example.com",
   "password": "senha123"
 }
+
+### Registro - Tentativa de injeção
+POST {{baseUrl}}{{authPrefix}}/register
+Content-Type: application/json
+
+{
+  "name": "'; DROP TABLE users; --",
+  "email": "sql@example.com",
+  "password": "senha123"
+}
+
+### Registro - Email já cadastrado
+POST {{baseUrl}}{{authPrefix}}/register
+Content-Type: application/json
+
+{
+  "name": "João Silva 2",
+  "email": "joao.silva@example.com",
+  "password": "OutraSenha123!"
+}
+
+# =============================================================================
+# 2. LOGIN
+# =============================================================================
+
+### Login - Credenciais válidas
+POST {{baseUrl}}{{authPrefix}}/login
+Content-Type: application/json
+
+{
+  "email": "joao.silva@example.com",
+  "password": "MinhaSenha123!"
+}
+
+### Login - Dados inválidos (sem email)
+POST {{baseUrl}}{{authPrefix}}/login
+Content-Type: application/json
+
+{
+  "password": "senha123"
+}
+
+### Login - Credenciais incorretas
+POST {{baseUrl}}{{authPrefix}}/login
+Content-Type: application/json
+
+{
+  "email": "joao.silva@example.com",
+  "password": "senhaerrada"
+}
+
+### Login - Usuário não encontrado
+POST {{baseUrl}}{{authPrefix}}/login
+Content-Type: application/json
+
+{
+  "email": "naoexiste@example.com",
+  "password": "senha123"
+}
+
+# =============================================================================
+# 3. ROTAS PROTEGIDAS
+# =============================================================================
+
+### Perfil do usuário - Com token válido
+GET {{baseUrl}}{{authPrefix}}/me
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3ODkwMTIzNDU2Nzg5MDEyMzQ1IiwibmFtZSI6Ikpvw6NvIFNpbHZhIiwicm9sZSI6InVzZXIiLCJpYXQiOjE3MzY4MzQ1NjcsImV4cCI6MTczNjkxOTk2N30.example_token_replace_with_real_one
+
+### Perfil do usuário - Sem token
+GET {{baseUrl}}{{authPrefix}}/me
+
+### Perfil do usuário - Token inválido
+GET {{baseUrl}}{{authPrefix}}/me
+Authorization: Bearer token_invalido
+
+### Perfil do usuário - Usuário não encontrado
+GET {{baseUrl}}{{authPrefix}}/me
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImludmFsaWRfaWQiLCJuYW1lIjoiVGVzdCIsInJvbGUiOiJ1c2VyIiwiaWF0IjoxNzM2ODM0NTY3LCJleHAiOjE3MzY5MTk5Njd9.invalid_user_token
+
+# =============================================================================
+# 4. TESTES DE SEGURANÇA
+# =============================================================================
+
+### Tentativa de SQL Injection no registro
+POST {{baseUrl}}{{authPrefix}}/register
+Content-Type: application/json
+
+{
+  "name": "'; DROP TABLE users; --",
+  "email": "sql@example.com",
+  "password": "senha123"
+}
+
+### Tentativa de XSS no registro
+POST {{baseUrl}}{{authPrefix}}/register
+Content-Type: application/json
+
+{
+  "name": "<script>alert('XSS')</script>",
+  "email": "xss@example.com",
+  "password": "senha123"
+}
+
+### Tentativa de SQL Injection no login
+POST {{baseUrl}}{{authPrefix}}/login
+Content-Type: application/json
+
+{
+  "email": "admin@example.com' OR '1'='1",
+  "password": "senha123"
+}
+
+# =============================================================================
+# 5. TESTES DE PERFORMANCE E STRESS
+# =============================================================================
+
+### Múltiplos logins simultâneos (copie e execute em paralelo)
+POST {{baseUrl}}{{authPrefix}}/login
+Content-Type: application/json
+
+{
+  "email": "joao.silva@example.com",
+  "password": "MinhaSenha123!"
+}
+
+### Teste de rate limiting (execute múltiplas vezes rapidamente)
+POST {{baseUrl}}{{authPrefix}}/login
+Content-Type: application/json
+
+{
+  "email": "joao.silva@example.com",
+  "password": "MinhaSenha123!"
+}
+
+# =============================================================================
+# 6. HEALTH CHECK (não é do módulo auth, mas útil para testes)
+# =============================================================================
+
+### Health Check da aplicação
+GET {{baseUrl}}/health
+
+# =============================================================================
+# DICAS DE USO:
+# =============================================================================
+# 1. Execute os testes em ordem: registro -> login -> rotas protegidas
+# 2. Substitua o token JWT nos headers Authorization pelos tokens reais
+# 3. Use variáveis de ambiente para o baseUrl se necessário
+# 4. Teste cenários de erro para validar tratamento adequado
+# 5. Monitore os logs da aplicação durante os testes
+# =============================================================================
