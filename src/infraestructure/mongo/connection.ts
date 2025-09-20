@@ -16,21 +16,21 @@ class MongoConnection {
 
   public async connect(): Promise<void> {
     if (this.isConnected) {
-      console.log('MongoDB já conectado');
+      console.log('MongoDB already connected');
       return;
     }
 
     try {
       await mongoose.connect(config.MONGO_URI, {
-        serverSelectionTimeoutMS: 5000, // Timeout para seleção do servidor
-        socketTimeoutMS: 45000, // Timeout do socket
-        bufferCommands: false, // Desabilitar buffering de comandos
-        maxPoolSize: 10, // Tamanho máximo do pool de conexões
+        serverSelectionTimeoutMS: 5000, // Server selection timeout
+        socketTimeoutMS: 45000, // Socket timeout
+        bufferCommands: false, // Disable command buffering
+        maxPoolSize: 10, // Maximum connection pool size
       });
       this.isConnected = true;
-      console.log('Conectado ao MongoDB');
+      console.log('Connected to MongoDB');
     } catch (error) {
-      console.error('Erro ao conectar ao MongoDB:', error);
+      console.error('Error connecting to MongoDB:', error);
       throw error;
     }
   }
@@ -43,9 +43,9 @@ class MongoConnection {
     try {
       await mongoose.disconnect();
       this.isConnected = false;
-      console.log('Desconectado do MongoDB');
+      console.log('Disconnected from MongoDB');
     } catch (error) {
-      console.error('Erro ao desconectar do MongoDB:', error);
+      console.error('Error disconnecting from MongoDB:', error);
       throw error;
     }
   }

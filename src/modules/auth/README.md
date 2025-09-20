@@ -1,76 +1,76 @@
-# Módulo de Autenticação
+# Authentication Module
 
-Este módulo implementa autenticação completa com JWT, integrado ao MongoDB através do `UserAuthRepository`.
+This module implements complete JWT authentication, integrated with MongoDB through the `UserAuthRepository`.
 
-## Arquitetura
+## Architecture
 
-### Funcionalidades Principais
-- Registro de usuários
-- Login com JWT
-- Rotas protegidas
-- Busca de usuários (admin)
-- Validações de segurança
-- Sanitização de entrada
-- Proteção contra injeção
+### Main Features
+- User registration
+- JWT login
+- Protected routes
+- User search (admin)
+- Security validations
+- Input sanitization
+- Protection against injection
 
-### Estrutura de Arquivos
+### File Structure
 ```
 auth/
-├── auth.controller.ts    # Rotas e lógica de negócio
-├── auth.plugin.ts        # Plugin Fastify de autenticação
-├── repository/           # Camada de persistência
+├── auth.controller.ts    # Routes and business logic
+├── auth.plugin.ts        # Fastify authentication plugin
+├── repository/           # Persistence layer
 │   ├── userAuth.repository.ts
 │   └── index.ts
-├── strategy.ts           # Estratégia de autenticação
-├── command.ts            # Comandos CLI
-└── types/                # Tipos TypeScript
+├── strategy.ts           # Authentication strategy
+├── command.ts            # CLI commands
+└── types/                # TypeScript types
 ```
 
-### Componentes Principais
+### Main Components
 
 #### AuthController
-Gerencia as rotas de autenticação:
-- `POST /auth/register` - Registro de usuários
-- `POST /auth/login` - Login de usuários
-- `GET /auth/me` - Dados do usuário autenticado
-- `GET /auth/users` - Lista de usuários (admin)
+Manages authentication routes:
+- `POST /auth/register` - User registration
+- `POST /auth/login` - User login
+- `GET /auth/me` - Authenticated user data
+- `GET /auth/users` - User list (admin)
 
 #### AuthPlugin
-Plugin Fastify que:
-- Registra hooks de autenticação
-- Valida tokens JWT
-- Controla acesso baseado em roles
-- Gerencia sessões de usuário
+Fastify plugin that:
+- Registers authentication hooks
+- Validates JWT tokens
+- Controls access based on roles
+- Manages user sessions
 
 #### UserAuthRepository
-Camada de persistência responsável por:
-- Operações CRUD de usuários
-- Busca por email e ID
-- Validações de unicidade
-- Paginação de resultados
-- Controle de status e roles
+Persistence layer responsible for:
+- User CRUD operations
+- Search by email and ID
+- Uniqueness validations
+- Result pagination
+- Status and role control
 
 #### Strategy
-Implementa a estratégia de autenticação:
-- Validação de credenciais
-- Geração de tokens JWT
-- Verificação de permissões
-- Controle de acesso
+Implements authentication strategy:
+- Credential validation
+- JWT token generation
+- Permission verification
+- Access control
 
-### Validações de Segurança
-- **Email**: Regex rigoroso, sanitização, verificação de duplicatas
-- **Senha**: Mínimo 8 caracteres, complexidade obrigatória
-- **Nome**: Sanitização contra XSS, limite de caracteres
-- **Status/Role**: Enums validados
-- **Injeção**: Detecção e bloqueio de tentativas
+### Security Validations
+- **Email**: Strict regex, sanitization, duplicate verification
+- **Password**: Minimum 8 characters, required complexity
+- **Name**: XSS sanitization, character limit
+- **Status/Role**: Validated enums
+- **Injection**: Detection and blocking of attempts
 
-### Camadas de Segurança
-- Sanitização de entrada
-- Validação de dados
-- Proteção contra injeção
-- Autenticação JWT
-- Controle de acesso baseado em roles
-- Verificação de status da conta
+### Security Layers
+- Input sanitization
+- Data validation
+- Protection against injection
+- JWT authentication
+- Role-based access control
+- Account status verification
 
-## Integração
-O módulo é integrado ao sistema através do `modules.ts` principal e utiliza as configurações globais de banco de dados e validação de ambiente.
+## Integration
+The module is integrated into the system through the main `modules.ts` and uses global database configurations and environment validation.

@@ -11,7 +11,7 @@ const config: FastifyServerOptions = {
       },
     },
   },
-  // Outras opções de configuração
+  // Other configuration options
 }
 
 export default config

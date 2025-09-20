@@ -8,11 +8,11 @@ import fastifySwagger from '@fastify/swagger'
 import fastifySwaggerUi from '@fastify/swagger-ui'
 
 export default async function app(fastify: FastifyInstance, opts: FastifyPluginOptions) {
-  // Configurar middlewares globais de tratamento de resposta
+  // Configure global response handling middlewares
   errorHandler(fastify);
   notFoundHandler(fastify);
 
-  // Registrar Swagger PRIMEIRO para capturar as rotas definidas após
+  // Register Swagger FIRST to capture routes defined after
   if (process.env.NODE_ENV === 'development') {
     await fastify.register(fastifySwagger, {
       openapi: {
@@ -51,7 +51,7 @@ export default async function app(fastify: FastifyInstance, opts: FastifyPluginO
     await mongoConnection.connect();
     fastify.decorate('mongo', mongoConnection);
 
-    // Registrar Swagger após todas as rotas estarem definidas
+    // Register Swagger after all routes are defined
     if (process.env.NODE_ENV === 'development') {
       // Note: This approach doesn't work because onReady is too late for plugin registration
       // await fastify.register(swaggerPlugin);

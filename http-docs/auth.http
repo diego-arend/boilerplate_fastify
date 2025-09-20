@@ -1,29 +1,29 @@
 # =============================================================================
-# AUTENTICAÇÃO - Testes da API (Respostas Padronizadas)
+# AUTHENTICATION - API Tests (Standardized Responses)
 # =============================================================================
 # Base URL: http://localhost:3001
-# Prefixo: /auth
-# Estrutura de resposta: { success, message, code, data?, error? }
+# Prefix: /auth
+# Response structure: { success, message, code, data?, error? }
 # =============================================================================
 
 @baseUrl = http://localhost:3001
 @authPrefix = /auth
 
 # =============================================================================
-# 1. REGISTRO DE USUÁRIOS
+# 1. USER REGISTRATION
 # =============================================================================
 
-### Registro - Usuário válido
+### Registration - Valid user
 POST {{baseUrl}}{{authPrefix}}/register
 Content-Type: application/json
 
 {
-  "name": "João Silva",
+  "name": "John Silva",
   "email": "joao.silva@example.com",
   "password": "MinhaSenha123!"
 }
 
-### Registro - Dados inválidos (sem nome)
+### Registration - Invalid data (missing name)
 POST {{baseUrl}}{{authPrefix}}/register
 Content-Type: application/json
 
@@ -32,7 +32,7 @@ Content-Type: application/json
   "password": "senha123"
 }
 
-### Registro - Tentativa de injeção
+### Registration - Injection attempt
 POST {{baseUrl}}{{authPrefix}}/register
 Content-Type: application/json
 
@@ -42,12 +42,12 @@ Content-Type: application/json
   "password": "senha123"
 }
 
-### Registro - Email já cadastrado
+### Registration - Email already registered
 POST {{baseUrl}}{{authPrefix}}/register
 Content-Type: application/json
 
 {
-  "name": "João Silva 2",
+  "name": "John Silva 2",
   "email": "joao.silva@example.com",
   "password": "OutraSenha123!"
 }
@@ -56,7 +56,7 @@ Content-Type: application/json
 # 2. LOGIN
 # =============================================================================
 
-### Login - Credenciais válidas
+### Login - Valid credentials
 POST {{baseUrl}}{{authPrefix}}/login
 Content-Type: application/json
 
@@ -65,7 +65,7 @@ Content-Type: application/json
   "password": "MinhaSenha123!"
 }
 
-### Login - Dados inválidos (sem email)
+### Login - Invalid data (missing email)
 POST {{baseUrl}}{{authPrefix}}/login
 Content-Type: application/json
 
@@ -73,7 +73,7 @@ Content-Type: application/json
   "password": "senha123"
 }
 
-### Login - Credenciais incorretas
+### Login - Incorrect credentials
 POST {{baseUrl}}{{authPrefix}}/login
 Content-Type: application/json
 
@@ -82,7 +82,7 @@ Content-Type: application/json
   "password": "senhaerrada"
 }
 
-### Login - Usuário não encontrado
+### Login - User not found
 POST {{baseUrl}}{{authPrefix}}/login
 Content-Type: application/json
 
@@ -92,29 +92,29 @@ Content-Type: application/json
 }
 
 # =============================================================================
-# 3. ROTAS PROTEGIDAS
+# 3. PROTECTED ROUTES
 # =============================================================================
 
-### Perfil do usuário - Com token válido
+### User profile - With valid token
 GET {{baseUrl}}{{authPrefix}}/me
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3ODkwMTIzNDU2Nzg5MDEyMzQ1IiwibmFtZSI6Ikpvw6NvIFNpbHZhIiwicm9sZSI6InVzZXIiLCJpYXQiOjE3MzY4MzQ1NjcsImV4cCI6MTczNjkxOTk2N30.example_token_replace_with_real_one
 
-### Perfil do usuário - Sem token
+### User profile - Without token
 GET {{baseUrl}}{{authPrefix}}/me
 
-### Perfil do usuário - Token inválido
+### User profile - Invalid token
 GET {{baseUrl}}{{authPrefix}}/me
 Authorization: Bearer token_invalido
 
-### Perfil do usuário - Usuário não encontrado
+### User profile - User not found
 GET {{baseUrl}}{{authPrefix}}/me
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImludmFsaWRfaWQiLCJuYW1lIjoiVGVzdCIsInJvbGUiOiJ1c2VyIiwiaWF0IjoxNzM2ODM0NTY3LCJleHAiOjE3MzY5MTk5Njd9.invalid_user_token
 
 # =============================================================================
-# 4. TESTES DE SEGURANÇA
+# 4. SECURITY TESTS
 # =============================================================================
 
-### Tentativa de SQL Injection no registro
+### SQL Injection attempt in registration
 POST {{baseUrl}}{{authPrefix}}/register
 Content-Type: application/json
 
@@ -124,7 +124,7 @@ Content-Type: application/json
   "password": "senha123"
 }
 
-### Tentativa de XSS no registro
+### XSS attempt in registration
 POST {{baseUrl}}{{authPrefix}}/register
 Content-Type: application/json
 
@@ -134,7 +134,7 @@ Content-Type: application/json
   "password": "senha123"
 }
 
-### Tentativa de SQL Injection no login
+### SQL Injection attempt in login
 POST {{baseUrl}}{{authPrefix}}/login
 Content-Type: application/json
 
@@ -144,10 +144,10 @@ Content-Type: application/json
 }
 
 # =============================================================================
-# 5. TESTES DE PERFORMANCE E STRESS
+# 5. PERFORMANCE AND STRESS TESTS
 # =============================================================================
 
-### Múltiplos logins simultâneos (copie e execute em paralelo)
+### Multiple simultaneous logins (copy and execute in parallel)
 POST {{baseUrl}}{{authPrefix}}/login
 Content-Type: application/json
 
@@ -156,7 +156,7 @@ Content-Type: application/json
   "password": "MinhaSenha123!"
 }
 
-### Teste de rate limiting (execute múltiplas vezes rapidamente)
+### Rate limiting test (execute multiple times quickly)
 POST {{baseUrl}}{{authPrefix}}/login
 Content-Type: application/json
 
@@ -166,18 +166,18 @@ Content-Type: application/json
 }
 
 # =============================================================================
-# 6. HEALTH CHECK (não é do módulo auth, mas útil para testes)
+# 6. HEALTH CHECK (not part of auth module, but useful for testing)
 # =============================================================================
 
-### Health Check da aplicação
+### Application Health Check
 GET {{baseUrl}}/health
 
 # =============================================================================
-# DICAS DE USO:
+# USAGE TIPS:
 # =============================================================================
-# 1. Execute os testes em ordem: registro -> login -> rotas protegidas
-# 2. Substitua o token JWT nos headers Authorization pelos tokens reais
-# 3. Use variáveis de ambiente para o baseUrl se necessário
-# 4. Teste cenários de erro para validar tratamento adequado
-# 5. Monitore os logs da aplicação durante os testes
+# 1. Execute tests in order: registration -> login -> protected routes
+# 2. Replace JWT tokens in Authorization headers with real tokens
+# 3. Use environment variables for baseUrl if necessary
+# 4. Test error scenarios to validate proper handling
+# 5. Monitor application logs during testing
 # =============================================================================

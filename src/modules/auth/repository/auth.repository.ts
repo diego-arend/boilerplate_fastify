@@ -10,33 +10,33 @@ export class AuthRepository extends BaseRepository<IUser> {
   }
 
   /**
-   * Busca usuário por email para autenticação
+   * Find user by email for authentication
    */
   async findByEmail(email: string): Promise<IUser | null> {
     const sanitizedEmail = SecurityValidators.sanitizeInput(email).toLowerCase();
 
     if (!SecurityValidators.isValidEmail(sanitizedEmail)) {
-      throw new Error('Email inválido');
+      throw new Error('Invalid email');
     }
 
     return await this.findOne({ email: sanitizedEmail });
   }
 
   /**
-   * Busca usuário por email incluindo senha (para login)
+   * Find user by email including password (for login)
    */
   async findByEmailWithPassword(email: string): Promise<IUser | null> {
     const sanitizedEmail = SecurityValidators.sanitizeInput(email).toLowerCase();
 
     if (!SecurityValidators.isValidEmail(sanitizedEmail)) {
-      throw new Error('Email inválido');
+      throw new Error('Invalid email');
     }
 
     return await this.model.findOne({ email: sanitizedEmail }).select('+password').exec();
   }
 
   /**
-   * Cria um novo usuário para registro
+   * Create a new user for registration
    */
   async createUser(userData: {
     name: string;
@@ -52,30 +52,30 @@ export class AuthRepository extends BaseRepository<IUser> {
     };
 
     if (!SecurityValidators.isValidEmail(sanitizedData.email)) {
-      throw new Error('Email inválido');
+      throw new Error('Invalid email');
     }
 
     if (!SecurityValidators.isStrongPassword(userData.password)) {
-      throw new Error('Senha não atende aos requisitos de segurança');
+      throw new Error('Password does not meet security requirements');
     }
 
     const existingUser = await this.findByEmail(sanitizedData.email);
     if (existingUser) {
-      throw new Error('Email já cadastrado');
+      throw new Error('Email already registered');
     }
 
     return await this.create(sanitizedData as Partial<IUser>);
   }
 
   /**
-   * Busca usuário por ID (para JWT verification)
+   * Find user by ID (for JWT verification)
    */
   async findByIdForAuth(id: string): Promise<IUser | null> {
     return await this.findById(id);
   }
 
   /**
-   * Verifica se email existe (para registro)
+   * Check if email exists (for registration)
    */
   async emailExists(email: string): Promise<boolean> {
     const sanitizedEmail = SecurityValidators.sanitizeInput(email).toLowerCase();
@@ -89,7 +89,7 @@ export class AuthRepository extends BaseRepository<IUser> {
   }
 
   /**
-   * Atualiza último login do usuário (opcional)
+   * Update user's last login (optional)
    */
   async updateLastLogin(userId: string): Promise<IUser | null> {
     return await this.updateById(userId, {

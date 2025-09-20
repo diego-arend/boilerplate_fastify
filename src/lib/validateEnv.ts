@@ -10,7 +10,7 @@ const envSchema = z.object({
 const parsed = envSchema.safeParse(process.env);
 if (!parsed.success) {
   console.error(
-    "FATAL ERROR: Variáveis de ambiente inválidas:",
+    "FATAL ERROR: Invalid environment variables:",
     parsed.error.format()
   );
   process.exit(1);
@@ -22,7 +22,7 @@ export function validateEnv(requiredVars: string[]) {
   const missing = requiredVars.filter((key) => !process.env[key]);
   if (missing.length > 0) {
     console.error(
-      `FATAL ERROR: Variáveis de ambiente ausentes: ${missing.join(", ")}`
+      `FATAL ERROR: Missing environment variables: ${missing.join(", ")}`
     );
     process.exit(1);
   }

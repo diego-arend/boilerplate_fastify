@@ -1,7 +1,7 @@
-// Utilitários de segurança para validação de entrada
+// Security utilities for input validation
 export class SecurityValidators {
 
-  // Sanitiza entrada removendo caracteres perigosos
+  // Sanitize input by removing dangerous characters
   static sanitizeInput(input: string): string {
     if (typeof input !== 'string') return '';
 
@@ -14,7 +14,7 @@ export class SecurityValidators {
       .trim();
   }
 
-  // Valida email com regras de segurança
+  // Validate email with security rules
   static isValidEmail(email: string): boolean {
     if (!email || typeof email !== 'string') return false;
 
@@ -27,11 +27,11 @@ export class SecurityValidators {
            email.trim() === email;
   }
 
-  // Valida senha forte
+  // Validate strong password
   static isStrongPassword(password: string): boolean {
     if (!password || typeof password !== 'string') return false;
 
-    // Pelo menos 8 caracteres, uma letra minúscula, maiúscula, número e caractere especial
+    // At least 8 characters, one lowercase, uppercase, number and special character
     const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/;
 
     return password.length >= 8 &&
@@ -39,7 +39,7 @@ export class SecurityValidators {
            strongPasswordRegex.test(password);
   }
 
-  // Detecta tentativas de injeção
+  // Detect injection attempts
   static hasInjectionAttempt(input: string): boolean {
     if (!input || typeof input !== 'string') return false;
 
@@ -59,13 +59,13 @@ export class SecurityValidators {
     return injectionPatterns.some(pattern => pattern.test(input));
   }
 
-  // Limpa query parameters de MongoDB
+  // Clean MongoDB query parameters
   static sanitizeMongoQuery(query: any): any {
     if (!query || typeof query !== 'object') return query;
 
     const sanitized = { ...query };
 
-    // Remove operadores MongoDB perigosos se não autorizados
+    // Remove dangerous MongoDB operators if not authorized
     const dangerousOperators = ['$where', '$function', '$accumulator', '$function'];
 
     for (const key in sanitized) {

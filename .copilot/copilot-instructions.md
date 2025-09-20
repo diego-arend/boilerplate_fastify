@@ -86,6 +86,59 @@ src/
 - Logs estruturados com Pino
 - Health checks automáticos
 
+## Documentação e Comentários
+
+### Padrão de Comentários
+- **Idioma**: Todos os comentários devem ser escritos em **inglês**
+- **Formato**: Utilizar **JSDoc** para documentação estruturada
+- **Cobertura**: Todo arquivo de lógica deve ter comentários adequados
+- **Consistência**: Seguir padrões estabelecidos em todo o projeto
+
+### Estrutura JSDoc Obrigatória
+```typescript
+/**
+ * Brief description of what the function/class does
+ * @param {Type} paramName - Description of parameter
+ * @returns {Type} Description of return value
+ * @throws {ErrorType} Description of thrown errors
+ */
+```
+
+### Exemplos de Documentação
+```typescript
+/**
+ * Validates user email format and security requirements
+ * @param {string} email - The email address to validate
+ * @returns {boolean} True if email is valid and secure
+ * @throws {Error} If email format is invalid
+ */
+static isValidEmail(email: string): boolean {
+  // Implementation here
+}
+
+/**
+ * User authentication repository
+ * Handles all database operations related to user authentication
+ */
+export class AuthRepository extends BaseRepository<IUser> {
+  /**
+   * Find user by email for authentication purposes
+   * @param {string} email - User's email address
+   * @returns {Promise<IUser | null>} User object or null if not found
+   */
+  async findByEmail(email: string): Promise<IUser | null> {
+    // Implementation here
+  }
+}
+```
+
+### Tipos de Comentários
+- **JSDoc Functions**: Para todas as funções públicas e métodos
+- **Class Documentation**: Para todas as classes e interfaces
+- **Inline Comments**: Para lógica complexa (em inglês)
+- **TODO/FIXME**: Para melhorias futuras (em inglês)
+- **Error Messages**: Todas as mensagens devem ser em inglês
+
 ## Scripts Disponíveis
 
 ```bash

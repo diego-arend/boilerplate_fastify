@@ -3,22 +3,22 @@ import fastifySwagger from '@fastify/swagger';
 import fastifySwaggerUi from '@fastify/swagger-ui';
 
 /**
- * Plugin de documentação Swagger
- * Disponível apenas em ambiente de desenvolvimento
+ * Swagger documentation plugin
+ * Available only in development environment
  */
 export default async function swaggerPlugin(
   fastify: FastifyInstance,
   opts: FastifyPluginOptions
 ) {
-  // Só registra o Swagger em desenvolvimento
+  // Only register Swagger in development
   if (process.env.NODE_ENV !== 'development') {
-    fastify.log.info('Swagger não registrado - ambiente não é desenvolvimento');
+    fastify.log.info('Swagger not registered - environment is not development');
     return;
   }
 
   fastify.log.info('Registrando Swagger...');
 
-  // Configuração do Swagger com OpenAPI v3
+  // Swagger configuration with OpenAPI v3
   await fastify.register(fastifySwagger, {
     openapi: {
       openapi: '3.0.3',
@@ -95,11 +95,11 @@ export default async function swaggerPlugin(
       deepLinking: false,
       tryItOutEnabled: true,
       requestInterceptor: (req: any) => {
-        // Adicionar headers customizados se necessário
+        // Add custom headers if necessary
         return req;
       },
       responseInterceptor: (res: any) => {
-        // Processar respostas se necessário
+        // Process responses if necessary
         return res;
       }
     },
@@ -110,7 +110,7 @@ export default async function swaggerPlugin(
   fastify.log.info('Swagger registrado em /docs - Ambiente de desenvolvimento');
 }
 
-// Decorators para documentação
+// Decorators for documentation
 export const swaggerDecorators = {
   /**
    * Decorator para adicionar tags aos endpoints
@@ -123,7 +123,7 @@ export const swaggerDecorators = {
   },
 
   /**
-   * Decorator para adicionar descrição aos endpoints
+   * Decorator to add description to endpoints
    */
   description: (description: string) => (target: any, propertyKey: string) => {
     if (!target.constructor.swaggerDescriptions) {

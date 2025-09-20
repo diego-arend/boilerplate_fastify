@@ -4,18 +4,18 @@ export default async function healthController(fastify: FastifyInstance) {
   // Health check route
   fastify.get('/health', {
     schema: {
-      description: 'Verifica o status de saúde da aplicação',
+      description: 'Check the application health status',
       tags: ['Health'],
       summary: 'Health Check',
       response: {
         200: {
           type: 'object',
           properties: {
-            status: { type: 'string', description: 'Status da aplicação', example: 'UP' },
-            timestamp: { type: 'string', format: 'date-time', description: 'Timestamp da verificação' },
-            uptime: { type: 'number', description: 'Tempo de atividade em segundos' },
-            version: { type: 'string', description: 'Versão da aplicação' },
-            service: { type: 'string', description: 'Nome do serviço' }
+            status: { type: 'string', description: 'Application status', example: 'UP' },
+            timestamp: { type: 'string', format: 'date-time', description: 'Verification timestamp' },
+            uptime: { type: 'number', description: 'Uptime in seconds' },
+            version: { type: 'string', description: 'Application version' },
+            service: { type: 'string', description: 'Service name' }
           }
         }
       }

@@ -15,7 +15,7 @@ interface RegisterRequest {
   password: string;
 }
 
-// Instância do repositório de autenticação
+// Authentication repository instance
 const authRepository = new AuthRepository();
 
 export default async function authController(fastify: FastifyInstance) {
@@ -23,9 +23,9 @@ export default async function authController(fastify: FastifyInstance) {
   // Register route
   fastify.post('/register', {
     schema: {
-      description: 'Registra um novo usuário no sistema',
+      description: 'Register a new user in the system',
       tags: ['Auth'],
-      summary: 'Registrar Usuário',
+      summary: 'Register User',
       body: {
         type: 'object',
         required: ['name', 'email', 'password'],
@@ -40,7 +40,7 @@ export default async function authController(fastify: FastifyInstance) {
           type: 'object',
           properties: {
             success: { type: 'boolean', example: true },
-            message: { type: 'string', example: 'Usuário registrado com sucesso' },
+            message: { type: 'string', example: 'User registered successfully' },
             code: { type: 'number', example: 201 },
             data: {
               type: 'object',
@@ -49,7 +49,7 @@ export default async function authController(fastify: FastifyInstance) {
                   type: 'object',
                   properties: {
                     id: { type: 'string', example: '507f1f77bcf86cd799439011' },
-                    name: { type: 'string', example: 'João Silva' },
+                    name: { type: 'string', example: 'John Silva' },
                     email: { type: 'string', example: 'joao@example.com' },
                     role: { type: 'string', example: 'user' },
                     status: { type: 'string', example: 'active' }
@@ -64,7 +64,7 @@ export default async function authController(fastify: FastifyInstance) {
           type: 'object',
           properties: {
             success: { type: 'boolean', example: false },
-            message: { type: 'string', example: 'Nome, email e senha são obrigatórios' },
+            message: { type: 'string', example: 'Name, email and password are required' },
             code: { type: 'number', example: 400 },
             error: { type: 'string', example: 'VALIDATION_ERROR' }
           }
@@ -75,9 +75,9 @@ export default async function authController(fastify: FastifyInstance) {
     try {
       const { name, email, password } = request.body as RegisterRequest;
 
-      // Validações básicas de entrada
+      // Basic input validations
       if (!name || !email || !password) {
-        return ApiResponseHandler.validationError(reply, 'Nome, email e senha são obrigatórios');
+        return ApiResponseHandler.validationError(reply, 'Name, email and password are required');
       }
 
       // Sanitiza os dados de entrada
@@ -87,17 +87,17 @@ export default async function authController(fastify: FastifyInstance) {
         password
       };
 
-      // Validações de segurança
+      // Security validations
       if (SecurityValidators.hasInjectionAttempt(sanitizedData.name) ||
           SecurityValidators.hasInjectionAttempt(sanitizedData.email)) {
-        return ApiResponseHandler.validationError(reply, 'Dados inválidos detectados');
+        return ApiResponseHandler.validationError(reply, 'Invalid data detected');
       }
 
-      // Cria o usuário usando o repositório
+      // Create user using repository
       const newUser = await authRepository.createUser({
         name: sanitizedData.name,
         email: sanitizedData.email,
-        password: sanitizedData.password // Será hasheada no service posteriormente
+        password: sanitizedData.password // Will be hashed in service later
       });
 
       // Generate JWT token
@@ -107,7 +107,7 @@ export default async function authController(fastify: FastifyInstance) {
         { expiresIn: '24h' }
       );
 
-      return ApiResponseHandler.created(reply, 'Usuário registrado com sucesso', {
+      return ApiResponseHandler.created(reply, 'User registered successfully', {
         user: {
           id: newUser._id,
           name: newUser.name,
@@ -127,9 +127,9 @@ export default async function authController(fastify: FastifyInstance) {
   // Login route
   fastify.post('/login', {
     schema: {
-      description: 'Faz login do usuário e retorna token JWT',
+      description: 'User login and JWT token return',
       tags: ['Auth'],
-      summary: 'Login do Usuário',
+      summary: 'User Login',
       body: {
         type: 'object',
         required: ['email', 'password'],
@@ -143,7 +143,7 @@ export default async function authController(fastify: FastifyInstance) {
           type: 'object',
           properties: {
             success: { type: 'boolean', example: true },
-            message: { type: 'string', example: 'Login realizado com sucesso' },
+            message: { type: 'string', example: 'Login successful' },
             code: { type: 'number', example: 200 },
             data: {
               type: 'object',
@@ -152,7 +152,7 @@ export default async function authController(fastify: FastifyInstance) {
                   type: 'object',
                   properties: {
                     id: { type: 'string', example: '507f1f77bcf86cd799439011' },
-                    name: { type: 'string', example: 'João Silva' },
+                    name: { type: 'string', example: 'John Silva' },
                     email: { type: 'string', example: 'joao@example.com' },
                     role: { type: 'string', example: 'user' },
                     status: { type: 'string', example: 'active' }
@@ -167,7 +167,7 @@ export default async function authController(fastify: FastifyInstance) {
           type: 'object',
           properties: {
             success: { type: 'boolean', example: false },
-            message: { type: 'string', example: 'Credenciais inválidas' },
+            message: { type: 'string', example: 'Invalid credentials' },
             code: { type: 'number', example: 401 },
             error: { type: 'string', example: 'AUTHENTICATION_ERROR' }
           }
@@ -178,30 +178,30 @@ export default async function authController(fastify: FastifyInstance) {
     try {
       const { email, password } = request.body as LoginRequest;
 
-      // Validações básicas
+      // Basic validations
       if (!email || !password) {
-        return ApiResponseHandler.validationError(reply, 'Email e senha são obrigatórios');
+        return ApiResponseHandler.validationError(reply, 'Email and password are required');
       }
 
-      // Sanitiza email
+      // Sanitize email
       const sanitizedEmail = SecurityValidators.sanitizeInput(email).toLowerCase();
 
-      // Busca usuário com senha (para comparação)
+      // Find user with password (for comparison)
       const user = await authRepository.findByEmailWithPassword(sanitizedEmail);
 
       if (!user) {
-        return ApiResponseHandler.authError(reply, 'Credenciais inválidas');
+        return ApiResponseHandler.authError(reply, 'Invalid credentials');
       }
 
-      // Verifica se usuário está ativo
+      // Check if user is active
       if (user.status !== 'active') {
-        return ApiResponseHandler.authError(reply, 'Conta desativada');
+        return ApiResponseHandler.authError(reply, 'Account deactivated');
       }
 
-      // TODO: Comparar senha hasheada (implementar no service)
-      // Por enquanto, comparação simples (NÃO usar em produção)
+      // TODO: Compare hashed password (implement in service)
+      // For now, simple comparison (DO NOT use in production)
       if (password !== user.password) {
-        return ApiResponseHandler.authError(reply, 'Credenciais inválidas');
+        return ApiResponseHandler.authError(reply, 'Invalid credentials');
       }
 
       // Generate JWT token
@@ -211,7 +211,7 @@ export default async function authController(fastify: FastifyInstance) {
         { expiresIn: '24h' }
       );
 
-      return ApiResponseHandler.success(reply, 'Login realizado com sucesso', {
+      return ApiResponseHandler.success(reply, 'Login successful', {
         user: {
           id: user._id,
           name: user.name,
@@ -231,16 +231,16 @@ export default async function authController(fastify: FastifyInstance) {
   fastify.get('/me', {
     preHandler: fastify.authenticate,
     schema: {
-      description: 'Retorna os dados do usuário autenticado',
+      description: 'Return authenticated user data',
       tags: ['Auth'],
-      summary: 'Perfil do Usuário',
+      summary: 'User Profile',
       security: [{ bearerAuth: [] }],
       response: {
         200: {
           type: 'object',
           properties: {
             success: { type: 'boolean', example: true },
-            message: { type: 'string', example: 'Dados do usuário retornados' },
+            message: { type: 'string', example: 'User data returned' },
             code: { type: 'number', example: 200 },
             data: {
               type: 'object',
@@ -249,7 +249,7 @@ export default async function authController(fastify: FastifyInstance) {
                   type: 'object',
                   properties: {
                     id: { type: 'string', example: '507f1f77bcf86cd799439011' },
-                    name: { type: 'string', example: 'João Silva' },
+                    name: { type: 'string', example: 'John Silva' },
                     email: { type: 'string', example: 'joao@example.com' },
                     role: { type: 'string', example: 'user' },
                     status: { type: 'string', example: 'active' },
@@ -264,7 +264,7 @@ export default async function authController(fastify: FastifyInstance) {
           type: 'object',
           properties: {
             success: { type: 'boolean', example: false },
-            message: { type: 'string', example: 'Usuário não autenticado' },
+            message: { type: 'string', example: 'User not authenticated' },
             code: { type: 'number', example: 401 },
             error: { type: 'string', example: 'AUTHENTICATION_ERROR' }
           }
@@ -273,19 +273,19 @@ export default async function authController(fastify: FastifyInstance) {
     }
   }, async (request, reply) => {
     try {
-      // Verifica se usuário está autenticado
+      // Check if user is authenticated
       if (!request.authenticatedUser) {
-        return ApiResponseHandler.authError(reply, 'Usuário não autenticado');
+        return ApiResponseHandler.authError(reply, 'User not authenticated');
       }
 
-      // Busca dados atualizados do usuário
+      // Find updated user data
       const user = await authRepository.findById(request.authenticatedUser.id.toString());
 
       if (!user) {
-        return ApiResponseHandler.notFound(reply, 'Usuário não encontrado');
+        return ApiResponseHandler.notFound(reply, 'User not found');
       }
 
-      return ApiResponseHandler.success(reply, 'Dados do usuário retornados', {
+      return ApiResponseHandler.success(reply, 'User data returned', {
         user: {
           id: user._id,
           name: user.name,
@@ -296,7 +296,7 @@ export default async function authController(fastify: FastifyInstance) {
         }
       });
     } catch (error) {
-      console.error('Erro ao buscar usuário:', error);
+      console.error('Error fetching user:', error);
       return ApiResponseHandler.internalError(reply, error instanceof Error ? error : String(error));
     }
   });

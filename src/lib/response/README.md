@@ -1,10 +1,10 @@
 # ApiResponseHandler
 
-Classe utilitária para padronização de respostas da API Fastify. Centraliza o tratamento de respostas de sucesso e erro, garantindo consistência em toda a aplicação.
+Utility class for standardizing Fastify API responses. Centralizes the handling of success and error responses, ensuring consistency throughout the application.
 
-## Estrutura de Resposta
+## Response Structure
 
-Todas as respostas seguem o formato padrão:
+All responses follow the standard format:
 
 ```json
 {
@@ -16,127 +16,127 @@ Todas as respostas seguem o formato padrão:
 }
 ```
 
-## Métodos Disponíveis
+## Available Methods
 
-### Respostas de Sucesso
+### Success Responses
 
 #### `success(reply, message?, data?, code?)`
-Resposta genérica de sucesso.
+Generic success response.
 
 ```typescript
 import { ApiResponseHandler } from '../lib/response/index.js';
 
-// Uso básico
-return ApiResponseHandler.success(reply, 'Operação realizada');
+// Basic usage
+return ApiResponseHandler.success(reply, 'Operation completed');
 
-// Com dados
-return ApiResponseHandler.success(reply, 'Usuário criado', userData);
+// With data
+return ApiResponseHandler.success(reply, 'User created', userData);
 
-// Com código específico
+// With specific code
 return ApiResponseHandler.success(reply, 'OK', data, 200);
 ```
 
 #### `created(reply, message?, data?)`
-Resposta para criação de recursos (HTTP 201).
+Response for resource creation (HTTP 201).
 
 ```typescript
-return ApiResponseHandler.created(reply, 'Usuário registrado', userData);
+return ApiResponseHandler.created(reply, 'User registered', userData);
 ```
 
 #### `noContent(reply, message?)`
-Resposta sem conteúdo (HTTP 204).
+Response without content (HTTP 204).
 
 ```typescript
-return ApiResponseHandler.noContent(reply, 'Usuário deletado');
+return ApiResponseHandler.noContent(reply, 'User deleted');
 ```
 
 #### `paginated(reply, data, total, page, limit, message?)`
-Resposta com paginação.
+Response with pagination.
 
 ```typescript
-return ApiResponseHandler.paginated(reply, users, 150, 1, 10, 'Usuários listados');
+return ApiResponseHandler.paginated(reply, users, 150, 1, 10, 'Users listed');
 ```
 
-### Respostas de Erro
+### Error Responses
 
 #### `validationError(reply, message?, details?)`
-Erro de validação (HTTP 400).
+Validation error (HTTP 400).
 
 ```typescript
-return ApiResponseHandler.validationError(reply, 'Email é obrigatório');
+return ApiResponseHandler.validationError(reply, 'Email is required');
 ```
 
 #### `authError(reply, message?, details?)`
-Erro de autenticação (HTTP 401).
+Authentication error (HTTP 401).
 
 ```typescript
-return ApiResponseHandler.authError(reply, 'Token inválido');
+return ApiResponseHandler.authError(reply, 'Invalid token');
 ```
 
 #### `forbidden(reply, message?, details?)`
-Erro de autorização (HTTP 403).
+Authorization error (HTTP 403).
 
 ```typescript
-return ApiResponseHandler.forbidden(reply, 'Acesso negado');
+return ApiResponseHandler.forbidden(reply, 'Access denied');
 ```
 
 #### `notFound(reply, message?, details?)`
-Recurso não encontrado (HTTP 404).
+Resource not found (HTTP 404).
 
 ```typescript
-return ApiResponseHandler.notFound(reply, 'Usuário não encontrado');
+return ApiResponseHandler.notFound(reply, 'User not found');
 ```
 
 #### `conflict(reply, message?, details?)`
-Conflito de dados (HTTP 409).
+Data conflict (HTTP 409).
 
 ```typescript
-return ApiResponseHandler.conflict(reply, 'Email já cadastrado');
+return ApiResponseHandler.conflict(reply, 'Email already registered');
 ```
 
 #### `internalError(reply, error?, logError?)`
-Erro interno do servidor (HTTP 500).
+Internal server error (HTTP 500).
 
 ```typescript
 try {
-  // operação que pode falhar
+  // operation that may fail
 } catch (error) {
   return ApiResponseHandler.internalError(reply, error);
 }
 ```
 
 #### `serviceUnavailable(reply, message?)`
-Serviço indisponível (HTTP 503).
+Service unavailable (HTTP 503).
 
 ```typescript
-return ApiResponseHandler.serviceUnavailable(reply, 'Banco de dados indisponível');
+return ApiResponseHandler.serviceUnavailable(reply, 'Database unavailable');
 ```
 
 #### `custom(reply, success, code, message, data?, error?)`
-Resposta customizada.
+Custom response.
 
 ```typescript
-return ApiResponseHandler.custom(reply, false, 422, 'Erro de validação', validationErrors);
+return ApiResponseHandler.custom(reply, false, 422, 'Validation error', validationErrors);
 ```
 
-## Exemplos de Uso em Controllers
+## Usage Examples in Controllers
 
-### Controller de Autenticação
+### Authentication Controller
 
 ```typescript
 import { ApiResponseHandler } from '../../lib/response/index.js';
 
 export default async function authController(fastify: FastifyInstance) {
-  // Registro
+  // Registration
   fastify.post('/register', async (request, reply) => {
     try {
       const user = await createUser(request.body);
-      return ApiResponseHandler.created(reply, 'Usuário registrado', {
+      return ApiResponseHandler.created(reply, 'User registered', {
         user: user,
         token: generateToken(user)
       });
     } catch (error) {
-      if (error.message.includes('já cadastrado')) {
+      if (error.message.includes('already registered')) {
         return ApiResponseHandler.conflict(reply, error.message);
       }
       return ApiResponseHandler.internalError(reply, error);
@@ -149,15 +149,15 @@ export default async function authController(fastify: FastifyInstance) {
       const { email, password } = request.body;
 
       if (!email || !password) {
-        return ApiResponseHandler.validationError(reply, 'Email e senha são obrigatórios');
+        return ApiResponseHandler.validationError(reply, 'Email and password are required');
       }
 
       const user = await authenticateUser(email, password);
       if (!user) {
-        return ApiResponseHandler.authError(reply, 'Credenciais inválidas');
+        return ApiResponseHandler.authError(reply, 'Invalid credentials');
       }
 
-      return ApiResponseHandler.success(reply, 'Login realizado', {
+      return ApiResponseHandler.success(reply, 'Login successful', {
         user: user,
         token: generateToken(user)
       });
@@ -168,7 +168,7 @@ export default async function authController(fastify: FastifyInstance) {
 }
 ```
 
-### Controller com Paginação
+### Controller with Pagination
 
 ```typescript
 fastify.get('/users', async (request, reply) => {
@@ -183,33 +183,33 @@ fastify.get('/users', async (request, reply) => {
 });
 ```
 
-## Benefícios
+## Benefits
 
-- ✅ **Consistência**: Todas as respostas seguem o mesmo formato
-- ✅ **Manutenibilidade**: Centralização da lógica de resposta
-- ✅ **Segurança**: Controle sobre exposição de erros sensíveis
-- ✅ **Testabilidade**: Facilita testes automatizados
-- ✅ **Documentação**: API mais previsível para consumidores
-- ✅ **Logging**: Erros críticos são logados automaticamente
+- ✅ **Consistency**: All responses follow the same format
+- ✅ **Maintainability**: Centralized response logic
+- ✅ **Security**: Control over sensitive error exposure
+- ✅ **Testability**: Facilitates automated testing
+- ✅ **Documentation**: More predictable API for consumers
+- ✅ **Logging**: Critical errors are automatically logged
 
-## Boas Práticas
+## Best Practices
 
-1. **Use sempre a classe** em vez de `reply.send()` direto
-2. **Trate erros adequadamente** com try/catch
-3. **Forneça mensagens claras** para o usuário
-4. **Evite expor detalhes internos** em produção
-5. **Use códigos HTTP apropriados** para cada situação
-6. **Log erros críticos** para monitoramento
+1. **Always use the class** instead of direct `reply.send()`
+2. **Handle errors appropriately** with try/catch
+3. **Provide clear messages** for the user
+4. **Avoid exposing internal details** in production
+5. **Use appropriate HTTP codes** for each situation
+6. **Log critical errors** for monitoring
 
-## Integração com Middlewares
+## Integration with Middlewares
 
-A classe pode ser integrada com middlewares para tratamento global de erros:
+The class can be integrated with middlewares for global error handling:
 
 ```typescript
-// Middleware global de erro
+// Global error middleware
 fastify.setErrorHandler((error, request, reply) => {
   if (error.validation) {
-    return ApiResponseHandler.validationError(reply, 'Dados inválidos', error.validation);
+    return ApiResponseHandler.validationError(reply, 'Invalid data', error.validation);
   }
 
   return ApiResponseHandler.internalError(reply, error);

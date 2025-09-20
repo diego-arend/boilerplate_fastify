@@ -11,56 +11,56 @@ export interface IUser extends Document {
   updatedAt: Date;
 }
 
-// Schema do usuário
+// User schema
 const userSchema = new Schema<IUser>({
   name: {
     type: String,
-    required: [true, 'Nome é obrigatório'],
+    required: [true, 'Name is required'],
     trim: true,
-    minlength: [2, 'Nome deve ter pelo menos 2 caracteres'],
-    maxlength: [100, 'Nome deve ter no máximo 100 caracteres'],
+    minlength: [2, 'Name must have at least 2 characters'],
+    maxlength: [100, 'Name must have at most 100 characters'],
     validate: {
       validator: function(v: string) {
-        // Previne injeção de HTML/JavaScript
+        // Prevent HTML/JavaScript injection
         return !/<script|javascript:|on\w+=/i.test(v);
       },
-      message: 'Nome contém caracteres não permitidos'
+      message: 'Name contains disallowed characters'
     }
   },
   email: {
     type: String,
-    required: [true, 'Email é obrigatório'],
+    required: [true, 'Email is required'],
     unique: true,
     lowercase: true,
     trim: true,
-    match: [/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/, 'Email inválido'],
+    match: [/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/, 'Invalid email'],
     validate: {
       validator: function(v: string) {
-        // Validação adicional contra emails maliciosos
+        // Additional validation against malicious emails
         return v.length <= 254 && !/\.\./.test(v);
       },
-      message: 'Email inválido ou muito longo'
+      message: 'Invalid or too long email'
     }
   },
   password: {
     type: String,
-    required: [true, 'Senha é obrigatória'],
-    minlength: [8, 'Senha deve ter pelo menos 8 caracteres'],
-    maxlength: [128, 'Senha muito longa'],
-    select: false, // Não retorna senha por padrão nas queries
+    required: [true, 'Password is required'],
+    minlength: [8, 'Password must have at least 8 characters'],
+    maxlength: [128, 'Password too long'],
+    select: false, // Does not return password by default in queries
     validate: {
       validator: function(v: string) {
-        // Requer pelo menos uma letra minúscula, maiúscula, número e caractere especial
+        // Requires at least one lowercase, uppercase, number and special character
         return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/.test(v);
       },
-      message: 'Senha deve conter pelo menos uma letra minúscula, maiúscula, número e caractere especial'
+      message: 'Password must contain at least one lowercase, uppercase, number and special character'
     }
   },
   status: {
     type: String,
     enum: {
       values: ['active', 'inactive', 'suspended'],
-      message: 'Status deve ser: active, inactive ou suspended'
+      message: 'Status must be: active, inactive or suspended'
     },
     default: 'active'
   },
@@ -68,45 +68,45 @@ const userSchema = new Schema<IUser>({
     type: String,
     enum: {
       values: ['user', 'admin'],
-      message: 'Role deve ser: user ou admin'
+      message: 'Role must be: user or admin'
     },
     default: 'user'
   }
 }, {
-  timestamps: true, // Adiciona createdAt e updatedAt automaticamente
-  versionKey: false, // Remove o campo __v
-  strict: true, // Impede campos não definidos no schema
-  minimize: false // Mantém objetos vazios
+  timestamps: true, // Adds createdAt and updatedAt automatically
+  versionKey: false, // Removes the __v field
+  strict: true, // Prevents fields not defined in schema
+  minimize: false // Keeps empty objects
 });
 
-// Índices para otimização
-// userSchema.index({ email: 1 }); // Removido - já criado automaticamente pelo unique: true
+// Indexes for optimization
+// userSchema.index({ email: 1 }); // Removed - already created automatically by unique: true
 userSchema.index({ status: 1 });
 userSchema.index({ createdAt: -1 });
 
-// Pre-save hook para sanitização e validações adicionais
+// Pre-save hook for sanitization and additional validations
 userSchema.pre('save', function(next) {
-  // Sanitiza o nome removendo caracteres potencialmente perigosos
+  // Sanitize name by removing potentially dangerous characters
   if (this.name) {
     this.name = this.name.replace(/[<>'"&]/g, '');
   }
 
-  // Validação adicional de email
+  // Additional email validation
   if (this.email) {
-    // Remove espaços em branco extras
+    // Remove extra whitespace
     this.email = this.email.trim();
-    // Converte para lowercase
+    // Convert to lowercase
     this.email = this.email.toLowerCase();
   }
 
   next();
 });
 
-// Pre-update hooks para validações em updates
+// Pre-update hooks for validations in updates
 userSchema.pre('findOneAndUpdate', function(next) {
   const update = this.getUpdate() as any;
 
-  // Sanitiza campos se estiverem sendo atualizados
+  // Sanitize fields if being updated
   if (update.name) {
     update.name = update.name.replace(/[<>'"&]/g, '');
   }
@@ -118,33 +118,33 @@ userSchema.pre('findOneAndUpdate', function(next) {
   next();
 });
 
-// Função de sanitização de entrada
+// Input sanitization function
 function sanitizeInput(input: string): string {
   if (typeof input !== 'string') return '';
 
   return input
-    .replace(/[<>'"&]/g, '') // Remove caracteres HTML
+    .replace(/[<>'"&]/g, '') // Remove HTML characters
     .replace(/javascript:/gi, '') // Remove javascript:
     .replace(/on\w+=/gi, '') // Remove event handlers
-    .replace(/\.\./g, '.') // Previne path traversal
+    .replace(/\.\./g, '.') // Prevent path traversal
     .trim();
 }
 
-// Método para comparar senha (será implementado com bcrypt)
+// Method to compare password (will be implemented with bcrypt)
 userSchema.methods.comparePassword = function(candidatePassword: string): Promise<boolean> {
-  // Implementação será feita no repositório ou service
+  // Implementation will be done in repository or service
   return Promise.resolve(false);
 };
 
-// Método para transformar o documento em JSON (remove campos sensíveis)
+// Method to transform document to JSON (removes sensitive fields)
 userSchema.methods.toJSON = function() {
   const userObject = this.toObject();
 
-  // Remove campos sensíveis
+  // Remove sensitive fields
   delete userObject.password;
   delete userObject.__v;
 
-  // Sanitiza campos de texto antes de retornar
+  // Sanitize text fields before returning
   if (userObject.name) {
     userObject.name = sanitizeInput(userObject.name);
   }
@@ -152,10 +152,10 @@ userSchema.methods.toJSON = function() {
   return userObject;
 };
 
-// Método para sanitizar dados de entrada
+// Method to sanitize input data
 userSchema.methods.sanitizeInput = sanitizeInput;
 
-// Modelo do usuário
+// User model
 export const UserModel = model<IUser>('User', userSchema);
 
 export default UserModel;

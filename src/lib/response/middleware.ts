@@ -2,8 +2,8 @@ import type { FastifyInstance } from 'fastify';
 import { ApiResponseHandler } from './ApiResponseHandler.js';
 
 /**
- * Middleware global para tratamento de erros não capturados
- * Centraliza o tratamento de erros em um único local
+ * Global middleware for handling uncaught errors
+ * Centralizes error handling in a single location
  */
 export function errorHandler(fastify: FastifyInstance) {
   fastify.setErrorHandler((error, request, reply) => {
@@ -16,11 +16,11 @@ export function errorHandler(fastify: FastifyInstance) {
       ip: request.ip
     });
 
-    // Tratamento específico para erros de validação
+    // Specific handling for validation errors
     if (error.validation) {
       return ApiResponseHandler.validationError(
         reply,
-        'Dados de entrada inválidos',
+        'Invalid input data',
         error.validation
       );
     }
@@ -29,11 +29,11 @@ export function errorHandler(fastify: FastifyInstance) {
     if (error instanceof SyntaxError && 'body' in error) {
       return ApiResponseHandler.validationError(
         reply,
-        'JSON malformado na requisição'
+        'Malformed JSON in request'
       );
     }
 
-    // Tratamento para erros de autenticação/autorização
+    // Handling for authentication/authorization errors
     if (error.message?.includes('Unauthorized') || error.message?.includes('Forbidden')) {
       return ApiResponseHandler.authError(reply, error.message);
     }
@@ -43,26 +43,26 @@ export function errorHandler(fastify: FastifyInstance) {
       return ApiResponseHandler.validationError(reply, 'Erro de dados');
     }
 
-    // Erro interno genérico (não expõe detalhes sensíveis)
+    // Generic internal error (does not expose sensitive details)
     return ApiResponseHandler.internalError(reply, error);
   });
 }
 
 /**
- * Hook para tratamento de respostas não encontradas (404)
+ * Hook for handling not found responses (404)
  */
 export function notFoundHandler(fastify: FastifyInstance) {
   fastify.setNotFoundHandler((request, reply) => {
-    return ApiResponseHandler.notFound(reply, `Rota ${request.method} ${request.url} não encontrada`);
+    return ApiResponseHandler.notFound(reply, `Route ${request.method} ${request.url} not found`);
   });
 }
 
 /**
- * Hook para tratamento de métodos não permitidos
- * Nota: Esta funcionalidade pode ser implementada no futuro
- * com verificações mais específicas por rota
+ * Hook for handling method not allowed
+ * Note: This functionality can be implemented in the future
+ * with more specific route-based checks
  */
 export function methodNotAllowedHandler(fastify: FastifyInstance) {
-  // Hook pode ser implementado futuramente para verificações específicas
-  // de métodos permitidos por rota
+  // Hook can be implemented in the future for specific
+  // checks of allowed methods per route
 }

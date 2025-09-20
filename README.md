@@ -1,181 +1,181 @@
 # Boilerplate Fastify
 
-Boilerplate para aplicações Fastify com TypeScript, MongoDB e Redis.
+Boilerplate for Fastify applications with TypeScript, MongoDB and Redis.
 
-## 🚀 Executando com Docker
+## 🚀 Running with Docker
 
-### Pré-requisitos
+### Prerequisites
 
 - Docker
 - Docker Compose
 
-### Ambiente de Desenvolvimento
+### Development Environment
 
-Para executar em modo desenvolvimento com hot reload:
+To run in development mode with hot reload:
 
 ```bash
-# Construir e executar todos os serviços
+# Build and run all services
 docker-compose -f docker-compose.dev.yml up --build
 
-# Ou em background
+# Or in background
 docker-compose -f docker-compose.dev.yml up -d --build
 ```
 
-### Ambiente de Produção
+### Production Environment
 
-Para executar em modo produção:
+To run in production mode:
 
 ```bash
-# Construir e executar todos os serviços
+# Build and run all services
 docker-compose up --build
 
-# Ou em background
+# Or in background
 docker-compose up -d --build
 ```
 
-### Serviços Disponíveis
+### Available Services
 
 - **App** (Fastify): http://localhost:3001
 - **MongoDB**: localhost:27017
 - **Redis**: localhost:6379
-- **Swagger UI** (desenvolvimento): http://localhost:3001/docs
+- **Swagger UI** (development): http://localhost:3001/docs
 
-### Comandos Úteis
+### Useful Commands
 
 ```bash
-# Ver logs da aplicação
+# View application logs
 docker-compose logs app
 
-# Ver logs de todos os serviços
+# View all services logs
 docker-compose logs
 
-# Parar todos os serviços
+# Stop all services
 docker-compose down
 
-# Parar e remover volumes
+# Stop and remove volumes
 docker-compose down -v
 
-# Executar comandos no container da aplicação
+# Execute commands in the application container
 docker-compose exec app sh
 
-# Verificar status dos serviços
+# Check services status
 docker-compose ps
 ```
 
-## 📚 Documentação da API
+## 📚 API Documentation
 
-### Swagger UI (Desenvolvimento)
+### Swagger UI (Development)
 
-A aplicação inclui documentação interativa da API através do Swagger UI, disponível apenas em ambiente de desenvolvimento:
+The application includes interactive API documentation through Swagger UI, available only in development environment:
 
 - **URL**: http://localhost:3001/docs
-- **Formato**: OpenAPI 3.0
-- **Ambiente**: Apenas quando `NODE_ENV=development`
+- **Format**: OpenAPI 3.0
+- **Environment**: Only when `NODE_ENV=development`
 
-**Funcionalidades:**
-- Documentação completa de todos os endpoints
-- Interface interativa para testar APIs
-- Schemas de request/response detalhados  
-- Autenticação JWT integrada (Bearer token)
-- Organização por tags (Auth, Health)
+**Features:**
+- Complete documentation of all endpoints
+- Interactive interface to test APIs
+- Detailed request/response schemas
+- Integrated JWT authentication (Bearer token)
+- Organization by tags (Auth, Health)
 
-**Para acessar:**
-1. Inicie a aplicação em modo desenvolvimento:
+**To access:**
+1. Start the application in development mode:
    ```bash
    docker-compose -f docker-compose.dev.yml up --build
    ```
-2. Acesse: http://localhost:3001/docs
+2. Access: http://localhost:3001/docs
 
-**Observação:** A documentação Swagger é desabilitada automaticamente em produção por questões de segurança.
+**Note:** Swagger documentation is automatically disabled in production for security reasons.
 
-### Arquivos de Documentação
-- `http-docs/auth.http` - Testes HTTP para autenticação
-- `src/lib/response/README.md` - Documentação da classe ApiResponseHandler
+### Documentation Files
+- `http-docs/auth.http` - HTTP tests for authentication
+- `src/lib/response/README.md` - ApiResponseHandler class documentation
 
-### Endpoints Principais
+### Main Endpoints
 
 **Health Check:**
-- `GET /health` - Status da aplicação
+- `GET /health` - Application status
 
-**Autenticação:**
-- `POST /auth/register` - Registro de usuário
-- `POST /auth/login` - Login e obtenção de token JWT
-- `GET /auth/me` - Perfil do usuário autenticado (requer token)
+**Authentication:**
+- `POST /auth/register` - User registration
+- `POST /auth/login` - Login and JWT token retrieval
+- `GET /auth/me` - Authenticated user profile (requires token)
 
-Todos os endpoints estão documentados no Swagger UI com schemas completos e exemplos de uso.
+All endpoints are documented in Swagger UI with complete schemas and usage examples.
 
-### Scripts de Desenvolvimento
+### Development Scripts
 
 ```bash
-# Executar em modo desenvolvimento (com Swagger)
+# Run in development mode (with Swagger)
 pnpm dev
 
-# Build para produção
+# Build for production
 pnpm build
 
-# Executar em produção (sem Swagger)
+# Run in production (without Swagger)
 pnpm start
 ```
 
-**Nota:** O Swagger UI é habilitado automaticamente em ambiente de desenvolvimento (`NODE_ENV=development`).
+**Note:** Swagger UI is automatically enabled in development environment (`NODE_ENV=development`).
 
 ### Health Checks
 
-Todos os serviços incluem health checks automáticos:
+All services include automatic health checks:
 
-- **App**: Verifica se a rota `/health` responde
-- **MongoDB**: Testa conexão com o banco
-- **Redis**: Testa conexão com o cache
+- **App**: Checks if the `/health` route responds
+- **MongoDB**: Tests database connection
+- **Redis**: Tests cache connection
 
-### Variáveis de Ambiente
+### Environment Variables
 
-As seguintes variáveis são configuradas automaticamente:
+The following variables are automatically configured:
 
 - `PORT=3001`
 - `MONGO_URI=mongodb://admin:password@mongodb:27017/boilerplate?authSource=admin`
-- `JWT_SECRET` (configurado no docker-compose)
-- `NODE_ENV=production` (ou development)
+- `JWT_SECRET` (configured in docker-compose)
+- `NODE_ENV=production` (or development)
 
-### Desenvolvimento Local
+### Local Development
 
-Para desenvolvimento local sem Docker:
+For local development without Docker:
 
 ```bash
-# Instalar dependências
+# Install dependencies
 pnpm install
 
-# Executar em modo desenvolvimento (com Swagger)
+# Run in development mode (with Swagger)
 pnpm run dev
 
-# Build para produção
+# Build for production
 pnpm run build
 
-# Executar em produção (sem Swagger)
+# Run in production (without Swagger)
 pnpm run start
 ```
 
-### Estrutura do Projeto
+### Project Structure
 
 ```
 src/
-├── app.ts                 # Configuração principal da aplicação
-├── server.ts             # Inicialização do servidor
+├── app.ts                 # Main application configuration
+├── server.ts             # Server initialization
 ├── infraestructure/
-│   ├── mongo/           # Conexão e repositório MongoDB
-│   └── server/          # Configurações Fastify
-├── entities/            # Schemas das entidades
-├── modules/             # Módulos de negócio
-└── lib/                 # Utilitários
+│   ├── mongo/           # MongoDB connection and repository
+│   └── server/          # Fastify configurations
+├── entities/            # Entity schemas
+├── modules/             # Business modules
+└── lib/                 # Utilities
 ```
 
-### Segurança
+### Security
 
-O projeto inclui múltiplas camadas de segurança:
+The project includes multiple security layers:
 
-- Validações rigorosas nos schemas
-- Sanitização de entrada
-- Proteção contra injeções
-- Autenticação JWT
-- HTTPS obrigatório em produção
+- Strict validations in schemas
+- Input sanitization
+- Protection against injections
+- JWT authentication
+- HTTPS required in production
 
-Para mais detalhes sobre segurança, consulte o arquivo `PlanTask.chatmode.md`.
+For more details about security, see the `PlanTask.chatmode.md` file.
