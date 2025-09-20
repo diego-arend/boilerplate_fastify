@@ -2,23 +2,23 @@
 
 Este módulo implementa autenticação completa com JWT, integrado ao MongoDB através do `UserAuthRepository`.
 
-## Funcionalidades
+## Arquitetura
 
-- ✅ Registro de usuários
-- ✅ Login com JWT
-- ✅ Rotas protegidas
-- ✅ Busca de usuários (admin)
-- ✅ Validações de segurança
-- ✅ Sanitização de entrada
-- ✅ Proteção contra injeção
+### Funcionalidades Principais
+- Registro de usuários
+- Login com JWT
+- Rotas protegidas
+- Busca de usuários (admin)
+- Validações de segurança
+- Sanitização de entrada
+- Proteção contra injeção
 
-## Estrutura
-
+### Estrutura de Arquivos
 ```
 auth/
 ├── auth.controller.ts    # Rotas e lógica de negócio
 ├── auth.plugin.ts        # Plugin Fastify de autenticação
-├── repository/           # Repositório específico
+├── repository/           # Camada de persistência
 │   ├── userAuth.repository.ts
 │   └── index.ts
 ├── strategy.ts           # Estratégia de autenticação
@@ -26,116 +26,51 @@ auth/
 └── types/                # Tipos TypeScript
 ```
 
-## API Endpoints
+### Componentes Principais
 
-### POST /auth/register
-Registra um novo usuário.
+#### AuthController
+Gerencia as rotas de autenticação:
+- `POST /auth/register` - Registro de usuários
+- `POST /auth/login` - Login de usuários
+- `GET /auth/me` - Dados do usuário autenticado
+- `GET /auth/users` - Lista de usuários (admin)
 
-**Request:**
-```json
-{
-  "name": "João Silva",
-  "email": "joao@example.com",
-  "password": "MinhaSenha123!"
-}
-```
+#### AuthPlugin
+Plugin Fastify que:
+- Registra hooks de autenticação
+- Valida tokens JWT
+- Controla acesso baseado em roles
+- Gerencia sessões de usuário
 
-**Response:**
-```json
-{
-  "user": {
-    "id": "...",
-    "name": "João Silva",
-    "email": "joao@example.com",
-    "role": "user",
-    "status": "active"
-  },
-  "token": "jwt_token_here"
-}
-```
+#### UserAuthRepository
+Camada de persistência responsável por:
+- Operações CRUD de usuários
+- Busca por email e ID
+- Validações de unicidade
+- Paginação de resultados
+- Controle de status e roles
 
-### POST /auth/login
-Faz login do usuário.
-
-**Request:**
-```json
-{
-  "email": "joao@example.com",
-  "password": "MinhaSenha123!"
-}
-```
-
-### GET /auth/me
-Retorna dados do usuário autenticado.
-
-**Headers:**
-```
-Authorization: Bearer jwt_token_here
-```
-
-### GET /auth/users (Admin only)
-Lista usuários com paginação.
-
-**Query Parameters:**
-- `page`: Página (padrão: 1)
-- `limit`: Itens por página (padrão: 10)
-- `status`: Filtrar por status
-- `role`: Filtrar por role
-
-## UserAuthRepository
-
-### Métodos Principais
-
-```typescript
-import { UserAuthRepository } from './modules/auth/repository/index.js';
-
-const userRepo = new UserAuthRepository();
-
-// Buscar por email
-const user = await userRepo.findByEmail('user@example.com');
-
-// Criar usuário
-const newUser = await userRepo.createUser({
-  name: 'João',
-  email: 'joao@example.com',
-  password: 'hashed_password'
-});
-
-// Atualizar senha
-await userRepo.updatePassword(userId, 'new_hashed_password');
-
-// Buscar usuários ativos
-const activeUsers = await userRepo.findActiveUsers();
-
-// Paginação
-const result = await userRepo.findUsersPaginated(1, 10);
-```
+#### Strategy
+Implementa a estratégia de autenticação:
+- Validação de credenciais
+- Geração de tokens JWT
+- Verificação de permissões
+- Controle de acesso
 
 ### Validações de Segurança
-
 - **Email**: Regex rigoroso, sanitização, verificação de duplicatas
 - **Senha**: Mínimo 8 caracteres, complexidade obrigatória
 - **Nome**: Sanitização contra XSS, limite de caracteres
 - **Status/Role**: Enums validados
 - **Injeção**: Detecção e bloqueio de tentativas
 
-## Próximos Passos
+### Camadas de Segurança
+- Sanitização de entrada
+- Validação de dados
+- Proteção contra injeção
+- Autenticação JWT
+- Controle de acesso baseado em roles
+- Verificação de status da conta
 
-1. **Implementar hash de senha** (bcrypt)
-2. **Adicionar refresh tokens**
-3. **Implementar recuperação de senha**
-4. **Adicionar rate limiting**
-5. **Logs de segurança**
-
-## Segurança
-
-O módulo inclui múltiplas camadas de segurança:
-
-- ✅ Sanitização de entrada
-- ✅ Validação de dados
-- ✅ Proteção contra injeção
-- ✅ Autenticação JWT
-- ✅ Controle de acesso baseado em roles
-- ✅ Verificação de status da conta
-
-Para mais detalhes sobre segurança, consulte o arquivo `PlanTask.chatmode.md`.
+## Integração
+O módulo é integrado ao sistema através do `modules.ts` principal e utiliza as configurações globais de banco de dados e validação de ambiente.
