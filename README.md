@@ -8,7 +8,21 @@ Boilerplate for Fastify applications with TypeScript, MongoDB and Redis cache sy
 - **TypeScript**: Type-safe development
 - **MongoDB**: Database with Mongoose ODM
 - **Redis Cache**: In-memory caching system
-- **BullMQ Queue System**: Background job processing with worker separation
+- **BullMQ Queue System**: Background job processing wit**Monitoring and Debugging:**
+```bash
+# Monitor queue worker
+docker-compose logs -f queue-worker
+
+# Check Redis queue data
+docker-compose exec redis redis-cli
+> KEYS bull:*
+> HGETALL bull:jobs:waiting
+
+# Add jobs programmatically in your app
+import { getDefaultQueueManager, JobType } from './infraestructure/queue/index.js';
+const queueManager = getDefaultQueueManager();
+await queueManager.addJob(JobType.EMAIL_SEND, emailData);
+```ration
 - **JWT Authentication**: Secure authentication with RBAC
 - **Docker**: Containerized development and production
 - **Swagger UI**: Interactive API documentation (dev only)
@@ -115,11 +129,11 @@ The application includes interactive API documentation through Swagger UI, avail
 
 ### Documentation Files
 - `http-docs/auth.http` - HTTP tests for authentication
-- `http-docs/queue.http` - HTTP tests for queue system
 - `http-docs/cache.http` - HTTP tests for cache behavior
 - `src/infraestructure/cache/README.md` - Cache system documentation
 - `src/modules/auth/README.md` - Authentication and RBAC documentation
 - `src/lib/response/README.md` - ApiResponseHandler class documentation
+- `src/infraestructure/queue/README.md` - Queue system documentation
 
 ### Main Endpoints
 
@@ -132,14 +146,10 @@ The application includes interactive API documentation through Swagger UI, avail
 - `GET /auth/me` - Authenticated user profile (requires token, **cached**)
 
 **Queue Management:**
-- `POST /api/queue/jobs` - Add job to queue
-- `GET /api/queue/jobs/:jobId` - Get job status and details
-- `DELETE /api/queue/jobs/:jobId` - Remove job from queue
-- `GET /api/queue/stats` - Get queue statistics
-- `POST /api/queue/pause` - Pause job processing
-- `POST /api/queue/resume` - Resume job processing
-- `POST /api/queue/clean/completed` - Clean old completed jobs
-- `POST /api/queue/clean/failed` - Clean old failed jobs
+- Queue operations are handled internally via QueueManager
+- Jobs are added directly in application code
+- Queue monitoring available through Redis CLI
+- Worker processes jobs in background containers
 
 **Cache Testing:**
 - Use `http-docs/cache.http` for cache hit/miss testing
@@ -267,45 +277,43 @@ The application includes a robust job queue system with BullMQ and Redis:
 - **HIGH**: 10 (important notifications)
 - **URGENT**: 20 (security alerts, critical operations)
 
-**Queue Management API:**
+**Queue Management:**
 
-*Add Job to Queue:*
-```bash
-POST /api/queue/jobs
-{
-  "type": "EMAIL_SEND",
-  "data": {
-    "to": "user@example.com",
-    "subject": "Welcome",
-    "template": "welcome"
-  },
-  "options": {
-    "priority": 10,
-    "delay": 5000,
-    "attempts": 3,
-    "jobId": "custom-job-id"
-  }
-}
+The queue system operates internally without HTTP endpoints. Jobs are added directly in your application code:
+
+```typescript
+import { getDefaultQueueManager, JobType } from './infraestructure/queue/index.js';
+
+const queueManager = getDefaultQueueManager();
+
+// Add email job
+await queueManager.addJob(JobType.EMAIL_SEND, {
+  to: 'user@example.com',
+  subject: 'Welcome',
+  template: 'welcome'
+}, {
+  priority: 10,
+  attempts: 3
+});
+
+// Add notification job  
+await queueManager.addJob(JobType.USER_NOTIFICATION, {
+  userId: 'user123',
+  title: 'New message',
+  body: 'You have a new message'
+});
 ```
 
-*Get Job Status:*
-```bash
-GET /api/queue/jobs/{jobId}
-# Returns: status, data, result, attempts, timestamps
-```
+**Queue Monitoring:**
 
-*Queue Statistics:*
+Monitor queues directly through Redis:
 ```bash
-GET /api/queue/stats
-# Returns: waiting, active, completed, failed, delayed counts
-```
+# Connect to Redis
+docker-compose exec redis redis-cli
 
-*Queue Control:*
-```bash
-POST /api/queue/pause    # Pause job processing
-POST /api/queue/resume   # Resume job processing
-POST /api/queue/clean/completed  # Clean old completed jobs
-POST /api/queue/clean/failed     # Clean old failed jobs
+# Check queue data
+> KEYS bull:*
+> HGETALL bull:jobs:waiting
 ```
 
 **Worker Configuration:**
@@ -325,7 +333,7 @@ docker-compose logs -f queue-worker
 
 **Job Handler Implementation:**
 
-Each job type has its own handler in `src/modules/queue/queue.worker.ts`:
+Each job type has its own handler in `src/infraestructure/queue/queue.worker.ts`:
 
 ```typescript
 // Example job handler
@@ -343,11 +351,15 @@ private async handleEmailSend(jobData: EmailJobData): Promise<JobResult> {
 
 **Queue Testing:**
 
-Use the `http-docs/queue.http` file for comprehensive testing:
-1. Add jobs with different types and priorities
-2. Check job status and results
-3. Test queue management operations
-4. Monitor queue statistics
+Test the queue system by adding jobs in your application code. Monitor processing through worker logs:
+
+```bash
+# View worker logs
+docker-compose logs -f queue-worker
+
+# Monitor Redis for queue activity  
+docker-compose exec redis redis-cli MONITOR
+```
 
 **Error Handling:**
 - Failed jobs are automatically retried based on `attempts` setting
@@ -425,21 +437,20 @@ src/
 │   │   ├── cache.plugin.ts        # Fastify cache plugin
 │   │   └── index.ts               # Cache exports
 │   ├── mongo/               # MongoDB connection and repository
+│   ├── queue/               # BullMQ job queue system
+│   │   ├── queue.types.ts       # Job types and interfaces
+│   │   ├── queue.manager.ts     # Queue management operations
+│   │   ├── queue.worker.ts      # Background worker process
+│   │   ├── queue.controller.ts  # Queue API endpoints
+│   │   └── queue.plugin.ts      # Fastify queue plugin
 │   └── server/              # Fastify configurations
 ├── entities/                # Entity schemas
 ├── modules/                 # Business modules
 │   ├── auth/               # Authentication system with RBAC
-│   ├── health/             # Health check endpoints
-│   └── queue/              # BullMQ job queue system
-│       ├── queue.types.ts       # Job types and interfaces
-│       ├── queue.manager.ts     # Queue management operations
-│       ├── queue.worker.ts      # Background worker process
-│       ├── queue.controller.ts  # Queue API endpoints
-│       └── queue.plugin.ts      # Fastify queue plugin
+│   └── health/             # Health check endpoints
 ├── lib/                    # Utilities and helpers
 └── http-docs/              # HTTP test files
     ├── auth.http          # Authentication tests
-    ├── queue.http         # Queue system tests
     └── cache.http         # Cache testing examples
 ```
 

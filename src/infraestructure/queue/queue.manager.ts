@@ -17,19 +17,23 @@ import type {
 export class QueueManager {
   private queue: Queue;
   private config: QueueConfig;
-  private isInitialized = false;
+  private static instance: QueueManager | null = null;
+  private initialized: boolean = false;
 
   /**
    * Create QueueManager instance
    * @param queueName - Name of the queue
    */
-  constructor(queueName: string = 'default') {
+  constructor(queueName: string = 'main') {
+    const redisPassword = process.env.REDIS_PASSWORD;
+    
     this.config = {
       name: queueName,
       redis: {
-        host: 'localhost',
-        port: 6379,
-        db: 0
+        host: process.env.REDIS_HOST || 'localhost',
+        port: parseInt(process.env.REDIS_PORT || '6379'),
+        ...(redisPassword && { password: redisPassword }),
+        db: parseInt(process.env.REDIS_DB || '0')
       },
       defaultJobOptions: {
         attempts: 3,
@@ -37,59 +41,28 @@ export class QueueManager {
           type: 'exponential',
           delay: 2000
         },
-        removeOnComplete: 100,
+        removeOnComplete: 10,
         removeOnFail: 50
       }
     };
 
-    // Initialize queue (will be configured later)
+    // Initialize queue
     this.queue = new Queue(queueName, {
       connection: this.getRedisConfig(),
       ...(this.config.defaultJobOptions && { defaultJobOptions: this.config.defaultJobOptions })
     });
+    
+    this.initialized = true;
   }
 
   /**
-   * Initialize queue manager with application configuration
-   * @param appConfig - Application configuration
+   * Get singleton instance of QueueManager
    */
-  public async initialize(appConfig: typeof config): Promise<void> {
-    if (this.isInitialized) {
-      return;
+  static getInstance(queueName = 'main'): QueueManager {
+    if (!QueueManager.instance) {
+      QueueManager.instance = new QueueManager(queueName);
     }
-
-    try {
-      // Update Redis configuration from app config
-      const redisConfig = {
-        host: appConfig.REDIS_HOST,
-        port: appConfig.REDIS_PORT,
-        ...(appConfig.REDIS_DB !== undefined && { db: appConfig.REDIS_DB })
-      };
-
-      // Add password only if provided
-      if (appConfig.REDIS_PASSWORD) {
-        this.config.redis = {
-          ...redisConfig,
-          password: appConfig.REDIS_PASSWORD
-        };
-      } else {
-        this.config.redis = redisConfig;
-      }
-
-      // Recreate queue with updated configuration
-      await this.queue.close();
-      this.queue = new Queue(this.config.name, {
-        connection: this.getRedisConfig(),
-        ...(this.config.defaultJobOptions && { defaultJobOptions: this.config.defaultJobOptions })
-      });
-
-      this.isInitialized = true;
-      console.log(`QueueManager: Initialized queue '${this.config.name}'`);
-
-    } catch (error) {
-      console.error('QueueManager: Initialization failed', error);
-      throw new Error(`Failed to initialize queue manager: ${error}`);
-    }
+    return QueueManager.instance;
   }
 
   /**
@@ -104,7 +77,6 @@ export class QueueManager {
     jobData: T,
     options: JobOptions = {}
   ): Promise<Job<T>> {
-    this.ensureInitialized();
 
     try {
       // Validate job data
@@ -136,7 +108,6 @@ export class QueueManager {
    * @returns Job instance or null if not found
    */
   public async getJob(jobId: string): Promise<Job | null> {
-    this.ensureInitialized();
 
     try {
       const job = await this.queue.getJob(jobId);
@@ -196,7 +167,6 @@ export class QueueManager {
    * @returns True if removed successfully
    */
   public async removeJob(jobId: string): Promise<boolean> {
-    this.ensureInitialized();
 
     try {
       const job = await this.getJob(jobId);
@@ -217,7 +187,6 @@ export class QueueManager {
    * @returns Queue statistics
    */
   public async getStats(): Promise<QueueStats> {
-    this.ensureInitialized();
 
     try {
       const waiting = await this.queue.getWaiting();
@@ -252,7 +221,6 @@ export class QueueManager {
    * Pause the queue
    */
   public async pause(): Promise<void> {
-    this.ensureInitialized();
     await this.queue.pause();
     console.log(`QueueManager: Queue '${this.config.name}' paused`);
   }
@@ -261,7 +229,6 @@ export class QueueManager {
    * Resume the queue
    */
   public async resume(): Promise<void> {
-    this.ensureInitialized();
     await this.queue.resume();
     console.log(`QueueManager: Queue '${this.config.name}' resumed`);
   }
@@ -272,7 +239,6 @@ export class QueueManager {
    * @param limit - Maximum number of jobs to clean
    */
   public async cleanCompleted(grace: number = 24 * 60 * 60 * 1000, limit: number = 100): Promise<number> {
-    this.ensureInitialized();
 
     try {
       const jobs = await this.queue.clean(grace, limit, 'completed');
@@ -291,7 +257,6 @@ export class QueueManager {
    * @param limit - Maximum number of jobs to clean
    */
   public async cleanFailed(grace: number = 24 * 60 * 60 * 1000, limit: number = 100): Promise<number> {
-    this.ensureInitialized();
 
     try {
       const jobs = await this.queue.clean(grace, limit, 'failed');
@@ -313,11 +278,11 @@ export class QueueManager {
   }
 
   /**
-   * Check if queue is ready
+   * Check if queue manager is initialized
    * @returns True if initialized
    */
   public isReady(): boolean {
-    return this.isInitialized;
+    return this.initialized;
   }
 
   /**
@@ -326,7 +291,7 @@ export class QueueManager {
   public async close(): Promise<void> {
     try {
       await this.queue.close();
-      this.isInitialized = false;
+      this.initialized = false;
       console.log(`QueueManager: Queue '${this.config.name}' closed`);
     } catch (error) {
       console.error('QueueManager: Error closing queue', error);
@@ -379,32 +344,14 @@ export class QueueManager {
       }
     }
   }
-
-  /**
-   * Ensure queue is initialized
-   * @private
-   */
-  private ensureInitialized(): void {
-    if (!this.isInitialized) {
-      throw new Error('QueueManager not initialized. Call initialize() first.');
-    }
-  }
 }
-
-/**
- * Default queue manager instance
- */
-let defaultQueueManager: QueueManager | null = null;
 
 /**
  * Get default queue manager instance
  * @returns QueueManager singleton
  */
 export function getDefaultQueueManager(): QueueManager {
-  if (!defaultQueueManager) {
-    defaultQueueManager = new QueueManager('main');
-  }
-  return defaultQueueManager;
+  return QueueManager.getInstance('main');
 }
 
 /**

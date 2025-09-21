@@ -48,4 +48,4 @@ RUN chown -R worker:nodejs /app
 USER worker
 
 # Command for production worker
-CMD ["node", "dist/modules/queue/queue.worker.js"]
+CMD ["node", "dist/infraestructure/queue/queue.worker.js"]

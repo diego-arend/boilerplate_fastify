@@ -10,7 +10,7 @@
     "dev": "tsx --watch src/server.ts",
     "start": "node dist/server.js",
     "build": "tsc",
-    "worker:queue": "tsx src/modules/queue/queue.worker.ts",
+    "worker:queue": "tsx src/infraestructure/queue/queue.worker.ts",
     "docker:dev": "docker-compose -f docker-compose.dev.yml up --build",
     "docker:dev:down": "docker-compose -f docker-compose.dev.yml down",
     "docker:prod": "docker-compose up --build",

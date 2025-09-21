@@ -1,6 +1,6 @@
 # BullMQ Queue System
 
-This module implements a robust job queue system using BullMQ and Redis for background task processing.
+This infrastructure module implements a robust job queue system using BullMQ and Redis for background task processing.
 
 ## Architecture
 

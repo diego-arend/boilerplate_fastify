@@ -1,7 +1,6 @@
 import type { FastifyInstance, FastifyPluginOptions } from 'fastify'
 import authPlugin from './modules/auth/auth.plugin.js'
 import healthPlugin from './modules/health/health.plugin.js'
-import queuePlugin from './modules/queue/queue.plugin.js'
 import cachePlugin from './infraestructure/cache/cache.plugin.js'
 import { registerModule } from './infraestructure/server/modules.js'
 import MongoConnection from './infraestructure/mongo/connection.js'
@@ -53,7 +52,6 @@ export default async function app(fastify: FastifyInstance, opts: FastifyPluginO
   // Register modules
   await registerModule(fastify, healthPlugin, '', 'health')
   await registerModule(fastify, authPlugin, '/auth', 'auth')
-  await registerModule(fastify, queuePlugin, '/api', 'queue')
 
   // MongoDB connection will be handled in server.ts
   fastify.addHook('onReady', async () => {
