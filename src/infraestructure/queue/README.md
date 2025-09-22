@@ -1,13 +1,14 @@
 # BullMQ Queue System
 
-This infrastructure module implements a robust job queue system using BullMQ and Redis for background task processing.
+This infrastructure module implements a robust job queue system using BullMQ and Redis for background task processing with modular job handlers.
 
 ## Architecture
 
-The queue system is designed with separation of concerns:
+The queue system is designed with separation of concerns and modular job processing:
 
 - **API Server**: Handles job submission, status queries, and queue management
 - **Queue Worker**: Separate process/container that processes jobs in the background
+- **Modular Job Handlers**: Individual handlers for each job type in separate files
 - **Redis**: Shared storage for job queues, results, and status tracking
 
 ## Components
@@ -19,12 +20,12 @@ Defines all job types, data structures, and interfaces:
 ```typescript
 // Available job types
 export const JobType = {
-  EMAIL_SEND: 'EMAIL_SEND',
-  USER_NOTIFICATION: 'USER_NOTIFICATION', 
-  DATA_EXPORT: 'DATA_EXPORT',
-  FILE_PROCESS: 'FILE_PROCESS',
-  CACHE_WARM: 'CACHE_WARM',
-  CLEANUP: 'CLEANUP'
+  EMAIL_SEND: 'email:send',
+  USER_NOTIFICATION: 'user:notification', 
+  DATA_EXPORT: 'data:export',
+  FILE_PROCESS: 'file:process',
+  CACHE_WARM: 'cache:warm',
+  CLEANUP: 'cleanup'
 } as const;
 
 // Job priority levels
@@ -32,11 +33,34 @@ export const JobPriority = {
   LOW: 1,
   NORMAL: 5,
   HIGH: 10,
-  URGENT: 20
+  CRITICAL: 15
 } as const;
 ```
 
-### 2. Queue Manager (`queue.manager.ts`)
+### 2. Modular Job Handlers (`jobs/`)
+
+Each job type has its own dedicated handler file with comprehensive processing logic:
+
+#### Structure
+```
+src/infraestructure/queue/jobs/
+├── index.ts                    # Handler registry and utilities
+├── emailSend.job.ts           # EMAIL_SEND handler
+├── userNotification.job.ts    # USER_NOTIFICATION handler
+├── dataExport.job.ts          # DATA_EXPORT handler
+├── fileProcess.job.ts         # FILE_PROCESS handler
+├── cacheWarm.job.ts           # CACHE_WARM handler
+└── cleanup.job.ts             # CLEANUP handler
+```
+
+#### Handler Features
+- **Type Safety**: Full TypeScript support with specific data interfaces
+- **Validation**: Comprehensive input validation and security checks
+- **Error Handling**: Detailed error reporting and retry logic
+- **Logging**: Structured logging with job context
+- **Simulation**: Realistic processing simulation for development/testing
+
+### 3. Queue Manager (`queue.manager.ts`)
 
 Provides high-level operations for queue management:
 
@@ -55,29 +79,30 @@ await queueManager.initialize(fastify.config);
 const job = await queueManager.addJob(JobType.EMAIL_SEND, {
   to: 'user@example.com',
   subject: 'Welcome',
-  template: 'welcome'
+  body: 'Welcome to our service!',
+  timestamp: Date.now()
 }, {
   priority: JobPriority.HIGH,
   attempts: 3
 });
 ```
 
-### 3. Queue Worker (`queue.worker.ts`)
+### 4. Queue Worker (`queue.worker.ts`)
 
-Independent worker process that processes jobs:
+Independent worker process that uses modular handlers:
 
-- Separate handlers for each job type
+- Automatic handler registration from job registry
 - Graceful shutdown handling
 - Comprehensive error handling and logging
 - Job result tracking and statistics
 
 ```typescript
-// Can be run as separate process
+// Worker automatically loads all handlers from jobs/index.ts
 const worker = new QueueWorker();
 await worker.start();
 ```
 
-### 4. Queue Controller (`queue.controller.ts`)
+### 5. Queue Controller (`queue.controller.ts`)
 
 REST API endpoints for queue operations:
 
@@ -88,60 +113,89 @@ REST API endpoints for queue operations:
 - `POST /queue/pause|resume` - Control processing
 - `POST /queue/clean/completed|failed` - Cleanup operations
 
-### 5. Queue Plugin (`queue.plugin.ts`)
+### 6. Queue Plugin (`queue.plugin.ts`)
 
 Fastify plugin that registers queue routes and initializes the system.
 
 ## Job Types and Handlers
 
-### EMAIL_SEND
-Handles email notifications and campaigns:
+### EMAIL_SEND (`jobs/emailSend.job.ts`)
+Handles email notifications and campaigns with template support:
+
 ```typescript
 interface EmailJobData extends BaseJobData {
   to: string;
   subject: string;
-  template: string;
+  body: string;
+  template?: string;
   variables?: Record<string, any>;
-  attachments?: Array<{
-    filename: string;
-    path: string;
-  }>;
 }
 ```
 
-### USER_NOTIFICATION
-Manages in-app user notifications:
+**Features:**
+- Template rendering simulation
+- Email validation and security checks
+- Delivery failure simulation (2% rate)
+- Comprehensive logging and error handling
+
+### USER_NOTIFICATION (`jobs/userNotification.job.ts`)
+Manages multi-channel user notifications:
+
 ```typescript
 interface UserNotificationJobData extends BaseJobData {
+  userId: string;
   title: string;
-  body: string;
-  type: 'info' | 'warning' | 'error' | 'success';
-  metadata?: Record<string, any>;
+  message: string;
+  type: 'info' | 'warning' | 'success' | 'error';
+  channels?: ('push' | 'email' | 'sms')[];
 }
 ```
 
-### DATA_EXPORT
+**Features:**
+- Multi-channel delivery (push, email, SMS)
+- Partial success handling
+- Channel-specific failure rates
+- Content length validation
+
+### DATA_EXPORT (`jobs/dataExport.job.ts`)
 Handles large data export operations:
+
 ```typescript
 interface DataExportJobData extends BaseJobData {
-  exportType: 'csv' | 'json' | 'xlsx';
-  filters: Record<string, any>;
-  columns?: string[];
+  userId: string;
+  format: 'csv' | 'json' | 'xlsx';
+  filters?: Record<string, any>;
+  outputPath?: string;
 }
 ```
 
-### FILE_PROCESS
+**Features:**
+- Multiple export formats
+- Secure path validation
+- File size estimation
+- Download URL generation with expiry
+
+### FILE_PROCESS (`jobs/fileProcess.job.ts`)
 Processes file uploads and transformations:
+
 ```typescript
 interface FileProcessJobData extends BaseJobData {
+  fileId: string;
   filePath: string;
-  operation: 'resize' | 'compress' | 'convert' | 'extract_text';
+  operation: 'compress' | 'resize' | 'convert' | 'analyze';
   options?: Record<string, any>;
 }
 ```
 
-### CACHE_WARM
+**Features:**
+- Multiple operation types (compress, resize, convert, analyze)
+- File type validation and security checks
+- Operation-specific processing simulation
+- Detailed file metadata generation
+
+### CACHE_WARM (`jobs/cacheWarm.job.ts`)
 Performs cache warming operations:
+
 ```typescript
 interface CacheWarmJobData extends BaseJobData {
   cacheKey: string;
@@ -150,40 +204,68 @@ interface CacheWarmJobData extends BaseJobData {
 }
 ```
 
-### CLEANUP
+**Features:**
+- Multiple data source types (database, API, file, computation, external)
+- Cache freshness checking
+- Data processing and validation
+- TTL management and expiry calculation
+
+### CLEANUP (`jobs/cleanup.job.ts`)
 System maintenance and cleanup tasks:
+
 ```typescript
 interface CleanupJobData extends BaseJobData {
-  targetType: 'temp_files' | 'old_logs' | 'expired_sessions';
-  olderThan: number; // milliseconds
-  path?: string;
+  target: 'temp_files' | 'old_logs' | 'expired_sessions' | 'cache';
+  olderThan?: number; // days
   pattern?: string;
 }
 ```
+
+**Features:**
+- Multiple cleanup targets
+- Secure path validation
+- Simulated file scanning and deletion
+- Detailed cleanup statistics and reporting
 
 ## Usage Examples
 
 ### Adding Jobs
 
 ```typescript
-// High priority email
+// High priority email with full data
 await queueManager.addJob(JobType.EMAIL_SEND, {
   to: 'urgent@example.com',
   subject: 'Security Alert',
-  template: 'security_alert'
+  body: 'Your account security needs attention.',
+  template: 'security_alert',
+  timestamp: Date.now()
 }, {
-  priority: JobPriority.URGENT,
+  priority: JobPriority.CRITICAL,
   attempts: 5
 });
 
-// Delayed notification
+// Multi-channel user notification
 await queueManager.addJob(JobType.USER_NOTIFICATION, {
   userId: 'user123',
-  title: 'Reminder',
-  body: 'Your subscription expires soon'
+  title: 'Subscription Reminder',
+  message: 'Your subscription expires in 3 days',
+  type: 'warning',
+  channels: ['push', 'email'],
+  timestamp: Date.now()
 }, {
   delay: 30000, // 30 seconds
-  priority: JobPriority.NORMAL
+  priority: JobPriority.HIGH
+});
+
+// Data export with custom filters
+await queueManager.addJob(JobType.DATA_EXPORT, {
+  userId: 'admin',
+  format: 'csv',
+  filters: { dateRange: '2024-01-01,2024-12-31', status: 'active' },
+  timestamp: Date.now()
+}, {
+  priority: JobPriority.NORMAL,
+  attempts: 3
 });
 ```
 
@@ -369,6 +451,119 @@ curl http://localhost:3001/api/queue/stats
 - Use authentication for queue management endpoints
 - Sanitize file paths and user inputs
 - Implement rate limiting for job submission
+
+## Adding New Job Types
+
+### 1. Create Job Handler File
+
+Create a new handler file in `src/infraestructure/queue/jobs/`:
+
+```typescript
+// src/infraestructure/queue/jobs/myNewJob.job.ts
+import type { FastifyBaseLogger } from 'fastify'
+import type { MyNewJobData, JobResult } from '../queue.types.js'
+
+export async function handleMyNewJob(
+  data: MyNewJobData,
+  jobId: string,
+  logger: FastifyBaseLogger
+): Promise<JobResult> {
+  const startTime = Date.now()
+
+  logger.info({ jobData: data }, 'Processing my new job')
+
+  try {
+    validateJobData(data)
+    const result = await processJob(data, logger)
+    const processingTime = Date.now() - startTime
+
+    return {
+      success: true,
+      data: result,
+      processedAt: Date.now(),
+      processingTime
+    }
+  } catch (error) {
+    const processingTime = Date.now() - startTime
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+
+    logger.error({ error, processingTime }, 'Job processing failed')
+
+    return {
+      success: false,
+      error: errorMessage,
+      processedAt: Date.now(),
+      processingTime
+    }
+  }
+}
+
+function validateJobData(data: MyNewJobData): void {
+  if (!data.requiredField) {
+    throw new Error('Required field is missing')
+  }
+}
+
+async function processJob(data: MyNewJobData, logger: FastifyBaseLogger): Promise<any> {
+  // Add processing logic
+  return { processed: true, timestamp: new Date().toISOString() }
+}
+```
+
+### 2. Update Queue Types
+
+Add the new job type and data interface in `queue.types.ts`:
+
+```typescript
+export const JobType = {
+  // ... existing types
+  MY_NEW_JOB: 'my:new:job',
+} as const;
+
+export interface MyNewJobData extends BaseJobData {
+  requiredField: string;
+  optionalField?: number;
+}
+
+// Update the union type
+export type JobData = 
+  | EmailJobData
+  | UserNotificationJobData
+  // ... other types
+  | MyNewJobData;
+```
+
+### 3. Register Handler
+
+Update the handler registry in `jobs/index.ts`:
+
+```typescript
+import { handleMyNewJob } from './myNewJob.job.js';
+
+export const JOB_HANDLERS: Record<string, JobHandler> = {
+  // ... existing handlers
+  [JobType.MY_NEW_JOB]: handleMyNewJob,
+} as const;
+
+export { handleMyNewJob } from './myNewJob.job.js';
+```
+
+### 4. Test the Handler
+
+```bash
+curl -X POST http://localhost:3001/api/queue/jobs \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "my:new:job",
+    "data": {
+      "requiredField": "test value",
+      "timestamp": '$(date +%s)'
+    },
+    "options": {
+      "priority": 5
+    }
+  }'
+```
 
 ## Troubleshooting
 

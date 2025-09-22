@@ -10,6 +10,9 @@ import {
   type WorkerConfig
 } from './queue.types.js';
 
+// Import job handlers
+import { JOB_HANDLERS, getJobHandler } from './jobs/index.js';
+
 // Load environment variables
 dotenv.config();
 
@@ -156,161 +159,18 @@ class QueueWorker {
 
   /**
    * Setup job handlers for different job types
+   * Uses modular handlers from the jobs directory
    */
   private setupHandlers(): void {
-    // Email sending handler
-    this.handlers.set(JobType.EMAIL_SEND, async (data: any, jobId: string, jobLogger: any) => {
-      jobLogger.info({
-        to: data.to,
-        subject: data.subject
-      }, 'Sending email');
-      
-      // Simulate email sending
-      await this.delay(1000 + Math.random() * 2000);
-      
-      return {
-        success: true,
-        data: {
-          messageId: `msg_${jobId}_${Date.now()}`,
-          to: data.to,
-          subject: data.subject,
-          sentAt: new Date().toISOString()
-        }
-      };
-    });
-
-    // User notification handler
-    this.handlers.set(JobType.USER_NOTIFICATION, async (data: any, jobId: string, jobLogger: any) => {
-      jobLogger.info({
-        userId: data.userId,
-        title: data.title,
-        channels: data.channels || ['push']
-      }, 'Sending user notification');
-      
-      // Simulate notification processing
-      await this.delay(500 + Math.random() * 1000);
-      
-      return {
-        success: true,
-        data: {
-          notificationId: `notif_${jobId}_${Date.now()}`,
-          userId: data.userId,
-          channels: data.channels || ['push'],
-          sentAt: new Date().toISOString()
-        }
-      };
-    });
-
-    // Data export handler
-    this.handlers.set(JobType.DATA_EXPORT, async (data: any, jobId: string, jobLogger: any) => {
-      jobLogger.info({
-        userId: data.userId,
-        format: data.format,
-        estimatedRecords: data.estimatedRecords
-      }, 'Starting data export');
-      
-      // Simulate data export processing
-      await this.delay(2000 + Math.random() * 3000);
-      
-      const filePath = data.outputPath || `/tmp/export_${jobId}_${Date.now()}.${data.format}`;
-      const recordCount = Math.floor(Math.random() * 10000);
-      
-      jobLogger.info({
-        filePath,
-        recordCount,
-        format: data.format
-      }, 'Data export completed');
-      
-      return {
-        success: true,
-        data: {
-          exportId: `export_${jobId}_${Date.now()}`,
-          filePath,
-          format: data.format,
-          recordCount,
-          completedAt: new Date().toISOString()
-        }
-      };
-    });
-
-    // File processing handler
-    this.handlers.set(JobType.FILE_PROCESS, async (data: any, jobId: string, jobLogger: any) => {
-      jobLogger.info({
-        fileId: data.fileId,
-        operation: data.operation,
-        filePath: data.filePath
-      }, 'Starting file processing');
-      
-      // Simulate file processing
-      await this.delay(3000 + Math.random() * 5000);
-      
-      return {
-        success: true,
-        data: {
-          processId: `proc_${jobId}_${Date.now()}`,
-          fileId: data.fileId,
-          operation: data.operation,
-          originalPath: data.filePath,
-          processedPath: `${data.filePath}.processed`,
-          completedAt: new Date().toISOString()
-        }
-      };
-    });
-
-    // Cache warming handler
-    this.handlers.set(JobType.CACHE_WARM, async (data: any, jobId: string, jobLogger: any) => {
-      jobLogger.info({
-        cacheKey: data.cacheKey,
-        dataSource: data.dataSource,
-        ttl: data.ttl || 3600
-      }, 'Warming cache');
-      
-      // Simulate cache warming
-      await this.delay(500 + Math.random() * 1000);
-      
-      return {
-        success: true,
-        data: {
-          cacheKey: data.cacheKey,
-          dataSource: data.dataSource,
-          ttl: data.ttl || 3600,
-          warmedAt: new Date().toISOString()
-        }
-      };
-    });
-
-    // Cleanup handler
-    this.handlers.set(JobType.CLEANUP, async (data: any, jobId: string, jobLogger: any) => {
-      jobLogger.info({
-        target: data.target,
-        olderThan: data.olderThan
-      }, 'Starting cleanup task');
-      
-      // Simulate cleanup operation
-      await this.delay(1000 + Math.random() * 2000);
-      
-      const itemsRemoved = Math.floor(Math.random() * 100);
-      
-      jobLogger.info({
-        itemsRemoved,
-        target: data.target
-      }, 'Cleanup task completed');
-      
-      return {
-        success: true,
-        data: {
-          target: data.target,
-          itemsRemoved,
-          olderThan: data.olderThan,
-          completedAt: new Date().toISOString()
-        }
-      };
-    });
+    // Register all job handlers from the registry
+    for (const [jobType, handler] of Object.entries(JOB_HANDLERS)) {
+      this.handlers.set(jobType, handler);
+    }
 
     this.logger.info({
       handlersCount: this.handlers.size,
       jobTypes: Array.from(this.handlers.keys())
-    }, 'Job handlers registered successfully');
+    }, 'Job handlers registered successfully from modular handlers');
   }
 
   /**
@@ -405,13 +265,6 @@ class QueueWorker {
       this.logger.error({ error }, 'Error during worker shutdown');
       process.exit(1);
     }
-  }
-
-  /**
-   * Delay utility for simulating async operations
-   */
-  private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   /**
