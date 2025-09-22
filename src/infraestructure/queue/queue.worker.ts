@@ -2,6 +2,7 @@
 import dotenv from 'dotenv';
 import { Worker, Job } from 'bullmq';
 import { config } from '../../lib/validators/validateEnv.js';
+import { defaultLogger } from '../../lib/logger/index.js';
 import {
   JobType,
   type JobData,
@@ -20,8 +21,15 @@ class QueueWorker {
   private worker: Worker;
   private config: WorkerConfig;
   private handlers: Map<string, Function>;
+  private logger: ReturnType<typeof defaultLogger.child>;
 
   constructor(queueName: string = 'main') {
+    // Initialize logger with worker context
+    this.logger = defaultLogger.child({ 
+      module: 'queue-worker',
+      queueName 
+    });
+
     // Load and validate environment
     const appConfig = config;
     
@@ -34,9 +42,25 @@ class QueueWorker {
       }
     };
 
+    this.logger.info({
+      queueName,
+      concurrency: this.config.concurrency,
+      environment: process.env.NODE_ENV || 'development'
+    }, 'Initializing Queue Worker');
+
     // Initialize job handlers
     this.handlers = new Map();
     this.setupHandlers();
+
+    // Log Redis connection info
+    const redisInfo = {
+      host: appConfig.REDIS_HOST,
+      port: appConfig.REDIS_PORT,
+      db: appConfig.REDIS_DB,
+      hasPassword: !!appConfig.REDIS_PASSWORD
+    };
+
+    this.logger.info(redisInfo, 'Connecting to Redis for queue processing');
 
     // Create BullMQ worker
     this.worker = new Worker(
@@ -58,12 +82,13 @@ class QueueWorker {
     );
 
     this.setupEventListeners();
-    console.log(`🚀 Queue Worker started for queue: ${queueName}`);
-    console.log(`📊 Configuration:`, {
+    
+    this.logger.info({
+      ...redisInfo,
       concurrency: this.config.concurrency,
-      redis: `${appConfig.REDIS_HOST}:${appConfig.REDIS_PORT}`,
-      database: appConfig.REDIS_DB
-    });
+      limiter: this.config.limiter,
+      handlersCount: this.handlers.size
+    }, 'Queue Worker started successfully');
   }
 
   /**
@@ -72,8 +97,14 @@ class QueueWorker {
   private async processJob(job: Job): Promise<JobResult> {
     const startTime = Date.now();
     const jobType = job.name;
+    const jobLogger = this.logger.child({ 
+      jobId: job.id, 
+      jobType,
+      attemptsMade: job.attemptsMade,
+      maxAttempts: job.opts.attempts || 1
+    });
     
-    console.log(`⚡ Processing job ${job.id} of type ${jobType}`);
+    jobLogger.info('Starting job processing');
     
     try {
       // Get handler for job type
@@ -85,11 +116,17 @@ class QueueWorker {
       // Validate job data
       this.validateJobData(job.data);
 
+      jobLogger.debug({ jobData: job.data }, 'Job data validated, executing handler');
+
       // Process job with handler
-      const result = await handler(job.data, job.id || 'unknown');
+      const result = await handler(job.data, job.id || 'unknown', jobLogger);
       
       const processingTime = Date.now() - startTime;
-      console.log(`✅ Job ${job.id} completed successfully in ${processingTime}ms`);
+      
+      jobLogger.info({
+        processingTime,
+        result: result.success
+      }, 'Job completed successfully');
       
       return {
         ...result,
@@ -101,7 +138,12 @@ class QueueWorker {
       const processingTime = Date.now() - startTime;
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       
-      console.error(`❌ Job ${job.id} failed:`, errorMessage);
+      jobLogger.error({
+        error: error instanceof Error ? error : new Error(String(error)),
+        processingTime,
+        attemptsMade: job.attemptsMade,
+        willRetry: job.attemptsMade < (job.opts.attempts || 1)
+      }, 'Job processing failed');
       
       return {
         success: false,
@@ -117,8 +159,11 @@ class QueueWorker {
    */
   private setupHandlers(): void {
     // Email sending handler
-    this.handlers.set(JobType.EMAIL_SEND, async (data: any, jobId: string) => {
-      console.log(`📧 Sending email to ${data.to}: ${data.subject}`);
+    this.handlers.set(JobType.EMAIL_SEND, async (data: any, jobId: string, jobLogger: any) => {
+      jobLogger.info({
+        to: data.to,
+        subject: data.subject
+      }, 'Sending email');
       
       // Simulate email sending
       await this.delay(1000 + Math.random() * 2000);
@@ -135,8 +180,12 @@ class QueueWorker {
     });
 
     // User notification handler
-    this.handlers.set(JobType.USER_NOTIFICATION, async (data: any, jobId: string) => {
-      console.log(`🔔 Sending notification to user ${data.userId}: ${data.title}`);
+    this.handlers.set(JobType.USER_NOTIFICATION, async (data: any, jobId: string, jobLogger: any) => {
+      jobLogger.info({
+        userId: data.userId,
+        title: data.title,
+        channels: data.channels || ['push']
+      }, 'Sending user notification');
       
       // Simulate notification processing
       await this.delay(500 + Math.random() * 1000);
@@ -153,13 +202,24 @@ class QueueWorker {
     });
 
     // Data export handler
-    this.handlers.set(JobType.DATA_EXPORT, async (data: any, jobId: string) => {
-      console.log(`📊 Exporting data for user ${data.userId} in ${data.format} format`);
+    this.handlers.set(JobType.DATA_EXPORT, async (data: any, jobId: string, jobLogger: any) => {
+      jobLogger.info({
+        userId: data.userId,
+        format: data.format,
+        estimatedRecords: data.estimatedRecords
+      }, 'Starting data export');
       
       // Simulate data export processing
       await this.delay(2000 + Math.random() * 3000);
       
       const filePath = data.outputPath || `/tmp/export_${jobId}_${Date.now()}.${data.format}`;
+      const recordCount = Math.floor(Math.random() * 10000);
+      
+      jobLogger.info({
+        filePath,
+        recordCount,
+        format: data.format
+      }, 'Data export completed');
       
       return {
         success: true,
@@ -167,15 +227,19 @@ class QueueWorker {
           exportId: `export_${jobId}_${Date.now()}`,
           filePath,
           format: data.format,
-          recordCount: Math.floor(Math.random() * 10000),
+          recordCount,
           completedAt: new Date().toISOString()
         }
       };
     });
 
     // File processing handler
-    this.handlers.set(JobType.FILE_PROCESS, async (data: any, jobId: string) => {
-      console.log(`🎯 Processing file ${data.fileId} with operation: ${data.operation}`);
+    this.handlers.set(JobType.FILE_PROCESS, async (data: any, jobId: string, jobLogger: any) => {
+      jobLogger.info({
+        fileId: data.fileId,
+        operation: data.operation,
+        filePath: data.filePath
+      }, 'Starting file processing');
       
       // Simulate file processing
       await this.delay(3000 + Math.random() * 5000);
@@ -194,8 +258,12 @@ class QueueWorker {
     });
 
     // Cache warming handler
-    this.handlers.set(JobType.CACHE_WARM, async (data: any, jobId: string) => {
-      console.log(`🔥 Warming cache for key: ${data.cacheKey}`);
+    this.handlers.set(JobType.CACHE_WARM, async (data: any, jobId: string, jobLogger: any) => {
+      jobLogger.info({
+        cacheKey: data.cacheKey,
+        dataSource: data.dataSource,
+        ttl: data.ttl || 3600
+      }, 'Warming cache');
       
       // Simulate cache warming
       await this.delay(500 + Math.random() * 1000);
@@ -212,13 +280,21 @@ class QueueWorker {
     });
 
     // Cleanup handler
-    this.handlers.set(JobType.CLEANUP, async (data: any, jobId: string) => {
-      console.log(`🧹 Running cleanup task: ${data.target}`);
+    this.handlers.set(JobType.CLEANUP, async (data: any, jobId: string, jobLogger: any) => {
+      jobLogger.info({
+        target: data.target,
+        olderThan: data.olderThan
+      }, 'Starting cleanup task');
       
       // Simulate cleanup operation
       await this.delay(1000 + Math.random() * 2000);
       
       const itemsRemoved = Math.floor(Math.random() * 100);
+      
+      jobLogger.info({
+        itemsRemoved,
+        target: data.target
+      }, 'Cleanup task completed');
       
       return {
         success: true,
@@ -231,7 +307,10 @@ class QueueWorker {
       };
     });
 
-    console.log(`📋 Registered ${this.handlers.size} job handlers:`, Array.from(this.handlers.keys()));
+    this.logger.info({
+      handlersCount: this.handlers.size,
+      jobTypes: Array.from(this.handlers.keys())
+    }, 'Job handlers registered successfully');
   }
 
   /**
@@ -240,27 +319,41 @@ class QueueWorker {
   private setupEventListeners(): void {
     // Worker events
     this.worker.on('ready', () => {
-      console.log('🟢 Worker is ready to process jobs');
+      this.logger.info('Worker is ready to process jobs');
     });
 
     this.worker.on('error', (error) => {
-      console.error('🔴 Worker error:', error);
+      this.logger.error({ error }, 'Worker error occurred');
     });
 
     this.worker.on('failed', (job, err) => {
-      console.error(`💥 Job ${job?.id} failed:`, err.message);
+      this.logger.error({
+        jobId: job?.id,
+        jobType: job?.name,
+        error: err,
+        attemptsMade: job?.attemptsMade,
+        maxAttempts: job?.opts?.attempts
+      }, 'Job failed');
     });
 
     this.worker.on('completed', (job) => {
-      console.log(`🎉 Job ${job.id} completed successfully`);
+      this.logger.info({
+        jobId: job.id,
+        jobType: job.name,
+        processingTime: job.finishedOn ? job.finishedOn - job.processedOn! : 0
+      }, 'Job completed successfully');
     });
 
     this.worker.on('stalled', (jobId) => {
-      console.warn(`⚠️ Job ${jobId} stalled`);
+      this.logger.warn({ jobId }, 'Job stalled');
     });
 
     this.worker.on('progress', (job, progress) => {
-      console.log(`📈 Job ${job.id} progress: ${progress}%`);
+      this.logger.debug({
+        jobId: job.id,
+        jobType: job.name,
+        progress
+      }, 'Job progress update');
     });
 
     // Graceful shutdown handlers
@@ -302,14 +395,14 @@ class QueueWorker {
    * Graceful shutdown
    */
   private async gracefulShutdown(signal: string): Promise<void> {
-    console.log(`📴 Received ${signal}, starting graceful shutdown...`);
+    this.logger.info({ signal }, 'Received shutdown signal, starting graceful shutdown');
     
     try {
       await this.worker.close();
-      console.log('✅ Worker closed gracefully');
+      this.logger.info('Worker closed gracefully');
       process.exit(0);
     } catch (error) {
-      console.error('❌ Error during shutdown:', error);
+      this.logger.error({ error }, 'Error during worker shutdown');
       process.exit(1);
     }
   }
@@ -337,15 +430,28 @@ class QueueWorker {
  * Start the queue worker if this file is run directly
  */
 if (import.meta.url === `file://${process.argv[1]}`) {
+  const queueName = process.env.QUEUE_NAME || 'main';
+  const logger = defaultLogger.child({ 
+    module: 'queue-worker-main',
+    queueName 
+  });
+
   try {
-    const queueName = process.env.QUEUE_NAME || 'main';
+    logger.info({
+      queueName,
+      environment: process.env.NODE_ENV || 'development',
+      nodeVersion: process.version
+    }, 'Starting Queue Worker process');
+    
     const worker = new QueueWorker(queueName);
     
-    // Keep the process running
-    console.log('🎯 Queue Worker is running. Press Ctrl+C to stop.');
+    logger.info('Queue Worker is running successfully. Press Ctrl+C to stop.');
     
   } catch (error) {
-    console.error('💥 Failed to start Queue Worker:', error);
+    logger.fatal({
+      error: error instanceof Error ? error : new Error(String(error)),
+      queueName
+    }, 'Failed to start Queue Worker');
     process.exit(1);
   }
 }

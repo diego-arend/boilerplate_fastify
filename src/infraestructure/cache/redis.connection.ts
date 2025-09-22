@@ -1,6 +1,7 @@
 import { createClient } from 'redis';
 import type { RedisClientType } from 'redis';
 import type { config } from '../../lib/validators/validateEnv.js';
+import { defaultLogger } from '../../lib/logger/index.js';
 
 /**
  * Redis connection singleton class
@@ -13,11 +14,14 @@ export class RedisConnection {
   private reconnectAttempts = 0;
   private readonly maxReconnectAttempts = 5;
   private readonly reconnectDelay = 1000; // 1 second
+  private logger: ReturnType<typeof defaultLogger.child>;
 
   /**
    * Private constructor to ensure singleton pattern
    */
-  private constructor() {}
+  private constructor() {
+    this.logger = defaultLogger.child({ module: 'redis-connection' });
+  }
 
   /**
    * Get the singleton instance of RedisConnection
@@ -37,7 +41,15 @@ export class RedisConnection {
    * @throws {Error} If connection fails after max attempts
    */
   public async connect(appConfig: typeof config): Promise<RedisClientType> {
+    const connectionInfo = {
+      host: appConfig.REDIS_HOST,
+      port: appConfig.REDIS_PORT,
+      db: appConfig.REDIS_DB,
+      environment: process.env.NODE_ENV || 'development'
+    };
+
     if (this.client && this.client.isOpen) {
+      this.logger.info(connectionInfo, 'Redis connection already established');
       return this.client;
     }
 
@@ -51,6 +63,12 @@ export class RedisConnection {
 
     this.isConnecting = true;
 
+    this.logger.info({
+      ...connectionInfo,
+      attempt: this.reconnectAttempts + 1,
+      maxAttempts: this.maxReconnectAttempts
+    }, 'Attempting to connect to Redis');
+
     try {
       // Create Redis client with configuration
       this.client = createClient({
@@ -58,11 +76,18 @@ export class RedisConnection {
         socket: {
           reconnectStrategy: (retries) => {
             if (retries >= this.maxReconnectAttempts) {
-              console.error('Redis: Max reconnection attempts reached');
+              this.logger.error({
+                ...connectionInfo,
+                attempts: retries + 1
+              }, 'Redis max reconnection attempts reached');
               return false;
             }
             const delay = Math.min(this.reconnectDelay * Math.pow(2, retries), 30000);
-            console.log(`Redis: Reconnecting in ${delay}ms (attempt ${retries + 1})`);
+            this.logger.warn({
+              ...connectionInfo,
+              attempt: retries + 1,
+              delayMs: delay
+            }, 'Redis reconnecting...');
             return delay;
           },
           connectTimeout: 10000, // 10 seconds
@@ -78,14 +103,23 @@ export class RedisConnection {
       this.isConnecting = false;
       this.reconnectAttempts = 0;
       
-      console.log('Redis: Successfully connected');
+      this.logger.info({
+        ...connectionInfo,
+        status: 'connected',
+        clientReady: this.client.isReady
+      }, 'Successfully connected to Redis');
+      
       return this.client;
 
     } catch (error) {
       this.isConnecting = false;
       this.reconnectAttempts++;
       
-      console.error('Redis: Connection failed', error);
+      this.logger.error({
+        ...connectionInfo,
+        attempt: this.reconnectAttempts,
+        error: error instanceof Error ? error : new Error(String(error))
+      }, 'Redis connection failed');
       
       if (this.reconnectAttempts >= this.maxReconnectAttempts) {
         throw new Error(`Redis: Failed to connect after ${this.maxReconnectAttempts} attempts`);
@@ -119,16 +153,21 @@ export class RedisConnection {
    */
   public async disconnect(): Promise<void> {
     if (this.client && this.client.isOpen) {
+      this.logger.info('Attempting to disconnect from Redis');
       try {
         await this.client.quit();
-        console.log('Redis: Disconnected gracefully');
+        this.logger.info('Redis disconnected gracefully');
       } catch (error) {
-        console.error('Redis: Error during disconnect', error);
+        this.logger.error({
+          error: error instanceof Error ? error : new Error(String(error))
+        }, 'Error during Redis disconnect');
       } finally {
         this.client = null;
         this.isConnecting = false;
         this.reconnectAttempts = 0;
       }
+    } else {
+      this.logger.info('Redis already disconnected');
     }
   }
 
@@ -139,11 +178,14 @@ export class RedisConnection {
    */
   public async destroy(): Promise<void> {
     if (this.client) {
+      this.logger.info('Destroying Redis connection');
       try {
         await this.client.disconnect();
-        console.log('Redis: Connection destroyed');
+        this.logger.info('Redis connection destroyed');
       } catch (error) {
-        console.error('Redis: Error during destroy', error);
+        this.logger.error({
+          error: error instanceof Error ? error : new Error(String(error))
+        }, 'Error during Redis destroy');
       } finally {
         this.client = null;
         this.isConnecting = false;
@@ -163,9 +205,13 @@ export class RedisConnection {
     }
     
     try {
-      return await this.client.ping();
+      const result = await this.client.ping();
+      this.logger.debug('Redis ping successful');
+      return result;
     } catch (error) {
-      console.error('Redis: Ping failed', error);
+      this.logger.error({
+        error: error instanceof Error ? error : new Error(String(error))
+      }, 'Redis ping failed');
       throw new Error('Redis: Ping failed');
     }
   }
@@ -202,23 +248,23 @@ export class RedisConnection {
     if (!this.client) return;
 
     this.client.on('error', (error) => {
-      console.error('Redis: Client error', error);
+      this.logger.error({ error }, 'Redis client error');
     });
 
     this.client.on('connect', () => {
-      console.log('Redis: Client connected');
+      this.logger.debug('Redis client connected');
     });
 
     this.client.on('ready', () => {
-      console.log('Redis: Client ready');
+      this.logger.debug('Redis client ready');
     });
 
     this.client.on('end', () => {
-      console.log('Redis: Connection ended');
+      this.logger.info('Redis connection ended');
     });
 
     this.client.on('reconnecting', () => {
-      console.log('Redis: Reconnecting...');
+      this.logger.info('Redis reconnecting...');
     });
   }
 
