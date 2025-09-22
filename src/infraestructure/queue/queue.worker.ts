@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import dotenv from 'dotenv';
 import { Worker, Job } from 'bullmq';
-import { config } from '../../lib/validateEnv.js';
+import { config } from '../../lib/validators/validateEnv.js';
 import {
   JobType,
   type JobData,

@@ -1,6 +1,6 @@
 import { createClient } from 'redis';
 import type { RedisClientType } from 'redis';
-import type { config } from '../../lib/validateEnv.js';
+import type { config } from '../../lib/validators/validateEnv.js';
 
 /**
  * Redis connection singleton class

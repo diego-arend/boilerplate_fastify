@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { config } from '../../lib/validateEnv.js';
+import { config } from '../../lib/validators/validateEnv.js';
 
 class MongoConnection {
   private static instance: MongoConnection;

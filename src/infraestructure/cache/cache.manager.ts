@@ -1,6 +1,6 @@
 import type { RedisClientType } from './redis.connection.js';
 import { getRedisConnection } from './redis.connection.js';
-import type { config } from '../../lib/validateEnv.js';
+import type { config } from '../../lib/validators/validateEnv.js';
 
 /**
  * Interface for cache options

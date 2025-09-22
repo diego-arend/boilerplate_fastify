@@ -1,5 +1,5 @@
 import { Queue, Job } from 'bullmq';
-import type { config } from '../../lib/validateEnv.js';
+import type { config } from '../../lib/validators/validateEnv.js';
 import type {
   JobType,
   JobData,

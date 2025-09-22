@@ -2,7 +2,7 @@ import dotenv from 'dotenv';
 import { fastify } from "fastify";
 import configFastify from "./infraestructure/server/fastify.config.js";
 import app from "./app.js";
-import { config } from "./lib/validateEnv.js";
+import { config } from "./lib/validators/validateEnv.js";
 
 dotenv.config({ debug: false });
 
