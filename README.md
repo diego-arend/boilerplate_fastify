@@ -1,550 +1,229 @@
 # Boilerplate Fastify
 
-Boilerplate for Fastify applications with TypeScript, MongoDB and Redis cache system.
+Enterprise-grade boilerplate for Fastify applications with TypeScript, MongoDB, Redis, and comprehensive infrastructure modules.
 
-## ✨ Features
+## 🏗️ Architecture Overview
 
-- **FastifyJS**: High-performance web framework
-- **TypeScript**: Type-safe development
-- **MongoDB**: Database with Mongoose ODM
-- **Redis Cache**: In-memory caching system
-- **BullMQ Queue System**: Background job processing wit**Monitoring and Debugging:**
-```bash
-# Monitor queue worker
-docker-compose logs -f queue-worker
+This project implements a **modular, scalable architecture** designed for enterprise applications:
 
-# Check Redis queue data
-docker-compose exec redis redis-cli
-> KEYS bull:*
-> HGETALL bull:jobs:waiting
+- **API Layer**: High-performance Fastify server with TypeScript
+- **Data Layer**: MongoDB with Mongoose ODM and repository pattern
+- **Caching Layer**: Redis-based caching system with automatic management
+- **Queue System**: BullMQ for background job processing with worker containers
+- **Authentication**: JWT-based auth with Role-Based Access Control (RBAC)
+- **Infrastructure**: Modular components with health monitoring and error handling
 
-# Add jobs programmatically in your app
-import { getDefaultQueueManager, JobType } from './infraestructure/queue/index.js';
-const queueManager = getDefaultQueueManager();
-await queueManager.addJob(JobType.EMAIL_SEND, emailData);
-```ration
-- **JWT Authentication**: Secure authentication with RBAC
-- **Docker**: Containerized development and production
-- **Swagger UI**: Interactive API documentation (dev only)
-- **Health Checks**: Application and services monitoring
+## 🚀 Technology Stack
 
-## 🚀 Running with Docker
+### Core Technologies
+- **[Fastify](https://fastify.dev/)** - High-performance web framework
+- **[TypeScript](https://www.typescriptlang.org/)** - Type-safe development
+- **[MongoDB](https://www.mongodb.com/)** - NoSQL database with Mongoose ODM
+- **[Redis](https://redis.io/)** - In-memory data store for caching and queues
+
+### Infrastructure
+- **[BullMQ](https://bullmq.io/)** - Background job processing and queue management
+- **[Docker](https://www.docker.com/)** - Containerization for development and production
+- **[JWT](https://jwt.io/)** - Secure authentication with role-based access
+- **[Swagger/OpenAPI](https://swagger.io/)** - Interactive API documentation (development only)
+
+### Development Tools
+- **[pnpm](https://pnpm.io/)** - Fast, disk space efficient package manager
+- **[Zod](https://zod.dev/)** - TypeScript-first schema validation
+- **[ESLint](https://eslint.org/)** - Code linting and quality
+- **[Prettier](https://prettier.io/)** - Code formatting
+
+## 📁 Project Structure
+
+```
+src/
+├── app.ts                    # Main application setup
+├── server.ts                 # Server initialization
+├── infraestructure/          # Infrastructure modules
+│   ├── cache/               # Redis caching system → See cache/README.md
+│   ├── mongo/               # MongoDB integration → See mongo/README.md
+│   ├── queue/               # BullMQ queue system → See queue/README.md
+│   └── server/              # Fastify configurations → See server/README.md
+├── entities/                # Database entities and models
+├── modules/                 # Business logic modules
+│   ├── auth/               # Authentication & RBAC → See auth/README.md
+│   └── health/             # Health check endpoints
+├── lib/                    # Shared utilities and helpers
+└── http-docs/              # HTTP test files and examples
+```
+
+## 🏃‍♂️ Quick Start
 
 ### Prerequisites
-
-- Docker
-- Docker Compose
+- Docker and Docker Compose
+- Node.js 18+ with pnpm (for local development)
 
 ### Development Environment
-
-To run in development mode with hot reload:
-
 ```bash
-# Build and run all services
+# Start all services with hot reload
 docker-compose -f docker-compose.dev.yml up --build
 
-# Or in background
+# Or run in background
 docker-compose -f docker-compose.dev.yml up -d --build
 ```
 
 ### Production Environment
-
-To run in production mode:
-
 ```bash
-# Build and run all services
+# Start production services
 docker-compose up --build
 
-# Or in background
+# Or run in background
 docker-compose up -d --build
 ```
 
 ### Available Services
-
-- **App** (Fastify): http://localhost:3001
-- **Queue Worker** (BullMQ): Background job processing
-- **MongoDB**: localhost:27017
+- **API Server**: http://localhost:3001
+- **Queue Worker**: Background job processing container
+- **MongoDB**: localhost:27017 (admin/password)
 - **Redis**: localhost:6379 (shared by cache and queue)
-- **Swagger UI** (development): http://localhost:3001/docs
+- **Swagger UI** (dev only): http://localhost:3001/docs
 
-### Useful Commands
+## 📚 Module Documentation
 
+Each infrastructure module has comprehensive documentation with implementation details, examples, and best practices:
+
+### Core Infrastructure
+- **[Cache System](src/infraestructure/cache/README.md)** - Redis-based automatic caching with TTL, user-scoped keys, and graceful fallback
+- **[MongoDB Integration](src/infraestructure/mongo/README.md)** - Connection management, repository pattern, and database operations
+- **[Queue System](src/infraestructure/queue/README.md)** - Enterprise-grade job processing with Dead Letter Queue and resilient manager
+- **[Server Configuration](src/infraestructure/server/README.md)** - Fastify setup, plugins, and middleware configuration
+
+### Business Modules
+- **[Authentication](src/modules/auth/README.md)** - JWT authentication with RBAC, user management, and security features
+
+### Shared Libraries
+- **[Response Handler](src/lib/response/README.md)** - Standardized API responses with consistent error handling
+
+## 🔧 Environment Configuration
+
+### Required Environment Variables
 ```bash
-# View application logs
-docker-compose logs app
+# Server
+PORT=3001
+NODE_ENV=development|production
+JWT_SECRET=your-jwt-secret-key
 
-# View queue worker logs
-docker-compose logs queue-worker
+# MongoDB
+MONGO_URI=mongodb://admin:password@mongodb:27017/boilerplate?authSource=admin
 
-# View all services logs
-docker-compose logs
-
-# Stop all services
-docker-compose down
-
-# Stop and remove volumes
-docker-compose down -v
-
-# Execute commands in the application container
-docker-compose exec app sh
-
-# Execute commands in the queue worker container
-docker-compose exec queue-worker sh
-
-# Check services status
-docker-compose ps
-
-# Start only queue worker
-docker-compose up queue-worker
-
-# Restart queue worker
-docker-compose restart queue-worker
+# Redis (Cache & Queue)
+REDIS_HOST=redis
+REDIS_PORT=6379
+REDIS_PASSWORD=
+REDIS_DB=0
 ```
 
-## 📚 API Documentation
-
-### Swagger UI (Development)
-
-The application includes interactive API documentation through Swagger UI, available only in development environment:
-
-- **URL**: http://localhost:3001/docs
-- **Format**: OpenAPI 3.0
-- **Environment**: Only when `NODE_ENV=development`
-
-**Features:**
-- Complete documentation of all endpoints
-- Interactive interface to test APIs
-- Detailed request/response schemas
-- Integrated JWT authentication (Bearer token)
-- Organization by tags (Auth, Health)
-
-**To access:**
-1. Start the application in development mode:
-   ```bash
-   docker-compose -f docker-compose.dev.yml up --build
-   ```
-2. Access: http://localhost:3001/docs
-
-**Note:** Swagger documentation is automatically disabled in production for security reasons.
-
-### Documentation Files
-- `http-docs/auth.http` - HTTP tests for authentication
-- `http-docs/cache.http` - HTTP tests for cache behavior
-- `src/infraestructure/cache/README.md` - Cache system documentation
-- `src/modules/auth/README.md` - Authentication and RBAC documentation
-- `src/lib/response/README.md` - ApiResponseHandler class documentation
-- `src/infraestructure/queue/README.md` - Queue system documentation
-
-### Main Endpoints
-
-**Health Check:**
-- `GET /health` - Application status
-
-**Authentication:**
-- `POST /auth/register` - User registration
-- `POST /auth/login` - Login and JWT token retrieval
-- `GET /auth/me` - Authenticated user profile (requires token, **cached**)
-
-**Queue Management:**
-- Queue operations are handled internally via QueueManager
-- Jobs are added directly in application code
-- Queue monitoring available through Redis CLI
-- Worker processes jobs in background containers
-
-**Cache Testing:**
-- Use `http-docs/cache.http` for cache hit/miss testing
-- Headers `X-Cache`, `X-Cache-Key`, `X-Cache-TTL` for debugging
-
-All endpoints are documented in Swagger UI with complete schemas and usage examples.
-
-### Development Scripts
+## 🛠️ Development Commands
 
 ```bash
-# Run in development mode (with Swagger)
+# Local development (with hot reload and Swagger)
 pnpm dev
-
-# Run queue worker separately 
-pnpm worker:queue
 
 # Build for production
 pnpm build
 
-# Run in production (without Swagger)
+# Start production server
 pnpm start
+
+# Run queue worker separately
+pnpm worker:queue
+
+# Docker commands
+docker-compose -f docker-compose.dev.yml up --build  # Development
+docker-compose up --build                            # Production
+docker-compose down                                   # Stop services
+docker-compose logs -f app                           # View app logs
 ```
 
-**Note:** Swagger UI is automatically enabled in development environment (`NODE_ENV=development`).
+## 🏥 Health Monitoring
 
-### Health Checks
+The application includes comprehensive health checks:
 
-All services include automatic health checks:
+- **Application Health**: `GET /health` - Overall application status
+- **Service Health**: Individual checks for MongoDB, Redis, and queue system
+- **Docker Health Checks**: Automatic container monitoring
+- **Graceful Shutdown**: Proper cleanup of connections and resources
 
-- **App**: Checks if the `/health` route responds
-- **MongoDB**: Tests database connection
-- **Redis**: Tests cache connection
+## 📊 API Documentation
 
-### Environment Variables
+### Development Documentation
+- **Swagger UI**: http://localhost:3001/docs (development only)
+- **HTTP Tests**: `http-docs/` directory with example requests
+- **OpenAPI 3.0**: Complete API specification with schemas
 
-The following variables are automatically configured:
+### Main API Endpoints
+- **Health**: `GET /health` - Application and services status
+- **Authentication**: `POST /auth/register`, `POST /auth/login`, `GET /auth/me`
+- **Cache Testing**: Available through HTTP test files
 
-**Server Configuration:**
-- `PORT=3001` - Application port
-- `NODE_ENV=development|production` - Environment mode
-- `JWT_SECRET` - JWT token secret key
+*For detailed endpoint documentation and usage examples, see the module-specific README files.*
 
-**MongoDB Configuration:**
-- `MONGO_URI=mongodb://admin:password@mongodb:27017/boilerplate?authSource=admin`
+## 🔐 Security Features
 
-**Redis Cache Configuration:**
-- `REDIS_HOST=redis` (container) or `localhost` (local)
-- `REDIS_PORT=6379` - Redis port
-- `REDIS_PASSWORD=` - Redis password (empty by default)
-- `REDIS_DB=0` - Redis database number
+- **JWT Authentication** with role-based access control (RBAC)
+- **Input Validation** using Zod schemas with TypeScript integration
+- **SQL Injection Protection** through Mongoose ODM
+- **XSS Prevention** with input sanitization
+- **Password Security** with bcrypt hashing
+- **Rate Limiting** and security headers in production
 
-### Cache System
+*For detailed security implementation, see [Authentication README](src/modules/auth/README.md)*
 
-The application includes an automatic Redis caching system:
+## 🚀 Production Deployment
 
-**Features:**
-- ✅ **Automatic caching** for GET requests
-- ✅ **Cache headers** (`X-Cache: HIT/MISS`) for debugging
-- ✅ **TTL configuration** per route or globally
-- ✅ **User-scoped caching** for authenticated routes
-- ✅ **Cache statistics** (hits, misses, errors)
-- ✅ **Graceful fallback** if Redis is unavailable
+### Docker Production Setup
+- **Multi-stage builds** for optimized container images
+- **Health checks** for all services with automatic restart policies
+- **Volume persistence** for MongoDB and Redis data
+- **Environment-based configuration** for different deployment stages
+- **Graceful shutdown** handling for zero-downtime deployments
 
-**Cache Behavior:**
-- Only GET requests are cached automatically
-- Authenticated routes use user-scoped cache keys
-- Skip routes: `/health`, `/auth/login`, `/auth/register`
-- Default TTL: 300 seconds (5 minutes)
-- Routes with query parameters are not cached by default
-
-**Manual Cache Control:**
-```typescript
-// Set cache manually
-await fastify.setCacheForRoute('my-key', data, 600);
-
-// Get from cache
-const cached = await fastify.getCacheForRoute('my-key');
-
-// Invalidate cache
-await fastify.invalidateCache('my-key');
-
-// Clear all route cache
-await fastify.clearRouteCache();
-```
-
-**Testing Cache:**
-Use the `http-docs/cache.http` file to test cache behavior:
-1. Make first request → `X-Cache: MISS`
-2. Make second request → `X-Cache: HIT`
-
-**Monitoring:**
-- Cache errors are automatically logged
-- Cache statistics available via `fastify.cache.getStats()`
-- Connection status logged on startup
-
-### BullMQ Queue System
-
-The application includes a robust job queue system with BullMQ and Redis:
-
-**Features:**
-- ✅ **Background job processing** with separate worker containers
-- ✅ **Job prioritization** and delayed execution
-- ✅ **Retry mechanisms** with configurable attempts
-- ✅ **Job status tracking** and result storage
-- ✅ **Queue management** (pause, resume, cleanup)
-- ✅ **Multiple job types** with specific handlers
-- ✅ **Graceful worker shutdown** and error handling
-
-**Architecture:**
-- **API Server**: Handles job submission and status queries
-- **Queue Worker**: Separate process/container for job processing
-- **Redis**: Shared storage for job queues and results
-
-**Available Job Types:**
-1. **EMAIL_SEND** - Email notifications and campaigns
-2. **USER_NOTIFICATION** - In-app user notifications
-3. **DATA_EXPORT** - Large data export operations
-4. **FILE_PROCESS** - File upload processing and transformations
-5. **CACHE_WARM** - Cache warming operations
-6. **CLEANUP** - System maintenance and cleanup tasks
-
-**Job Priority Levels:**
-- **LOW**: 1 (cleanup, non-urgent tasks)
-- **NORMAL**: 5 (default priority)
-- **HIGH**: 10 (important notifications)
-- **URGENT**: 20 (security alerts, critical operations)
-
-**Queue Management:**
-
-The queue system operates internally without HTTP endpoints. Jobs are added directly in your application code:
-
-```typescript
-import { getDefaultQueueManager, JobType } from './infraestructure/queue/index.js';
-
-const queueManager = getDefaultQueueManager();
-
-// Add email job
-await queueManager.addJob(JobType.EMAIL_SEND, {
-  to: 'user@example.com',
-  subject: 'Welcome',
-  template: 'welcome'
-}, {
-  priority: 10,
-  attempts: 3
-});
-
-// Add notification job  
-await queueManager.addJob(JobType.USER_NOTIFICATION, {
-  userId: 'user123',
-  title: 'New message',
-  body: 'You have a new message'
-});
-```
-
-**Queue Monitoring:**
-
-Monitor queues directly through Redis:
-```bash
-# Connect to Redis
-docker-compose exec redis redis-cli
-
-# Check queue data
-> KEYS bull:*
-> HGETALL bull:jobs:waiting
-```
-
-**Worker Configuration:**
-
-The queue worker runs in a separate container/process:
-
-```bash
-# Run worker locally
-pnpm run worker:queue
-
-# Docker worker service
-docker-compose up queue-worker
-
-# View worker logs
-docker-compose logs -f queue-worker
-```
-
-**Job Handler Implementation:**
-
-Each job type has its own handler in `src/infraestructure/queue/queue.worker.ts`:
-
-```typescript
-// Example job handler
-private async handleEmailSend(jobData: EmailJobData): Promise<JobResult> {
-  // Simulate email sending
-  await new Promise(resolve => setTimeout(resolve, 2000));
-  
-  return {
-    success: true,
-    message: `Email sent to ${jobData.to}`,
-    data: { messageId: 'msg_123', timestamp: Date.now() }
-  };
-}
-```
-
-**Queue Testing:**
-
-Test the queue system by adding jobs in your application code. Monitor processing through worker logs:
-
-```bash
-# View worker logs
-docker-compose logs -f queue-worker
-
-# Monitor Redis for queue activity  
-docker-compose exec redis redis-cli MONITOR
-```
-
-**Error Handling:**
-- Failed jobs are automatically retried based on `attempts` setting
-- Worker gracefully handles shutdown signals (SIGTERM, SIGINT)
-- Redis connection issues are logged and handled
-- Job failures include detailed error information
-
-**Monitoring and Debugging:**
-```bash
-# Monitor queue worker
-docker-compose logs -f queue-worker
-
-# Check Redis queue data
-docker-compose exec redis redis-cli
-> KEYS bull:jobs:*
-> HGETALL bull:jobs:waiting
-
-# Queue statistics
-curl http://localhost:3001/api/queue/stats
-```
-
-**Production Considerations:**
-- Worker containers can be scaled independently
-- Job data should be kept minimal (use references to large data)
-- Set appropriate retry limits to avoid infinite loops
-- Regular cleanup of old completed/failed jobs
-- Monitor Redis memory usage for queue data
-
-### Local Development
-
-For local development without Docker:
-
-**Prerequisites:**
-- Node.js 18+ with pnpm
-- MongoDB running on localhost:27017
-- Redis running on localhost:6379
-
-**Setup:**
-```bash
-# Install dependencies
-pnpm install
-
-# Copy and configure environment
-cp .env.example .env
-
-# Edit .env with your local configuration:
-# REDIS_HOST=localhost
-# MONGO_URI=mongodb://admin:password@localhost:27017/boilerplate?authSource=admin
-
-# Start local MongoDB and Redis (if not using Docker)
-# Or start only database services:
-docker-compose -f docker-compose.dev.yml up -d mongodb redis
-
-# Run in development mode (with Swagger and hot reload)
-pnpm run dev
-```
-
-**Available Scripts:**
-```bash
-pnpm dev       # Development with hot reload and Swagger
-pnpm build     # Build for production
-pnpm start     # Run production build
-```
-
-### Project Structure
-
-```
-src/
-├── app.ts                    # Main application configuration
-├── server.ts                 # Server initialization
-├── infraestructure/
-│   ├── cache/               # Redis cache system
-│   │   ├── redis.connection.ts    # Redis connection singleton
-│   │   ├── cache.manager.ts       # Cache operations manager
-│   │   ├── cache.plugin.ts        # Fastify cache plugin
-│   │   └── index.ts               # Cache exports
-│   ├── mongo/               # MongoDB connection and repository
-│   ├── queue/               # BullMQ job queue system
-│   │   ├── queue.types.ts       # Job types and interfaces
-│   │   ├── queue.manager.ts     # Queue management operations
-│   │   ├── queue.worker.ts      # Background worker process
-│   │   ├── queue.controller.ts  # Queue API endpoints
-│   │   └── queue.plugin.ts      # Fastify queue plugin
-│   └── server/              # Fastify configurations
-├── entities/                # Entity schemas
-├── modules/                 # Business modules
-│   ├── auth/               # Authentication system with RBAC
-│   └── health/             # Health check endpoints
-├── lib/                    # Utilities and helpers
-└── http-docs/              # HTTP test files
-    ├── auth.http          # Authentication tests
-    └── cache.http         # Cache testing examples
-```
-
-### Security
-
-The project includes multiple security layers:
-
-- Strict validations in schemas
-- Input sanitization
-- Protection against injections
-- JWT authentication with RBAC (Role-Based Access Control)
-- HTTPS required in production
-- User-scoped caching for authenticated routes
-
-For more details about security, see the `PlanTask.chatmode.md` file.
+### Scaling Considerations
+- **Queue workers** can be scaled independently
+- **Redis clustering** support for high availability
+- **MongoDB replica sets** for data redundancy
+- **Load balancer ready** with health check endpoints
 
 ## 🔧 Troubleshooting
 
-### Queue Worker Issues
-
-If you see queue processing problems:
-
+### Service Issues
 ```bash
-# Check queue worker status
-docker-compose -f docker-compose.dev.yml ps queue-worker
+# Check all services status
+docker-compose ps
 
-# View queue worker logs
-docker-compose -f docker-compose.dev.yml logs -f queue-worker
+# View logs for specific service
+docker-compose logs -f [service-name]
 
-# Restart queue worker
-docker-compose -f docker-compose.dev.yml restart queue-worker
+# Restart specific service
+docker-compose restart [service-name]
 
-# Check queue statistics
-curl http://localhost:3001/api/queue/stats
-
-# Monitor Redis queue data
-docker-compose -f docker-compose.dev.yml exec redis redis-cli
+# Reset all data (⚠️ destructive)
+docker-compose down -v
 ```
 
-**Common Queue Issues:**
-- **Worker not processing jobs**: Check if worker container is running
-- **Jobs stuck in waiting**: Verify Redis connection and worker status  
-- **High failed job count**: Review job handler logic and retry settings
-- **Memory issues**: Clean old jobs regularly and monitor Redis usage
+### Common Issues
+- **Redis Connection**: Check if Redis service is running and accessible
+- **MongoDB Connection**: Verify MongoDB service status and credentials
+- **Queue Processing**: Ensure queue worker container is running
+- **Port Conflicts**: Make sure ports 3001, 27017, 6379 are available
 
-### Redis Connection Issues
+*For detailed troubleshooting guides, refer to the specific module README files.*
 
-If you see Redis connection errors:
+## 📈 Performance & Monitoring
 
-```bash
-# Check if Redis is running
-docker-compose -f docker-compose.dev.yml ps
+- **Automatic Caching**: GET requests cached with configurable TTL
+- **Background Processing**: CPU-intensive tasks handled by queue workers
+- **Connection Pooling**: Optimized database and Redis connections
+- **Resource Monitoring**: Built-in health checks and logging
+- **Graceful Degradation**: Services continue operating when dependencies fail
 
-# View Redis logs
-docker-compose -f docker-compose.dev.yml logs redis
+*For performance optimization details, see individual module documentation.*
 
-# Restart Redis service
-docker-compose -f docker-compose.dev.yml restart redis
-```
+---
 
-**Common Redis errors:**
-- `ECONNREFUSED`: Redis is not running or wrong host/port
-- `ENOTFOUND`: DNS resolution failed (check REDIS_HOST)
-- `Authentication failed`: Check REDIS_PASSWORD if using auth
-
-**Fallback behavior:**
-- Application continues working even if Redis is unavailable
-- Cache operations fail gracefully with error logs
-- No caching occurs when Redis is down
-
-### MongoDB Connection Issues
-
-```bash
-# Check MongoDB status
-docker-compose -f docker-compose.dev.yml logs mongodb
-
-# Reset MongoDB data
-docker-compose -f docker-compose.dev.yml down -v
-docker-compose -f docker-compose.dev.yml up -d mongodb
-```
-
-### Application Logs
-
-```bash
-# Follow application logs
-docker-compose -f docker-compose.dev.yml logs -f app
-
-# Check all services
-docker-compose -f docker-compose.dev.yml logs
-```
-
-## 📈 Monitoring
-
-- **Health endpoint**: `GET /health` - Application status
-- **Cache headers**: `X-Cache: HIT/MISS` in responses
-- **Automatic logging**: Connection status and errors
-- **Docker health checks**: All services monitored
+**This boilerplate provides a solid foundation for building scalable, production-ready applications with modern technologies and enterprise-grade infrastructure.**
