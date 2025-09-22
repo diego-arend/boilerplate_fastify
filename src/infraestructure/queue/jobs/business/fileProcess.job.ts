@@ -1,5 +1,5 @@
 import type { FastifyBaseLogger } from 'fastify'
-import type { FileProcessJobData, JobResult } from '../queue.types.js'
+import type { FileProcessJobData, JobResult } from '../../queue.types.js'
 import { stat, access } from 'fs/promises'
 import { constants } from 'fs'
 import { extname, basename, dirname, join } from 'path'

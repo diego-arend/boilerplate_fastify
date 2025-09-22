@@ -1,5 +1,5 @@
 import type { FastifyBaseLogger } from 'fastify'
-import type { CacheWarmJobData, JobResult } from '../queue.types.js'
+import type { CacheWarmJobData, JobResult } from '../../queue.types.js'
 
 /**
  * Handler for CACHE_WARM jobs

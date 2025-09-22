@@ -9,6 +9,8 @@ import type {
   JobStatus,
   JobResult
 } from './queue.types.js';
+import { DeadLetterQueueManager, type DLQStats } from './dlq.manager.js';
+import { defaultLogger } from '../../lib/logger/index.js';
 
 /**
  * Queue Manager class for handling BullMQ operations
@@ -19,6 +21,7 @@ export class QueueManager {
   private config: QueueConfig;
   private static instance: QueueManager | null = null;
   private initialized: boolean = false;
+  private dlqManager: DeadLetterQueueManager | null = null;
 
   /**
    * Create QueueManager instance
@@ -51,6 +54,13 @@ export class QueueManager {
       connection: this.getRedisConfig(),
       ...(this.config.defaultJobOptions && { defaultJobOptions: this.config.defaultJobOptions })
     });
+    
+    // Initialize Dead Letter Queue Manager
+    this.dlqManager = new DeadLetterQueueManager(
+      this.queue,
+      defaultLogger.child({ module: 'queue-manager' }),
+      `${queueName}-dlq`
+    );
     
     this.initialized = true;
   }
@@ -286,10 +296,50 @@ export class QueueManager {
   }
 
   /**
+   * Get Dead Letter Queue statistics
+   * @returns DLQ statistics
+   */
+  public async getDLQStats(): Promise<DLQStats> {
+    if (!this.dlqManager) {
+      return {
+        total: 0,
+        byJobType: {},
+        byErrorType: {},
+        oldestJob: {}
+      };
+    }
+    return await this.dlqManager.getStats();
+  }
+
+  /**
+   * Reprocess job from Dead Letter Queue
+   * @param dlqJobId - DLQ job ID
+   * @param options - Recovery options
+   * @returns Recovery result
+   */
+  public async reprocessDLQJob(dlqJobId: string, options?: any) {
+    if (!this.dlqManager) {
+      return { success: false, error: 'DLQ Manager not initialized' };
+    }
+    return await this.dlqManager.reprocessJob(dlqJobId, options);
+  }
+
+  /**
+   * Get Dead Letter Queue manager instance
+   * @returns DLQ Manager instance
+   */
+  public getDLQManager(): DeadLetterQueueManager | null {
+    return this.dlqManager;
+  }
+
+  /**
    * Close queue connection
    */
   public async close(): Promise<void> {
     try {
+      if (this.dlqManager) {
+        await this.dlqManager.close();
+      }
       await this.queue.close();
       this.initialized = false;
       console.log(`QueueManager: Queue '${this.config.name}' closed`);

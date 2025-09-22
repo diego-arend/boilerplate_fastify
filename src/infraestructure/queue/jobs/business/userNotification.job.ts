@@ -1,5 +1,5 @@
 import type { FastifyBaseLogger } from 'fastify'
-import type { UserNotificationJobData, JobResult } from '../queue.types.js'
+import type { UserNotificationJobData, JobResult } from '../../queue.types.js'
 
 /**
  * Handler for USER_NOTIFICATION jobs

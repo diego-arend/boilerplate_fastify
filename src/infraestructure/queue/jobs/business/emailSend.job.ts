@@ -1,5 +1,5 @@
 import type { FastifyBaseLogger } from 'fastify'
-import type { EmailJobData, JobResult } from '../queue.types.js'
+import type { EmailJobData, JobResult } from '../../queue.types.js'
 
 /**
  * Handler for EMAIL_SEND jobs

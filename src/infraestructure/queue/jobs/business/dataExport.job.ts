@@ -1,5 +1,5 @@
 import type { FastifyBaseLogger } from 'fastify'
-import type { DataExportJobData, JobResult } from '../queue.types.js'
+import type { DataExportJobData, JobResult } from '../../queue.types.js'
 import { createWriteStream } from 'fs'
 import { mkdir } from 'fs/promises'
 import { dirname } from 'path'

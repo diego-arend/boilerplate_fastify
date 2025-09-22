@@ -1,14 +1,21 @@
 /**
  * Job handlers index file
  * Centralizes all job handler imports for easy management
+ * 
+ * Structure:
+ * - Core async business jobs: From business/ subfolder
+ * - Maintenance system jobs: From maintenance/ subfolder
  */
 
-export { handleEmailSend } from './emailSend.job.js';
-export { handleUserNotification } from './userNotification.job.js';
-export { handleDataExport } from './dataExport.job.js';
-export { handleFileProcess } from './fileProcess.job.js';
-export { handleCacheWarm } from './cacheWarm.job.js';
-export { handleCleanup } from './cleanup.job.js';
+// Core asynchronous business logic jobs
+export { handleEmailSend } from './business/emailSend.job.js';
+export { handleUserNotification } from './business/userNotification.job.js';
+export { handleDataExport } from './business/dataExport.job.js';
+export { handleFileProcess } from './business/fileProcess.job.js';
+
+// System maintenance jobs
+export { handleCacheWarm } from './maintenance/cacheWarm.job.js';
+export { handleCleanup } from './maintenance/cleanup.job.js';
 
 /**
  * Job handler registry for easy mapping
@@ -18,12 +25,12 @@ import { JobType } from '../queue.types.js';
 import type { FastifyBaseLogger } from 'fastify';
 import type { JobResult } from '../queue.types.js';
 
-import { handleEmailSend } from './emailSend.job.js';
-import { handleUserNotification } from './userNotification.job.js';
-import { handleDataExport } from './dataExport.job.js';
-import { handleFileProcess } from './fileProcess.job.js';
-import { handleCacheWarm } from './cacheWarm.job.js';
-import { handleCleanup } from './cleanup.job.js';
+import { handleEmailSend } from './business/emailSend.job.js';
+import { handleUserNotification } from './business/userNotification.job.js';
+import { handleDataExport } from './business/dataExport.job.js';
+import { handleFileProcess } from './business/fileProcess.job.js';
+import { handleCacheWarm } from './maintenance/cacheWarm.job.js';
+import { handleCleanup } from './maintenance/cleanup.job.js';
 
 /**
  * Type for job handler functions
