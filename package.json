@@ -19,6 +19,7 @@
     "docker:build": "docker build -t boilerplate-fastify ."
   },
   "dependencies": {
+    "@fastify/rate-limit": "^10.3.0",
     "@fastify/swagger": "^9.5.1",
     "@fastify/swagger-ui": "^5.2.3",
     "@types/mongoose": "^5.11.97",

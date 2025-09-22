@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyPluginOptions } from 'fastify'
 import authPlugin from './modules/auth/auth.plugin.js'
 import healthPlugin from './modules/health/health.plugin.js'
 import cachePlugin from './infraestructure/cache/cache.plugin.js'
+import rateLimitPlugin from './infraestructure/server/rateLimit.plugin.js'
 import { registerModule } from './infraestructure/server/modules.js'
 import MongoConnection from './infraestructure/mongo/connection.js'
 import { errorHandler, notFoundHandler } from './lib/response/index.js'
@@ -18,6 +19,15 @@ export default async function app(fastify: FastifyInstance, opts: FastifyPluginO
     defaultTTL: 300, // 5 minutes
     enableAutoCache: true,
     skipRoutes: ['/health', '/auth/login', '/auth/register', '/docs']
+  });
+
+  // Register rate limiting plugin AFTER cache but BEFORE routes
+  await fastify.register(rateLimitPlugin, {
+    max: 100, // requests per minute
+    timeWindow: 60000, // 1 minute
+    skipRoutes: ['/health', '/docs', '/docs/*'],
+    enableGlobal: true,
+    useRedis: true // Use Redis if available
   });
 
   // Register Swagger FIRST to capture routes defined after
