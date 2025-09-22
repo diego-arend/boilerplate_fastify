@@ -83,13 +83,13 @@ docker-compose up -d --build
 - **Redis**: localhost:6379 (shared by cache and queue)
 - **Swagger UI** (dev only): http://localhost:3001/docs
 
-## 📚 Module Documentation
+## �📚 Module Documentation
 
 Each infrastructure module has comprehensive documentation with implementation details, examples, and best practices:
 
 ### Core Infrastructure
 - **[Cache System](src/infraestructure/cache/README.md)** - Redis-based automatic caching with TTL, user-scoped keys, and graceful fallback
-- **[MongoDB Integration](src/infraestructure/mongo/README.md)** - Connection management, repository pattern, and database operations
+- **[MongoDB Integration](src/infraestructure/mongo/README.md)** - Connection management, repository pattern, atomic transactions, and database operations
 - **[Queue System](src/infraestructure/queue/README.md)** - Enterprise-grade job processing with Dead Letter Queue and resilient manager
 - **[Server Configuration](src/infraestructure/server/README.md)** - Fastify setup, plugins, and middleware configuration
 
