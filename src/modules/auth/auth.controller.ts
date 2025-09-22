@@ -5,6 +5,7 @@ import { SecurityValidators } from '../../entities/user/index.js';
 import { ApiResponseHandler } from '../../lib/response/index.js';
 import { PasswordService } from './services/index.js';
 import { z } from 'zod';
+import { defaultLogger } from '../../lib/logger/index.js';
 
 interface LoginRequest {
   email: string;
@@ -19,6 +20,7 @@ interface RegisterRequest {
 
 // Authentication repository instance
 const authRepository = new AuthRepository();
+const logger = defaultLogger.child({ context: 'auth-controller' });
 
 export default async function authController(fastify: FastifyInstance) {
 
@@ -74,8 +76,21 @@ export default async function authController(fastify: FastifyInstance) {
       }
     }
   }, async (request, reply) => {
+    const requestId = request.id || Math.random().toString(36).substr(2, 9);
+    const requestLogger = logger.child({ requestId, operation: 'register' });
+
     try {
       const { name, email, password } = request.body as RegisterRequest;
+
+      // Log registration attempt (development only)
+      if (process.env.NODE_ENV === 'development') {
+        requestLogger.info({
+          message: 'User registration attempt',
+          email: email.toLowerCase(),
+          hasName: !!name,
+          hasPassword: !!password
+        });
+      }
 
       // Validate using Zod schemas
       try {
@@ -100,6 +115,17 @@ export default async function authController(fastify: FastifyInstance) {
           { expiresIn: '24h' }
         );
 
+        // Log successful registration
+        if (process.env.NODE_ENV === 'development') {
+          requestLogger.info({
+            message: 'User registration successful',
+            userId: newUser._id,
+            userEmail: newUser.email,
+            userRole: newUser.role,
+            tokenGenerated: !!token
+          });
+        }
+
         return ApiResponseHandler.created(reply, 'User registered successfully', {
           user: {
             id: newUser._id,
@@ -113,12 +139,32 @@ export default async function authController(fastify: FastifyInstance) {
       } catch (validationError) {
         if (validationError instanceof z.ZodError) {
           const errorMessages = validationError.issues.map((issue) => issue.message).join(', ');
+          
+          // Log validation error
+          requestLogger.error({
+            message: 'User registration validation failed',
+            error: errorMessages,
+            email: email?.toLowerCase(),
+            validationIssues: validationError.issues.map(issue => ({
+              field: issue.path.join('.'),
+              message: issue.message,
+              code: issue.code
+            }))
+          });
+          
           return ApiResponseHandler.validationError(reply, `Validation failed: ${errorMessages}`);
         }
         throw validationError;
       }
     } catch (error) {
-      console.error('Registration error:', error);
+      // Log registration error
+      requestLogger.error({
+        message: 'User registration failed',
+        error: error instanceof Error ? error.message : String(error),
+        errorType: error instanceof Error ? error.constructor.name : 'Unknown',
+        stack: error instanceof Error ? error.stack : undefined
+      });
+
       const message = error instanceof Error ? error.message : 'Internal server error';
       return ApiResponseHandler.validationError(reply, message);
     }
@@ -175,8 +221,20 @@ export default async function authController(fastify: FastifyInstance) {
       }
     }
   }, async (request, reply) => {
+    const requestId = request.id || Math.random().toString(36).substr(2, 9);
+    const requestLogger = logger.child({ requestId, operation: 'login' });
+
     try {
       const { email, password } = request.body as LoginRequest;
+
+      // Log login attempt (development only)
+      if (process.env.NODE_ENV === 'development') {
+        requestLogger.info({
+          message: 'User login attempt',
+          email: email?.toLowerCase(),
+          hasPassword: !!password
+        });
+      }
 
       // Validate using Zod schemas
       try {
@@ -189,11 +247,21 @@ export default async function authController(fastify: FastifyInstance) {
         const user = await authRepository.findByEmailWithPassword(validatedData.email);
 
         if (!user) {
+          requestLogger.error({
+            message: 'Login failed - user not found',
+            email: email?.toLowerCase()
+          });
           return ApiResponseHandler.authError(reply, 'Invalid credentials');
         }
 
         // Check if user is active
         if (user.status !== 'active') {
+          requestLogger.error({
+            message: 'Login failed - account deactivated',
+            userId: user._id,
+            email: user.email,
+            userStatus: user.status
+          });
           return ApiResponseHandler.authError(reply, 'Account deactivated');
         }
 
@@ -201,6 +269,11 @@ export default async function authController(fastify: FastifyInstance) {
         const isPasswordValid = await PasswordService.comparePassword(password, user.password);
         
         if (!isPasswordValid) {
+          requestLogger.error({
+            message: 'Login failed - invalid password',
+            userId: user._id,
+            email: user.email
+          });
           return ApiResponseHandler.authError(reply, 'Invalid credentials');
         }
 
@@ -210,6 +283,17 @@ export default async function authController(fastify: FastifyInstance) {
           fastify.config.JWT_SECRET,
           { expiresIn: '24h' }
         );
+
+        // Log successful login
+        if (process.env.NODE_ENV === 'development') {
+          requestLogger.info({
+            message: 'User login successful',
+            userId: user._id,
+            userEmail: user.email,
+            userRole: user.role,
+            tokenGenerated: !!token
+          });
+        }
 
         return ApiResponseHandler.success(reply, 'Login successful', {
           user: {
@@ -223,12 +307,26 @@ export default async function authController(fastify: FastifyInstance) {
         });
       } catch (validationError) {
         if (validationError instanceof z.ZodError) {
+          requestLogger.error({
+            message: 'Login validation failed',
+            email: email?.toLowerCase(),
+            validationIssues: validationError.issues.map(issue => ({
+              field: issue.path.join('.'),
+              message: issue.message,
+              code: issue.code
+            }))
+          });
           return ApiResponseHandler.authError(reply, 'Invalid email or password format');
         }
         throw validationError;
       }
     } catch (error) {
-      console.error('Login error:', error);
+      requestLogger.error({
+        message: 'Login operation failed',
+        error: error instanceof Error ? error.message : String(error),
+        errorType: error instanceof Error ? error.constructor.name : 'Unknown',
+        stack: error instanceof Error ? error.stack : undefined
+      });
       return ApiResponseHandler.internalError(reply, error instanceof Error ? error : String(error));
     }
   });
@@ -278,14 +376,30 @@ export default async function authController(fastify: FastifyInstance) {
       }
     }
   }, async (request, reply) => {
+    const requestId = request.id || Math.random().toString(36).substr(2, 9);
+    const requestLogger = logger.child({ requestId, operation: 'get-profile' });
+
     try {
       // Check if user is authenticated
       if (!request.authenticatedUser) {
+        requestLogger.error({
+          message: 'Profile access failed - user not authenticated'
+        });
         return ApiResponseHandler.authError(reply, 'User not authenticated');
       }
 
       const userId = request.authenticatedUser.id.toString();
       const cacheKey = `user:profile:${userId}`;
+
+      // Log profile access attempt (development only)
+      if (process.env.NODE_ENV === 'development') {
+        requestLogger.info({
+          message: 'User profile access attempt',
+          userId: userId,
+          userName: request.authenticatedUser.name,
+          userRole: request.authenticatedUser.role
+        });
+      }
 
       // Try to get user data from cache first
       let userData = await fastify.cache.get<{
@@ -302,6 +416,10 @@ export default async function authController(fastify: FastifyInstance) {
         const user = await authRepository.findById(userId);
 
         if (!user) {
+          requestLogger.error({
+            message: 'Profile access failed - user not found in database',
+            userId: userId
+          });
           return ApiResponseHandler.notFound(reply, 'User not found');
         }
 
@@ -319,16 +437,51 @@ export default async function authController(fastify: FastifyInstance) {
         
         // Add cache header for debugging
         reply.header('X-Data-Source', 'DATABASE');
+
+        // Log cache miss (development only)
+        if (process.env.NODE_ENV === 'development') {
+          requestLogger.info({
+            message: 'User profile loaded from database',
+            userId: userId,
+            dataSource: 'DATABASE',
+            cacheTtl: 900
+          });
+        }
       } else {
         // Cache hit
         reply.header('X-Data-Source', 'CACHE');
+
+        // Log cache hit (development only)
+        if (process.env.NODE_ENV === 'development') {
+          requestLogger.info({
+            message: 'User profile loaded from cache',
+            userId: userId,
+            dataSource: 'CACHE'
+          });
+        }
+      }
+
+      // Log successful profile access (development only)
+      if (process.env.NODE_ENV === 'development') {
+        requestLogger.info({
+          message: 'User profile access successful',
+          userId: userData.id,
+          userRole: userData.role,
+          userStatus: userData.status
+        });
       }
 
       return ApiResponseHandler.success(reply, 'User data returned', {
         user: userData
       });
     } catch (error) {
-      console.error('Error fetching user:', error);
+      requestLogger.error({
+        message: 'Profile access operation failed',
+        userId: request.authenticatedUser?.id,
+        error: error instanceof Error ? error.message : String(error),
+        errorType: error instanceof Error ? error.constructor.name : 'Unknown',
+        stack: error instanceof Error ? error.stack : undefined
+      });
       return ApiResponseHandler.internalError(reply, error instanceof Error ? error : String(error));
     }
   });
