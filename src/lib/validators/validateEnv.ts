@@ -30,6 +30,7 @@ const envSchema = z.object({
   
   // Optional: Additional security settings
   CORS_ORIGIN: z.string().optional(),
+  CORS_ALLOW_CREDENTIALS: z.coerce.boolean().default(false).optional(),
   RATE_LIMIT_MAX: z.coerce.number().positive().default(100).optional(),
   RATE_LIMIT_WINDOW_MS: z.coerce.number().positive().default(60000).optional(), // 1 minute
 });
@@ -54,6 +55,7 @@ if (!parsed.success) {
       REDIS_DB: process.env.REDIS_DB,
       LOG_LEVEL: process.env.LOG_LEVEL,
       CORS_ORIGIN: process.env.CORS_ORIGIN,
+      CORS_ALLOW_CREDENTIALS: process.env.CORS_ALLOW_CREDENTIALS,
       RATE_LIMIT_MAX: process.env.RATE_LIMIT_MAX,
       RATE_LIMIT_WINDOW_MS: process.env.RATE_LIMIT_WINDOW_MS
     }

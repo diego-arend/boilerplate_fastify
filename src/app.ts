@@ -3,6 +3,7 @@ import authPlugin from './modules/auth/auth.plugin.js'
 import healthPlugin from './modules/health/health.plugin.js'
 import cachePlugin from './infraestructure/cache/cache.plugin.js'
 import rateLimitPlugin from './infraestructure/server/rateLimit.plugin.js'
+import corsPlugin from './infraestructure/server/cors.plugin.js'
 import { registerModule } from './infraestructure/server/modules.js'
 import MongoConnection from './infraestructure/mongo/connection.js'
 import { errorHandler, notFoundHandler } from './lib/response/index.js'
@@ -21,7 +22,14 @@ export default async function app(fastify: FastifyInstance, opts: FastifyPluginO
     skipRoutes: ['/health', '/auth/login', '/auth/register', '/docs']
   });
 
-  // Register rate limiting plugin AFTER cache but BEFORE routes
+  // Register CORS plugin BEFORE rate limiting for proper request handling
+  await fastify.register(corsPlugin, {
+    // Options can be passed here to override environment variables
+    // origin: 'http://localhost:3000',
+    // credentials: true
+  });
+
+  // Register rate limiting plugin AFTER CORS but BEFORE routes
   await fastify.register(rateLimitPlugin, {
     max: 100, // requests per minute
     timeWindow: 60000, // 1 minute
