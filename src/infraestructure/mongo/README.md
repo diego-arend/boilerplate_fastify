@@ -1,6 +1,8 @@
-# Enterprise MongoDB Infrastructure
+# MongoDB Infrastructure Documentation
 
-This infrastructure module provides a **robust, scalable, and production-ready MongoDB integration** for the Fastify application with comprehensive connection management, repository pattern implementation, and enterprise-grade features.
+This infrastructure module provides a **robust, scalable, and production-ready MongoDB integration** for the Fastify application with comprehensive connection management and generic repository pattern implementation.
+
+**Focus:** This documentation covers exclusively the MongoDB connection layer and BaseRepository pattern. For specific entity implementations, validation, and business logic patterns, refer to the Entity Architecture documentation.
 
 ## 🏗️ **System Architecture**
 
@@ -8,7 +10,7 @@ The MongoDB infrastructure is designed for **high performance, type safety, and 
 
 - **Singleton Connection Manager**: Efficient connection pooling and lifecycle management
 - **Generic Repository Pattern**: Type-safe CRUD operations with advanced querying
-- **Entity-Based Design**: Strongly-typed models with validation and security
+- **Transaction Support**: Atomic operations with session management
 - **Health Monitoring**: Built-in connection monitoring and logging
 - **Docker Integration**: Seamless container deployment with persistence
 - **Production Optimizations**: Connection pooling, timeouts, and error handling
@@ -90,18 +92,16 @@ process.on('SIGTERM', async () => {
 });
 ```
 
-### **3. Create Entity Model**
+### **3. Create Document Model**
 
 ```typescript
 import { Schema, model, Document } from 'mongoose';
 
-// TypeScript interface
-export interface IProduct extends Document {
-  name: string;
-  description: string;
-  price: number;
-  category: string;
-  inStock: boolean;
+// TypeScript interface for a generic document
+export interface IDocument extends Document {
+  title: string;
+  content: string;
+  status: 'draft' | 'published' | 'archived';
   tags: string[];
   metadata: Record<string, any>;
   createdAt: Date;
@@ -109,43 +109,27 @@ export interface IProduct extends Document {
 }
 
 // Mongoose schema with validation
-const productSchema = new Schema<IProduct>({
-  name: {
+const documentSchema = new Schema<IDocument>({
+  title: {
     type: String,
-    required: [true, 'Product name is required'],
+    required: [true, 'Title is required'],
     trim: true,
-    minlength: [2, 'Name must be at least 2 characters'],
-    maxlength: [100, 'Name cannot exceed 100 characters'],
+    minlength: [2, 'Title must be at least 2 characters'],
+    maxlength: [100, 'Title cannot exceed 100 characters'],
     index: true
   },
-  description: {
+  content: {
     type: String,
-    required: [true, 'Description is required'],
-    maxlength: [1000, 'Description cannot exceed 1000 characters']
+    required: [true, 'Content is required'],
+    maxlength: [5000, 'Content cannot exceed 5000 characters']
   },
-  price: {
-    type: Number,
-    required: [true, 'Price is required'],
-    min: [0, 'Price cannot be negative'],
-    validate: {
-      validator: function(v: number) {
-        return Number.isFinite(v) && v >= 0;
-      },
-      message: 'Price must be a valid positive number'
-    }
-  },
-  category: {
+  status: {
     type: String,
-    required: [true, 'Category is required'],
     enum: {
-      values: ['electronics', 'clothing', 'books', 'home', 'sports'],
-      message: 'Category must be one of: electronics, clothing, books, home, sports'
+      values: ['draft', 'published', 'archived'],
+      message: 'Status must be: draft, published, or archived'
     },
-    index: true
-  },
-  inStock: {
-    type: Boolean,
-    default: true,
+    default: 'draft',
     index: true
   },
   tags: [{
@@ -163,12 +147,11 @@ const productSchema = new Schema<IProduct>({
   strict: true
 });
 
-// Compound indexes for complex queries
-productSchema.index({ category: 1, inStock: 1 });
-productSchema.index({ price: 1, category: 1 });
-productSchema.index({ name: 'text', description: 'text' }); // Text search
+// Indexes for performance
+documentSchema.index({ status: 1, createdAt: -1 });
+documentSchema.index({ title: 'text', content: 'text' }); // Text search
 
-export const ProductModel = model<IProduct>('Product', productSchema);
+export const DocumentModel = model<IDocument>('Document', documentSchema);
 ```
 
 ### **4. Implement Repository**
@@ -176,29 +159,24 @@ export const ProductModel = model<IProduct>('Product', productSchema);
 ```typescript
 import { Model } from 'mongoose';
 import { BaseRepository } from '../infraestructure/mongo/baseRepository.js';
-import { ProductModel, type IProduct } from '../entities/product/productEntity.js';
+import { DocumentModel, type IDocument } from '../models/documentModel.js';
 
-export class ProductRepository extends BaseRepository<IProduct> {
+export class DocumentRepository extends BaseRepository<IDocument> {
   constructor() {
-    super(ProductModel as Model<IProduct>);
+    super(DocumentModel as Model<IDocument>);
   }
 
   /**
-   * Find products by category with stock filtering
+   * Find documents by status
    */
-  async findByCategory(category: string, inStockOnly: boolean = true): Promise<IProduct[]> {
-    const filter: any = { category };
-    if (inStockOnly) {
-      filter.inStock = true;
-    }
-    
-    return await this.find(filter);
+  async findByStatus(status: string): Promise<IDocument[]> {
+    return await this.find({ status });
   }
 
   /**
-   * Search products by text in name and description
+   * Search documents by text
    */
-  async searchProducts(query: string): Promise<IProduct[]> {
+  async searchDocuments(query: string): Promise<IDocument[]> {
     return await this.model
       .find({
         $text: { $search: query }
@@ -208,32 +186,16 @@ export class ProductRepository extends BaseRepository<IProduct> {
   }
 
   /**
-   * Find products in price range
+   * Find documents with pagination
    */
-  async findByPriceRange(minPrice: number, maxPrice: number): Promise<IProduct[]> {
-    return await this.find({
-      price: { $gte: minPrice, $lte: maxPrice }
-    });
-  }
-
-  /**
-   * Get products with pagination and filters
-   */
-  async findProductsPaginated(filters: {
-    category?: string;
-    inStock?: boolean;
-    minPrice?: number;
-    maxPrice?: number;
+  async findDocumentsPaginated(filters: {
+    status?: string;
+    tags?: string[];
   }, page: number = 1, limit: number = 20) {
     const query: any = {};
     
-    if (filters.category) query.category = filters.category;
-    if (typeof filters.inStock === 'boolean') query.inStock = filters.inStock;
-    if (filters.minPrice !== undefined || filters.maxPrice !== undefined) {
-      query.price = {};
-      if (filters.minPrice !== undefined) query.price.$gte = filters.minPrice;
-      if (filters.maxPrice !== undefined) query.price.$lte = filters.maxPrice;
-    }
+    if (filters.status) query.status = filters.status;
+    if (filters.tags?.length) query.tags = { $in: filters.tags };
 
     return await this.findPaginated(
       query,
@@ -241,47 +203,6 @@ export class ProductRepository extends BaseRepository<IProduct> {
       limit,
       { createdAt: -1 } // Sort by newest first
     );
-  }
-
-  /**
-   * Update stock status for multiple products
-   */
-  async updateStockBatch(productIds: string[], inStock: boolean): Promise<number> {
-    const result = await this.model.updateMany(
-      { _id: { $in: productIds } },
-      { $set: { inStock, updatedAt: new Date() } }
-    ).exec();
-
-    return result.modifiedCount;
-  }
-
-  /**
-   * Get category statistics
-   */
-  async getCategoryStats(): Promise<Array<{ category: string; count: number; avgPrice: number }>> {
-    return await this.model.aggregate([
-      { $match: { inStock: true } },
-      {
-        $group: {
-          _id: '$category',
-          count: { $sum: 1 },
-          avgPrice: { $avg: '$price' },
-          minPrice: { $min: '$price' },
-          maxPrice: { $max: '$price' }
-        }
-      },
-      {
-        $project: {
-          category: '$_id',
-          count: 1,
-          avgPrice: { $round: ['$avgPrice', 2] },
-          minPrice: 1,
-          maxPrice: 1,
-          _id: 0
-        }
-      },
-      { $sort: { count: -1 } }
-    ]).exec();
   }
 }
 ```
@@ -293,74 +214,85 @@ export class ProductRepository extends BaseRepository<IProduct> {
 ### **Generic CRUD Operations**
 
 ```typescript
+// Generic repository usage with any document type
+interface IDocument extends Document {
+  title: string;
+  status: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+class DocumentRepository extends BaseRepository<IDocument> {
+  constructor(model: Model<IDocument>) {
+    super(model);
+  }
+}
+
+const repository = new DocumentRepository(DocumentModel);
+
 // Create single document
-const product = await productRepository.create({
-  name: 'Wireless Headphones',
-  description: 'High-quality wireless headphones with noise cancellation',
-  price: 199.99,
-  category: 'electronics',
-  tags: ['audio', 'wireless', 'noise-cancelling']
+const document = await repository.create({
+  title: 'Sample Document',
+  status: 'draft'
 });
 
 // Find by ID
-const productById = await productRepository.findById(product._id);
+const foundDocument = await repository.findById(document._id);
 
 // Find with complex filters
-const electronicsProducts = await productRepository.find({
-  category: 'electronics',
-  price: { $gte: 100, $lte: 500 },
-  inStock: true
+const activeDocuments = await repository.find({
+  status: 'published',
+  createdAt: { $gte: new Date('2024-01-01') }
 });
 
-// Update with optimistic locking
-const updatedProduct = await productRepository.updateById(product._id, {
-  price: 179.99,
+// Update document
+const updatedDocument = await repository.updateById(document._id, {
+  status: 'published',
   updatedAt: new Date()
 });
 
 // Delete operations
-const deleted = await productRepository.deleteById(product._id);
-console.log(`Product deleted: ${deleted}`); // true/false
+const deleted = await repository.deleteById(document._id);
+console.log(`Document deleted: ${deleted}`); // true/false
 
 // Count with filters
-const electronicCount = await productRepository.count({
-  category: 'electronics',
-  inStock: true
+const publishedCount = await repository.count({
+  status: 'published'
 });
 ```
 
 ### **Advanced Pagination**
 
 ```typescript
-// Paginated results with comprehensive metadata
-const paginatedProducts = await productRepository.findPaginated(
-  { category: 'electronics', inStock: true }, // Filter
+// Generic pagination example
+const paginatedResult = await repository.findPaginated(
+  { status: 'published' }, // Filter
   2,    // Page number
   10,   // Items per page
-  { price: -1, createdAt: -1 }  // Sort: price desc, then newest first
+  { createdAt: -1 }  // Sort: newest first
 );
 
 console.log({
-  products: paginatedProducts.data,
+  documents: paginatedResult.data,
   pagination: {
-    currentPage: paginatedProducts.page,          // 2
-    totalPages: paginatedProducts.totalPages,     // 15
-    totalItems: paginatedProducts.total,          // 147
-    itemsPerPage: paginatedProducts.limit,        // 10
-    hasNextPage: paginatedProducts.hasNext,       // true
-    hasPreviousPage: paginatedProducts.hasPrev    // true
+    currentPage: paginatedResult.page,          // 2
+    totalPages: paginatedResult.totalPages,     // 15
+    totalItems: paginatedResult.total,          // 147
+    itemsPerPage: paginatedResult.limit,        // 10
+    hasNextPage: paginatedResult.hasNext,       // true
+    hasPreviousPage: paginatedResult.hasPrev    // true
   }
 });
 
-// Client-side pagination component data
+// Pagination metadata for UI components
 const paginationData = {
-  currentPage: paginatedProducts.page,
-  totalPages: paginatedProducts.totalPages,
-  pages: Array.from({ length: paginatedProducts.totalPages }, (_, i) => i + 1),
-  showPrevious: paginatedProducts.hasPrev,
-  showNext: paginatedProducts.hasNext,
-  startItem: (paginatedProducts.page - 1) * paginatedProducts.limit + 1,
-  endItem: Math.min(paginatedProducts.page * paginatedProducts.limit, paginatedProducts.total)
+  currentPage: paginatedResult.page,
+  totalPages: paginatedResult.totalPages,
+  pages: Array.from({ length: paginatedResult.totalPages }, (_, i) => i + 1),
+  showPrevious: paginatedResult.hasPrev,
+  showNext: paginatedResult.hasNext,
+  startItem: (paginatedResult.page - 1) * paginatedResult.limit + 1,
+  endItem: Math.min(paginatedResult.page * paginatedResult.limit, paginatedResult.total)
 };
 ```
 
@@ -512,72 +444,71 @@ mongodb:
 ### **Indexing Strategy**
 
 ```typescript
-// Strategic index creation
-const userSchema = new Schema<IUser>({
-  email: { 
+// Strategic index creation for any document type
+const documentSchema = new Schema<IDocument>({
+  title: { 
     type: String, 
-    unique: true,     // Automatic index creation
-    index: true       // Explicit index (redundant but clear)
+    required: true,
+    index: true       // Single field index for queries
   },
   status: { 
     type: String, 
-    index: true       // Query optimization for status filters
+    index: true       // Status filtering optimization
+  },
+  category: {
+    type: String,
+    index: true       // Category-based queries
   }
 }, {
   timestamps: true    // Automatic createdAt/updatedAt indexes
 });
 
 // Compound indexes for complex queries
-userSchema.index({ status: 1, createdAt: -1 });  // Status + time queries
-userSchema.index({ email: 1, status: 1 });       // Login validation
-userSchema.index({ role: 1, status: 1 });        // Admin queries
+documentSchema.index({ status: 1, createdAt: -1 });  // Status + time queries
+documentSchema.index({ category: 1, status: 1 });    // Category + status filters
+documentSchema.index({ title: 1, status: 1 });       // Title + status queries
 
 // Text search indexes
-userSchema.index({ 
-  name: 'text', 
-  email: 'text' 
+documentSchema.index({ 
+  title: 'text', 
+  content: 'text' 
 }, {
-  weights: { name: 10, email: 5 }  // Name is more important than email
+  weights: { title: 10, content: 5 }  // Title is more important than content
 });
 
 // Sparse indexes (only for documents with the field)
-userSchema.index({ lastLoginAt: -1 }, { sparse: true });
+documentSchema.index({ publishedAt: -1 }, { sparse: true });
 ```
 
 ### **Query Optimization**
 
 ```typescript
 // Efficient querying patterns
-class OptimizedRepository extends BaseRepository<IUser> {
+class OptimizedRepository<T extends Document> extends BaseRepository<T> {
   
   /**
    * Use lean() for read-only operations (50% faster)
    */
-  async findActiveUsersLean(): Promise<any[]> {
+  async findActiveDocumentsLean(): Promise<any[]> {
     return await this.model
       .find({ status: 'active' })
       .lean()  // Returns plain JavaScript objects (faster)
-      .select('name email createdAt')  // Only required fields
+      .select('title status createdAt')  // Only required fields
       .exec();
   }
 
   /**
    * Use aggregation for complex data processing
    */
-  async getUserStatsByRole(): Promise<any[]> {
+  async getDocumentStatsByStatus(): Promise<any[]> {
     return await this.model.aggregate([
-      { $match: { status: 'active' } },
+      { $match: { status: { $in: ['published', 'draft'] } } },
       { 
         $group: {
-          _id: '$role',
+          _id: '$status',
           count: { $sum: 1 },
-          avgAccountAge: { 
-            $avg: { 
-              $divide: [
-                { $subtract: [new Date(), '$createdAt'] },
-                1000 * 60 * 60 * 24  // Convert to days
-              ]
-            }
+          avgSize: { 
+            $avg: { $strLenCP: '$content' } // Average content length
           }
         }
       },
@@ -588,9 +519,9 @@ class OptimizedRepository extends BaseRepository<IUser> {
   /**
    * Batch operations for efficiency
    */
-  async updateMultipleUsers(userIds: string[], updateData: any): Promise<number> {
+  async updateMultipleDocuments(documentIds: string[], updateData: any): Promise<number> {
     const result = await this.model.updateMany(
-      { _id: { $in: userIds } },
+      { _id: { $in: documentIds } },
       { $set: { ...updateData, updatedAt: new Date() } }
     ).exec();
     
@@ -606,9 +537,9 @@ class OptimizedRepository extends BaseRepository<IUser> {
 ### **Input Sanitization**
 
 ```typescript
-// Built-in security features in entities
-const userSchema = new Schema<IUser>({
-  name: {
+// Built-in security features in schemas
+const documentSchema = new Schema<IDocument>({
+  title: {
     type: String,
     required: true,
     trim: true,
@@ -617,23 +548,28 @@ const userSchema = new Schema<IUser>({
         // Prevent XSS attacks
         return !/<script|javascript:|on\w+=/i.test(v);
       },
-      message: 'Name contains disallowed characters'
+      message: 'Title contains disallowed characters'
     }
   },
-  email: {
+  content: {
     type: String,
     required: true,
-    lowercase: true,  // Automatic normalization
     trim: true,
-    match: [/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/, 'Invalid email']
+    validate: {
+      validator: function(v: string) {
+        // Basic content sanitization
+        return v.length > 0 && v.length <= 10000;
+      },
+      message: 'Content must be between 1 and 10000 characters'
+    }
   }
 });
 
 // Pre-save sanitization hooks
-userSchema.pre('save', function(next) {
+documentSchema.pre('save', function(next) {
   // Sanitize input data
-  if (this.name) {
-    this.name = this.name.replace(/[<>'"&]/g, '');
+  if (this.title) {
+    this.title = this.title.replace(/[<>'"&]/g, '');
   }
   next();
 });
@@ -642,54 +578,65 @@ userSchema.pre('save', function(next) {
 ### **Repository Security Layer**
 
 ```typescript
-export class SecureUserRepository extends BaseRepository<IUser> {
+export class SecureRepository<T extends Document> extends BaseRepository<T> {
   
   /**
-   * Create user with validation and sanitization
+   * Create document with validation and sanitization
    */
-  async createSecureUser(userData: {
-    name: string;
-    email: string;
-    password: string;
-  }): Promise<IUser> {
-    // Input validation using Zod
-    const validatedData = SecurityValidators.validateUserRegistration(userData);
-    
-    // Check for existing email
-    const existingUser = await this.findOne({ email: validatedData.email });
-    if (existingUser) {
-      throw new Error('Email already registered');
+  async createSecureDocument(documentData: {
+    title: string;
+    content: string;
+    [key: string]: any;
+  }): Promise<T> {
+    // Input validation
+    if (!documentData.title?.trim()) {
+      throw new Error('Title is required');
     }
     
-    // Hash password before saving
-    const hashedPassword = await PasswordService.hashPassword(validatedData.password);
+    if (!documentData.content?.trim()) {
+      throw new Error('Content is required');
+    }
     
-    return await this.create({
-      ...validatedData,
-      password: hashedPassword
-    });
+    // Basic sanitization
+    const sanitizedData = {
+      ...documentData,
+      title: documentData.title.trim(),
+      content: documentData.content.trim()
+    };
+    
+    return await this.create(sanitizedData as Partial<T>);
   }
 
   /**
-   * Safe user lookup (excludes password by default)
+   * Safe document lookup with field filtering
    */
-  async findSafeById(id: string): Promise<Omit<IUser, 'password'> | null> {
-    return await this.model
-      .findById(id)
-      .select('-password')  // Explicitly exclude password
-      .exec();
+  async findSafeById(id: string, excludeFields: string[] = []): Promise<T | null> {
+    const query = this.model.findById(id);
+    
+    // Exclude sensitive fields
+    if (excludeFields.length > 0) {
+      query.select(excludeFields.map(field => `-${field}`).join(' '));
+    }
+    
+    return await query.exec();
   }
 
   /**
-   * Find with authentication (includes password)
+   * Find with sanitized filters
    */
-  async findWithPasswordByEmail(email: string): Promise<IUser | null> {
-    const sanitizedEmail = email.toLowerCase().trim();
+  async findWithSanitizedFilters(filters: Record<string, any>): Promise<T[]> {
+    // Sanitize filter values
+    const sanitizedFilters: Record<string, any> = {};
     
-    return await this.model
-      .findOne({ email: sanitizedEmail })
-      .select('+password')  // Include password for authentication
-      .exec();
+    for (const [key, value] of Object.entries(filters)) {
+      if (typeof value === 'string') {
+        sanitizedFilters[key] = value.trim();
+      } else {
+        sanitizedFilters[key] = value;
+      }
+    }
+    
+    return await this.find(sanitizedFilters);
   }
 }
 ```
@@ -933,13 +880,13 @@ app.post('/api/transfer', {
   }
 
   // Usar session nas operações do banco
-  await accountRepo.updateOne(
+  await repository.updateOne(
     { id: fromAccount }, 
     { $inc: { balance: -amount } }, 
     { session }
   );
   
-  await accountRepo.updateOne(
+  await repository.updateOne(
     { id: toAccount }, 
     { $inc: { balance: amount } }, 
     { session }
@@ -975,8 +922,8 @@ app.post('/api/orders', {
   const { items, customerId } = request.body as any;
   
   // Usar session em todas as operações
-  const order = await orderRepo.create({ items, customerId }, { session });
-  await inventoryRepo.updateStock(items, { session });
+  const order = await repository.create({ items, customerId }, { session });
+  await secondaryRepo.updateStock(items, { session });
   
   return reply.status(201).send({ 
     orderId: order.id,
@@ -1051,16 +998,16 @@ app.post('/api/complex-operation', {
   
   try {
     // Operações que podem falhar
-    const user = await userRepo.create(userData, { session });
-    const profile = await profileRepo.create(profileData, { session });
+    const document = await repository.create(documentData, { session });
+    const metadata = await metadataRepo.create(metadataData, { session });
     
     // Validação de negócio
-    if (!isValidUser(user)) {
+    if (!isValidDocument(document)) {
       // Status 400 → transação será revertida automaticamente
-      return reply.status(400).send({ error: 'Invalid user data' });
+      return reply.status(400).send({ error: 'Invalid document data' });
     }
     
-    return reply.send({ success: true, userId: user.id });
+    return reply.send({ success: true, documentId: document.id });
     
   } catch (error) {
     // Erro será logado e transação revertida automaticamente
@@ -1127,10 +1074,10 @@ Todos os métodos do `BaseRepository` suportam sessões automaticamente:
 
 ```typescript
 // Session é passada automaticamente quando disponível
-await userRepo.create(userData, { session: request.mongoSession });
-await userRepo.updateOne({ id }, updateData, { session: request.mongoSession });
-await userRepo.findMany({ active: true }, { session: request.mongoSession });
-await userRepo.deleteOne({ id }, { session: request.mongoSession });
+await repository.create(documentData, { session: request.mongoSession });
+await repository.updateOne({ id }, updateData, { session: request.mongoSession });
+await repository.findMany({ active: true }, { session: request.mongoSession });
+await repository.deleteOne({ id }, { session: request.mongoSession });
 ```
 
 ### **Uso Programático (Alternativo)**
@@ -1142,9 +1089,9 @@ import { withTransaction, TransactionManager } from '../infraestructure/mongo/in
 
 // Método 1: Utility function
 const result = await withTransaction(async (session) => {
-  await userRepo.create(userData, { session });
-  await profileRepo.create(profileData, { session });
-  return { userId: user.id };
+  await repository.create(documentData, { session });
+  await anotherRepository.update(updateData, { session });
+  return { documentId: document.id };
 });
 
 // Método 2: TransactionManager direto
@@ -1152,8 +1099,8 @@ const transactionManager = TransactionManager.getInstance();
 const session = await transactionManager.startTransaction();
 
 try {
-  await userRepo.create(userData, { session });
-  await profileRepo.create(profileData, { session });
+  await repository.create(documentData, { session });
+  await anotherRepository.update(updateData, { session });
   await transactionManager.commitTransaction(session);
 } catch (error) {
   await transactionManager.rollbackTransaction(session);
@@ -1189,8 +1136,8 @@ app.post('/api/transfer', {
   }
   
   // Operações atômicas focadas
-  await accountRepo.debit(fromAccount, amount, { session });
-  await accountRepo.credit(toAccount, amount, { session });
+  await repository.debit(fromAccount, amount, { session });
+  await repository.credit(toAccount, amount, { session });
   
   return reply.send({ success: true });
 });
@@ -1204,15 +1151,15 @@ app.post('/api/transfer', {
 
 ```typescript
 // ❌ Ruim - Operação simples não precisa de transação
-app.get('/api/users/:id', {
+app.get('/api/documents/:id', {
   config: { [TRANSACTION_ROUTE_CONFIG]: { enabled: true } }
 }, async (request, reply) => {
-  return await userRepo.findById(request.params.id);
+  return await repository.findById(request.params.id);
 });
 
 // ✅ Bom - Operação simples sem transação
-app.get('/api/users/:id', async (request, reply) => {
-  return await userRepo.findById(request.params.id);
+app.get('/api/documents/:id', async (request, reply) => {
+  return await repository.findById(request.params.id);
 });
 ```
 
@@ -1233,35 +1180,35 @@ Para **desenvolvimento**, use a configuração Docker fornecida que automaticame
 ### **Repository Design Patterns**
 
 ```typescript
-// 1. Single Responsibility: One repository per entity
-class UserRepository extends BaseRepository<IUser> {
-  // User-specific operations only
+// 1. Single Responsibility: One repository per document type
+class DocumentRepository extends BaseRepository<IDocument> {
+  // Document-specific operations only
 }
 
-class ProductRepository extends BaseRepository<IProduct> {
-  // Product-specific operations only
+class ArticleRepository extends BaseRepository<IArticle> {
+  // Article-specific operations only
 }
 
 // 2. Interface Segregation: Define specific interfaces
-interface IUserRepository {
-  findByEmail(email: string): Promise<IUser | null>;
-  createUser(userData: CreateUserDto): Promise<IUser>;
-  updateLastLogin(userId: string): Promise<void>;
+interface IDocumentRepository {
+  findByTitle(title: string): Promise<IDocument | null>;
+  createDocument(documentData: CreateDocumentDto): Promise<IDocument>;
+  updateStatus(documentId: string, status: string): Promise<void>;
 }
 
 // 3. Dependency Injection: Use interfaces, not concrete classes
-class UserService {
-  constructor(private userRepository: IUserRepository) {}
+class DocumentService {
+  constructor(private documentRepository: IDocumentRepository) {}
 }
 
 // 4. Error Boundaries: Handle errors at repository level
-class UserRepository extends BaseRepository<IUser> implements IUserRepository {
-  async findByEmail(email: string): Promise<IUser | null> {
+class DocumentRepository extends BaseRepository<IDocument> implements IDocumentRepository {
+  async findByTitle(title: string): Promise<IDocument | null> {
     try {
-      return await this.findOne({ email: email.toLowerCase() });
+      return await this.findOne({ title: title.trim() });
     } catch (error) {
-      this.logger.error({ email, error }, 'Failed to find user by email');
-      throw new DatabaseError('User lookup failed');
+      this.logger.error({ title, error }, 'Failed to find document by title');
+      throw new DatabaseError('Document lookup failed');
     }
   }
 }
@@ -1271,28 +1218,28 @@ class UserRepository extends BaseRepository<IUser> implements IUserRepository {
 
 ```typescript
 // DO: Use lean() for read-only operations
-const users = await userRepository.model.find({ status: 'active' }).lean();
+const documents = await repository.model.find({ status: 'published' }).lean();
 
 // DO: Select only required fields
-const userNames = await userRepository.model.find({}, 'name email').lean();
+const documentTitles = await repository.model.find({}, 'title status').lean();
 
 // DO: Use aggregation for complex operations
-const stats = await userRepository.model.aggregate([
-  { $match: { status: 'active' } },
-  { $group: { _id: '$role', count: { $sum: 1 } } }
+const stats = await repository.model.aggregate([
+  { $match: { status: 'published' } },
+  { $group: { _id: '$category', count: { $sum: 1 } } }
 ]);
 
 // DON'T: Load unnecessary data
-const users = await userRepository.find({}); // Loads all fields
+const documents = await repository.find({}); // Loads all fields
 
 // DON'T: Use individual queries in loops
-for (const userId of userIds) {
-  await userRepository.findById(userId); // N+1 problem
+for (const documentId of documentIds) {
+  await repository.findById(documentId); // N+1 problem
 }
 
 // DO: Use batch operations
-const users = await userRepository.model.find({
-  _id: { $in: userIds }
+const documents = await repository.model.find({
+  _id: { $in: documentIds }
 }).lean();
 ```
 
@@ -1308,32 +1255,32 @@ export async function up() {
   const db = mongoose.connection.db;
   
   // Add new field to existing documents
-  await db.collection('users').updateMany(
-    { preferences: { $exists: false } },
+  await db.collection('documents').updateMany(
+    { metadata: { $exists: false } },
     { 
       $set: { 
-        preferences: {
-          emailNotifications: true,
-          theme: 'light',
-          language: 'en'
+        metadata: {
+          version: 1,
+          tags: [],
+          priority: 'normal'
         }
       } 
     }
   );
   
-  console.log('✅ Added preferences field to all users');
+  console.log('✅ Added metadata field to all documents');
 }
 
 export async function down() {
   const db = mongoose.connection.db;
   
   // Remove field
-  await db.collection('users').updateMany(
+  await db.collection('documents').updateMany(
     {},
-    { $unset: { preferences: 1 } }
+    { $unset: { metadata: 1 } }
   );
   
-  console.log('✅ Removed preferences field from all users');
+  console.log('✅ Removed metadata field from all documents');
 }
 ```
 
@@ -1418,63 +1365,63 @@ export default fp(async function (fastify, opts) {
 });
 
 // Usage in routes
-app.get('/users/:id', async (request, reply) => {
-  const userRepository = new UserRepository();
-  const user = await userRepository.findById(request.params.id);
+app.get('/documents/:id', async (request, reply) => {
+  const documentRepository = new DocumentRepository();
+  const document = await documentRepository.findById(request.params.id);
   
-  if (!user) {
-    return reply.status(404).send({ error: 'User not found' });
+  if (!document) {
+    return reply.status(404).send({ error: 'Document not found' });
   }
   
-  return reply.send(user);
+  return reply.send(document);
 });
 ```
 
 ### **Service Layer Integration**
 
 ```typescript
-// services/user.service.ts
-export class UserService {
-  private userRepository: UserRepository;
+// services/document.service.ts
+export class DocumentService {
+  private documentRepository: DocumentRepository;
 
   constructor() {
-    this.userRepository = new UserRepository();
+    this.documentRepository = new DocumentRepository();
   }
 
-  async createUser(userData: CreateUserDto): Promise<{
+  async createDocument(documentData: CreateDocumentDto): Promise<{
     success: boolean;
-    user?: IUser;
+    document?: IDocument;
     error?: string;
   }> {
     try {
       // Business logic validation
-      await this.validateUserData(userData);
+      await this.validateDocumentData(documentData);
       
-      // Create user through repository
-      const user = await this.userRepository.createUser(userData);
+      // Create document through repository
+      const document = await this.documentRepository.createDocument(documentData);
       
-      // Post-creation business logic (send welcome email, etc.)
-      await this.onUserCreated(user);
+      // Post-creation business logic (index for search, etc.)
+      await this.onDocumentCreated(document);
       
-      return { success: true, user };
+      return { success: true, document };
     } catch (error) {
       return { 
         success: false, 
-        error: error.message || 'Failed to create user' 
+        error: error.message || 'Failed to create document' 
       };
     }
   }
 
-  private async validateUserData(userData: CreateUserDto): Promise<void> {
+  private async validateDocumentData(documentData: CreateDocumentDto): Promise<void> {
     // Custom business validation
-    if (await this.userRepository.emailExists(userData.email)) {
-      throw new Error('Email already in use');
+    if (await this.documentRepository.titleExists(documentData.title)) {
+      throw new Error('Title already exists');
     }
   }
 
-  private async onUserCreated(user: IUser): Promise<void> {
-    // Send welcome email, create profile, etc.
-    console.log(`👋 Welcome ${user.name}! Account created successfully.`);
+  private async onDocumentCreated(document: IDocument): Promise<void> {
+    // Index document, send notifications, etc.
+    console.log(`� Document "${document.title}" created successfully.`);
   }
 }
 ```

@@ -25,29 +25,37 @@ This is a modern boilerplate for backend APIs using **Fastify v5.5.0** with **Ty
 src/
 ├── app.ts                    # Main application plugin
 ├── server.ts                 # Server entry point
-├── entities/                 # Domain entities (optional)
+├── entities/                 # Domain entities (standardized structure)
+│   └── {entityName}/        # Entity-specific directory
+│       ├── {entityName}Entity.ts    # Schema, model, interface & validations
+│       ├── {entityName}Repository.ts # Repository extending BaseRepository
+│       └── index.ts         # Entity exports
 ├── infraestructure/          # Infrastructure layer
 │   ├── mongo/               # MongoDB connection and configurations
 │   │   ├── connection.ts    # MongoDB connection singleton
-│   │   └── connection.test.ts
+│   │   ├── baseRepository.ts # Generic repository with CRUD operations
+│   │   └── index.ts         # Infrastructure exports
 │   └── server/              # Server configurations
 │       ├── fastify.config.ts # Fastify configuration (logger, etc.)
 │       ├── fastify.d.ts     # Custom Fastify types
 │       └── modules.ts       # Module registration system
 ├── lib/                     # Shared utilities and libraries
-│   └── validateEnv.ts       # Environment variable validation with Zod
+│   ├── validateEnv.ts       # Environment variable validation with Zod
+│   └── validators/          # Global validation schemas
+│       ├── globalValidators.ts # Shared validation schemas (email, password, etc.)
+│       └── index.ts         # Validators exports
 └── modules/                 # Domain modules (DDD)
-    └── auth/                # Authentication module
-        ├── auth.controller.ts    # Controllers and routes
-        ├── auth.plugin.ts        # Module Fastify plugin
-        ├── repository/           # Persistence layer
-        │   ├── userAuth.repository.ts
+    └── {moduleName}/        # Business domain module
+        ├── {module}.controller.ts    # Controllers and routes
+        ├── {module}.plugin.ts        # Module Fastify plugin
+        ├── repository/               # Persistence layer
+        │   ├── {module}.repository.ts # Repository extending from entities
         │   └── index.ts
-        ├── strategy.ts           # Authentication strategies
-        ├── command.ts            # CLI commands (optional)
-        ├── types/                # Module-specific types
-        │   └── auth.d.ts
-        └── README.md             # Module documentation
+        ├── strategy.ts               # Authentication strategies (if needed)
+        ├── command.ts                # CLI commands (optional)
+        ├── types/                    # Module-specific types
+        │   └── {module}.d.ts
+        └── README.md                 # Module documentation
 ```
 
 ### Configuration Files (Root)
@@ -62,260 +70,113 @@ src/
 
 ## Development Patterns
 
-### Modular Architecture (DDD)
-- Each business domain in its own module
-- Clear separation between controllers, repositories and business logic
-- Fastify plugins for isolation and reusability
-- Automatic module registration system
+### Architecture Overview
+This project follows a modular Domain-Driven Design (DDD) architecture with standardized entity and repository patterns.
 
-### Configuration and Environment
-- Strict environment variable validation with Zod
-- Immutable configuration via `Object.freeze()`
-- Global `fastify.config` decorator for configuration access
-- Multi-environment support (dev, prod, test)
+#### Key Components
+- **Entities**: Domain entities with standardized structure (`src/entities/`)
+- **Modules**: Business domains with controllers, plugins, and repositories (`src/modules/`)
+- **Infrastructure**: Database connections and base repository (`src/infraestructure/`)
+- **Global Validators**: Shared validation schemas (`src/lib/validators/`)
 
-### Modern Development
-- **Hot Reload**: tsx for development with automatic reloading
-- **ES Modules**: Native Node.js import/export
-- **TypeScript Strict**: Rigorous typing configurations
-- **Docker Development**: Isolated and consistent environment
+#### Documentation Structure
+For detailed implementation patterns and guidelines, refer to specific README files:
 
-### Security and Quality
-- Input sanitization with Zod
-- Compile-time type validation
-- JWT authentication with refresh tokens
-- Structured logging with Pino
-- Automatic health checks
+- **📁 Entity Patterns**: `src/entities/README.md` - Complete entity architecture, validation patterns, and repository inheritance rules
+- **📁 Module Structure**: `src/modules/auth/README.md` - Module organization, plugin patterns, and controller guidelines  
+- **📁 Infrastructure**: 
+  - `src/infraestructure/mongo/README.md` - Database connection, BaseRepository operations, and transaction management
+  - `src/infraestructure/server/README.md` - Server configuration and Fastify setup
+  - `src/infraestructure/cache/README.md` - Cache implementation and strategies
+  - `src/infraestructure/queue/README.md` - Queue system and job processing
+- **📁 Libraries**:
+  - `src/lib/validators/README.md` - Validation schemas, security patterns, and Zod usage
+  - `src/lib/logger/README.md` - Logging configuration and structured logging patterns
+  - `src/lib/response/README.md` - API response standardization and error handling
+- **📁 Services**: `src/modules/auth/services/README.md` - Authentication services and utilities
+
+#### Quick Reference
+- **New Entity**: Follow patterns in `src/entities/README.md`
+- **New Module**: Reference `src/modules/auth/README.md` as example
+- **Database Operations**: Use BaseRepository patterns from `src/infraestructure/mongo/README.md`
+- **Validation**: Use global validators documented in `src/lib/validators/README.md`
+- **Error Handling**: Follow patterns in `src/lib/response/README.md`
+
+#### Key Architectural Principles
+For detailed patterns and implementation guidelines, see component-specific READMEs:
+- **Modular DDD Architecture**: Domain separation with clean boundaries
+- **Repository Inheritance**: All repositories extend BaseRepository
+- **Global Validators First**: Reuse before creating entity-specific validations
+- **Transaction Support**: MongoDB sessions across all operations
 
 ## Documentation and Comments
 
 ### Comment Standards
-- **Language**: All comments must be written in **English**
-- **Format**: Use **JSDoc** for structured documentation
-- **Coverage**: All logic files must have adequate comments
-- **Consistency**: Follow established patterns throughout the project
-- **Example Files**: **DO NOT** create example files (examples.ts, examples.js) at the end of implementations. Documentation should be included directly in main files or in specific README.md files.
+- **Language**: All comments in **English**
+- **Format**: JSDoc for structured documentation
+- **Coverage**: Document all public APIs and complex logic
+- **Consistency**: Follow established patterns
+- **No Example Files**: Documentation in main files or READMEs only
 
-### Mandatory JSDoc Structure
-```typescript
-/**
- * Brief description of what the function/class does
- * @param {Type} paramName - Description of parameter
- * @returns {Type} Description of return value
- * @throws {ErrorType} Description of thrown errors
- */
-```
-
-### Documentation Examples
-```typescript
-/**
- * Validates user email format and security requirements
- * @param {string} email - The email address to validate
- * @returns {boolean} True if email is valid and secure
- * @throws {Error} If email format is invalid
- */
-static isValidEmail(email: string): boolean {
-  // Implementation here
-}
-
-/**
- * User authentication repository
- * Handles all database operations related to user authentication
- */
-export class AuthRepository extends BaseRepository<IUser> {
-  /**
-   * Find user by email for authentication purposes
-   * @param {string} email - User's email address
-   * @returns {Promise<IUser | null>} User object or null if not found
-   */
-  async findByEmail(email: string): Promise<IUser | null> {
-    // Implementation here
-  }
-}
-```
-
-### Types of Comments
-- **JSDoc Functions**: For all public functions and methods
-- **Class Documentation**: For all classes and interfaces
-- **Inline Comments**: For complex logic (in English)
-- **TODO/FIXME**: For future improvements (in English)
-- **Error Messages**: All messages must be in English
+For detailed comment standards and examples, see main project `README.md`.
 
 ## Available Scripts
 
-```bash
-# Development
-pnpm dev                    # Start server with hot reload
-pnpm build                  # Compile TypeScript to JavaScript
-pnpm start                  # Run compiled version
-
-# Docker
-pnpm docker:dev            # Start development containers
-pnpm docker:dev:down       # Stop development containers
-pnpm docker:prod           # Start production containers
-pnpm docker:prod:down      # Stop production containers
-pnpm docker:logs           # View container logs
-pnpm docker:build          # Build Docker image
-```
+See `package.json` and main `README.md` for complete script documentation including development, build, and Docker commands.
 
 ## Technical Configurations
 
-### TypeScript (tsconfig.json)
-- **Module Resolution**: NodeNext for ES Modules compatibility
-- **Target**: ESNext for modern features
-- **Strict Mode**: Enabled with rigorous validations
-- **Source Maps**: For development debugging
-- **Declaration Files**: Automatic type generation
-
-### Fastify Configuration
-- **Logger**: Pino with pretty printing in development
-- **Plugins**: Modular plugin system
-- **Hooks**: Lifecycle hooks for initialization and shutdown
-- **Decorators**: Custom Fastify instance extensions
-
-### MongoDB Integration
-- **Connection**: Singleton pattern for single connection
-- **Mongoose**: ODM for data modeling
-- **Graceful Shutdown**: Automatic disconnection on termination
-- **Health Checks**: Automatic connectivity verification
+### Configuration Details
+For detailed technical configurations, refer to specific documentation:
+- **TypeScript**: See `tsconfig.json` and project setup in main `README.md`
+- **Fastify Configuration**: See `src/infraestructure/server/README.md`
+- **MongoDB Integration**: See `src/infraestructure/mongo/README.md`
+- **Environment Variables**: See `src/lib/validateEnv.ts` and main `README.md`
 
 ## Implemented Best Practices
 
-### Code
-- **TypeScript Strict**: Zero any, explicit types
-- **ESLint/Prettier**: Code standardization (configure if needed)
-- **Error Handling**: Consistent error treatment
-- **Logging**: Structured logs at all levels
-
-### Security
-- **Input Validation**: Zod schemas for all inputs
-- **JWT Authentication**: Secure tokens with expiration
-- **Environment Variables**: Strict config validation
-- **CORS**: Proper API configuration
-
-### Performance
-- **Fastify**: Performance-optimized framework
-- **Connection Pooling**: MongoDB with connection pool
-- **Caching**: Ready for Redis (container available)
-- **Health Checks**: Continuous health monitoring
+### Development Standards
+All development practices and patterns are documented in component-specific READMEs:
+- **Code Quality**: TypeScript strict mode, linting patterns in main `README.md`
+- **Security**: Input validation patterns in `src/lib/validators/README.md`
+- **Performance**: Database and caching strategies in `src/infraestructure/*/README.md`
+- **Error Handling**: Standardized patterns in `src/lib/response/README.md`
+- **Logging**: Structured logging in `src/lib/logger/README.md`
 
 ## Docker Development
 
-### Development Environment
-- **Hot Reload**: Automatic reloading without restart
-- **Volume Mounting**: Real-time code synchronization
-- **Debugging**: Debug port exposed
-- **Dependencies**: Optimized cache for fast rebuilds
-
-### Production
-- **Multi-stage Build**: Optimized and lightweight image
-- **Security**: Non-root user in production
-- **Health Checks**: Automatic health verifications
-- **Logging**: Production-appropriate configuration
+### Container Configuration
+- **Development**: See `docker-compose.dev.yml` and main `README.md`
+- **Production**: See `docker-compose.yml` and `Dockerfile`
+- **Services**: Individual service configurations documented in respective infrastructure READMEs
 
 ## Extensions and Tools
 
-### Recommended VS Code Extensions
-- **TypeScript Importer**: Intelligent auto-import
-- **Prettier**: Automatic formatting
-- **ESLint**: Linting and automatic correction
-- **Docker**: Complete container support
+### Development Tools
+For complete tool configuration and recommendations:
+- **VS Code Extensions**: See main `README.md` for recommended extensions
+- **Development Dependencies**: See `package.json` and main project documentation
 
 ### Model Context Protocol (MCP) Servers
-This project benefits from MCP servers integration for enhanced development workflow:
-
-#### Context7 MCP Server
-- **Purpose**: Real-time access to library documentation and code examples
-- **Usage**: Get up-to-date documentation for any technology in the stack
-- **Benefits**: 
-  - Instant access to current API documentation
-  - Contextual code examples
-  - Version-specific information
-  - Reduced context switching
-
-**Example Usage:**
-```typescript
-// When implementing Fastify routes, get specific documentation:
-// "fastify request validation"
-// "fastify async handlers" 
-// "fastify plugin development"
-
-// For MongoDB operations:
-// "mongoose model methods"
-// "mongodb aggregation pipeline"
-// "mongoose typescript integration"
-
-// For authentication:
-// "jsonwebtoken typescript"
-// "jwt security best practices"
-```
-
-#### Playwright MCP Server  
-- **Purpose**: Automated browser testing and HTTP API verification
-- **Usage**: Test endpoints, validate responses, simulate user interactions
-- **Benefits**:
-  - Programmatic API testing
-  - Response validation
-  - Authentication flow testing
-  - End-to-end route verification
-
-**Example Usage:**
-```typescript
-// Test authentication endpoints
-// 1. Navigate to login endpoint
-// 2. Submit credentials via HTTP POST
-// 3. Validate JWT token response
-// 4. Test protected route access with token
-// 5. Verify RBAC permissions
-
-// API testing workflow:
-// - Test all CRUD operations
-// - Validate input sanitization  
-// - Verify error responses
-// - Check rate limiting
-// - Test authentication flows
-```
-
-### Integration Guidelines
-
-#### When to use Context7 MCP:
-- Implementing new features with unfamiliar libraries
-- Resolving TypeScript compilation issues
-- Understanding complex API methods
-- Getting version-specific documentation
-- Learning best practices for specific libraries
-
-#### When to use Playwright MCP:
-- Testing new API endpoints after implementation
-- Validating authentication and authorization
-- End-to-end testing of complex workflows  
-- Simulating real user interactions
-- Regression testing after changes
-
-### Development Dependencies
-- **tsx**: TypeScript execution with hot reload
-- **@types/node**: Types for Node.js
-- **@types/jsonwebtoken**: Types for JWT
+This project benefits from MCP servers integration for enhanced development workflow. See main `README.md` for detailed integration guidelines and usage patterns.
 
 ## Next Steps and Expansion
 
-### Planned Features
-- Redis cache system
-- Rate limiting and DDoS protection
-- Automatic API documentation
-- Automated testing (Jest/Vitest)
-- CI/CD pipeline
-- Monitoring and observability
+### Project Evolution
+For information about planned features, roadmap, and expansion guidelines, see the main `README.md`.
 
-### Structure for New Modules
-1. Create directory in `src/modules/`
-2. Implement controller, plugin and repository
-3. Register in `app.ts` via `registerModule()`
-4. Add specific types if needed
-5. Document in module README
+### Development Workflow
+When creating new components, always refer to the appropriate README:
+- **New Module**: Use `src/modules/auth/README.md` as reference
+- **New Entity**: Follow patterns in `src/entities/README.md`
+- **New Infrastructure Component**: Reference existing patterns in `src/infraestructure/*/README.md`
 
 ## References and Documentation
 
+### Internal Documentation
+All implementation details are documented in component-specific READMEs throughout the project structure.
+
+### External References
 - [Fastify Documentation](https://fastify.dev/docs/latest/)
 - [TypeScript Handbook](https://www.typescriptlang.org/docs/)
 - [MongoDB Documentation](https://docs.mongodb.com/)
@@ -324,4 +185,4 @@ This project benefits from MCP servers integration for enhanced development work
 
 ---
 
-**Note**: This boilerplate follows current best practices for Node.js/TypeScript development, focusing on performance, security and maintainability.
+**Note**: This boilerplate follows current best practices for Node.js/TypeScript development. For detailed implementation patterns, always refer to the specific README files in each component directory.

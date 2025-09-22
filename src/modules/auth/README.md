@@ -1,8 +1,15 @@
 # Authentication Module
 
-This module implements complete JWT authentication, integrated with MongoDB through the `AuthRepository`.
+This module implements complete JWT authentication using **dependency injection architecture** for better testability and maintainability.
 
-## Architecture
+## 🏗️ Architecture
+
+### **New Dependency Injection Pattern**
+- **AuthRepository** receives `IUserRepository` via constructor injection
+- **UserRepository** receives `IBaseRepository` via constructor injection  
+- **Zero inheritance** - uses composition instead
+- **Interface-based contracts** for type safety
+- **Factory pattern** for clean instantiation
 
 ### Main Features
 - User registration with password hashing
@@ -16,19 +23,70 @@ This module implements complete JWT authentication, integrated with MongoDB thro
 ### File Structure
 ```
 auth/
-├── auth.controller.ts    # Routes and business logic
-├── auth.plugin.ts        # Fastify authentication plugin
-├── repository/           # Persistence layer
-│   ├── auth.repository.ts
+├── auth.controller.ts        # Routes and business logic (uses AuthRepositoryFactory)
+├── auth.plugin.ts           # Fastify authentication plugin
+├── factory/                 # Dependency injection factories
+│   └── auth.factory.ts      # AuthRepository factory with DI
+├── repository/              # Persistence layer
+│   ├── auth.repository.ts   # Implements IAuthRepository with UserRepository injection
 │   └── index.ts
-├── services/             # Business logic services
-│   ├── password.service.ts    # Password hashing and validation
-│   ├── strategy.ts           # JWT authentication strategy  
-│   ├── command.ts            # Authentication commands
-│   └── index.ts              # Services exports
-└── types/                # TypeScript types
+├── services/                # Business logic services
+│   ├── password.service.ts  # Password hashing and validation
+│   ├── strategy.ts         # JWT authentication strategy  
+│   ├── command.ts          # Authentication commands
+│   └── index.ts            # Services exports
+└── types/                   # TypeScript types
     └── auth.d.ts
 ```
+
+## 🔧 Dependency Injection Usage
+
+### Factory Pattern (Recommended)
+```typescript
+import { AuthRepositoryFactory } from './factory/auth.factory.js';
+
+// Create AuthRepository with all dependencies injected
+const authRepository = AuthRepositoryFactory.createAuthRepository();
+
+// Use normally - all dependencies are properly injected
+const user = await authRepository.findUserByEmail('user@example.com');
+await authRepository.createUser(userData);
+```
+
+### Manual Injection (For custom scenarios)
+```typescript
+import { BaseRepository, UserRepository, AuthRepository } from '../../../index.js';
+import { UserModel } from '../../../entities/user/userEntity.js';
+
+// Manual dependency chain construction
+const baseRepository = new BaseRepository<IUser>(UserModel);
+const userRepository = new UserRepository(baseRepository);
+const authRepository = new AuthRepository(userRepository);
+```
+
+### Testing with Mocks
+```typescript
+import { AuthRepositoryFactory } from './factory/auth.factory.js';
+
+// Mock UserRepository for testing
+const mockUserRepository = {
+  findUserByEmail: jest.fn(),
+  createUser: jest.fn(),
+  // ... other methods
+};
+
+// Create AuthRepository with mock
+const authRepository = AuthRepositoryFactory.createAuthRepositoryForTesting(mockUserRepository);
+```
+
+## 🎯 Architecture Benefits
+
+✅ **Decoupling**: No inheritance between repositories  
+✅ **Testability**: Easy to mock dependencies independently  
+✅ **Flexibility**: Can swap implementations without breaking changes  
+✅ **Single Responsibility**: Each repository has one clear purpose  
+✅ **Type Safety**: Interface contracts prevent runtime errors  
+✅ **SOLID Principles**: Follows dependency inversion principle
 
 ## 🛡️ Protecting Authenticated Routes
 

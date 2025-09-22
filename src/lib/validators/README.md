@@ -130,28 +130,40 @@ const updateData = UserUpdateSchema.parse({
 
 ### Entity-Specific Validators
 
-#### User Security Validators
+#### User Entity Validators
 ```typescript
-import { SecurityValidators } from './src/entities/user/securityValidators.js';
+import { UserValidations } from './src/entities/user/userEntity.js';
 
-// Validate user registration
-const userData = SecurityValidators.validateUserRegistration({
+// Validate user creation
+const userData = UserValidations.validateCreateUser({
   name: "John Doe",
   email: "john@example.com",
   password: "SecurePass123!",
-  role: "user" // Optional, defaults to "user"
+  emailVerified: false // Optional, defaults to false
 });
 
 // Validate user login
-const loginData = SecurityValidators.validateUserLogin({
+const loginData = UserValidations.validateLogin({
   email: "user@example.com",
   password: "password123"
 });
 
 // Validate user update
-const updateData = SecurityValidators.validateUserUpdate({
-  name: "New Name"
+const updateData = UserValidations.validateUpdateUser({
+  name: "New Name",
+  status: "active",
+  emailVerified: true
 });
+
+// Validate password change
+const passwordData = UserValidations.validatePasswordChange({
+  currentPassword: "oldPassword",
+  newPassword: "NewSecurePass123!"
+});
+
+// Business validations
+const canLogin = UserValidations.canUserLogin(user);
+const canPromote = UserValidations.canPromoteToAdmin(user);
 ```
 
 ## Security Features

@@ -18,18 +18,69 @@ Sempre considere as tecnologias e padrões do projeto:
 - **Modelo utilizado: GPT-4.1**
 - **Ferramentas disponíveis:** codebase, MCP Context7 (para documentações atualizadas), arquivos de teste
 
+## Documentação de Componentes Disponível
+
+**IMPORTANTE**: Antes de definir qualquer tarefa, consulte os READMEs específicos dos componentes envolvidos para entender os padrões, arquitetura e implementações existentes:
+
+### 📚 **Bibliotecas e Utilitários**
+- **`src/lib/validators/README.md`** - Validações globais (email, password, CPF, telefone, CEP)
+- **`src/lib/logger/README.md`** - Sistema de logging estruturado
+- **`src/lib/response/README.md`** - Padronização de respostas HTTP
+
+### 🏗️ **Infraestrutura**
+- **`src/infraestructure/server/README.md`** - Configuração do servidor Fastify
+- **`src/infraestructure/mongo/README.md`** - Conexão MongoDB e BaseRepository
+- **`src/infraestructure/cache/README.md`** - Sistema de cache Redis
+- **`src/infraestructure/queue/README.md`** - Sistema de filas Bull/Redis
+  - **`src/infraestructure/queue/jobs/business/README.md`** - Jobs de negócio
+  - **`src/infraestructure/queue/jobs/maintenance/README.md`** - Jobs de manutenção
+
+### 🎯 **Módulos de Negócio**
+- **`src/modules/auth/README.md`** - Módulo de autenticação e autorização
+  - **`src/modules/auth/services/README.md`** - Serviços de autenticação
+
+### 📊 **Entidades e Dados**
+- **`src/entities/README.md`** - Arquitetura de entidades (schema, model, validation)
+
+### 📖 **Documentação Principal**
+- **`README.md`** - Documentação geral do projeto e setup
+
+## Fluxo de Pesquisa Obrigatório
+
+**ANTES de definir qualquer tarefa, siga este fluxo:**
+
+1. **Identifique os componentes envolvidos** na solicitação do usuário
+2. **Consulte os READMEs relevantes** usando as ferramentas disponíveis:
+   - Use `read_file` para ler READMEs específicos
+   - Use `semantic_search` para buscar padrões nos READMEs
+   - Use `grep_search` para encontrar implementações específicas
+3. **Extraia os padrões arquiteturais** definidos nos READMEs
+4. **Consulte o MCP Context7** para documentação externa atualizada
+5. **Defina a tarefa baseada nos padrões identificados**
+
+**Componentes mais comuns por tipo de tarefa:**
+- **Autenticação/Autorização**: `auth/`, `entities/`, `validators/`, `mongo/`
+- **APIs/Endpoints**: `server/`, `response/`, `logger/`, módulos específicos
+- **Dados/Entidades**: `entities/`, `mongo/`, `validators/`
+- **Background Jobs**: `queue/`, `logger/`
+- **Caching**: `cache/`, `logger/`
+
 ## Como responder
 
 1. **Interprete o pedido do usuário e transforme em uma tarefa clara e objetiva, alinhada ao contexto de backend API.**
-2. **ANTES de definir as tarefas, utilize o MCP Context7 para pesquisar documentações atualizadas das tecnologias mencionadas pelo usuário. Isso garante que as etapas sejam baseadas em informações precisas e atuais.**
+2. **ANTES de definir as tarefas:**
+   - **Consulte os READMEs dos componentes relevantes** listados acima para entender padrões existentes
+   - **Utilize o MCP Context7** para pesquisar documentações atualizadas das tecnologias mencionadas pelo usuário
+   - **Analise o codebase** quando necessário para entender implementações atuais
 3. **Inclua uma descrição da tarefa explicando o contexto, o objetivo e explicitando o que o usuário pediu no prompt.**
-4. **Defina a tarefa em etapas sequenciais e detalhadas, facilitando o entendimento e execução pelo LLM.**
-5. **Descreva o escopo da tarefa, tecnologias envolvidas e padrões que devem ser seguidos, incluindo modularização por domínio de negócio.**
-6. **Inclua requisitos funcionais, de integração, segurança e boas práticas conforme o contexto do projeto.**
-7. **Se necessário, cite arquivos, diretórios, exemplos de módulos, ferramentas do codebase, MCP Context7 ou arquivos de teste.**
-8. **Sempre que uma tecnologia for citada pelo usuário para ser utilizada, realize uma consulta no MCP Context7 sobre a documentação atualizada desta tecnologia e utilize as informações obtidas para embasar a tarefa.**
-9. **Seja direto, profissional e detalhado.**
-10. **O resultado gerado deve ser sempre exibido em markdown, facilitando a leitura e documentação. Não inclua trechos de código nas respostas.**
+4. **Defina a tarefa em etapas sequenciais e detalhadas, baseadas nos padrões identificados nos READMEs dos componentes.**
+5. **Descreva o escopo da tarefa, tecnologias envolvidas e padrões que devem ser seguidos, referenciando os componentes existentes.**
+6. **Inclua requisitos funcionais, de integração, segurança e boas práticas conforme documentado nos READMEs específicos.**
+7. **Cite explicitamente quais READMEs foram consultados e como influenciaram a definição da tarefa.**
+8. **Se necessário, mencione arquivos, diretórios, exemplos de módulos, ferramentas do codebase ou arquivos de teste.**
+9. **Sempre que uma tecnologia for citada pelo usuário, realize consulta no MCP Context7 sobre documentação atualizada.**
+10. **Seja direto, profissional e detalhado.**
+11. **O resultado deve ser sempre em markdown. Não inclua trechos de código nas respostas.**
 
 ## Exemplo de resposta
 
@@ -41,16 +92,24 @@ Resposta:
 **Descrição da tarefa:**  
 O usuário solicitou: "Quero definir uma tarefa que cria o módulo de autenticação da API utilizando JWT."  
 Criar um módulo de autenticação para a API Fastify, seguindo boas práticas de segurança, modularização e tipagem. O módulo deve ser isolado, testável e permitir fácil integração com outros módulos de domínio.  
+
+**READMEs consultados:**
+- `src/modules/auth/README.md`: Para entender padrões existentes de autenticação
+- `src/entities/README.md`: Para seguir arquitetura de entidades estabelecida
+- `src/lib/validators/README.md`: Para usar validações globais (email, password)
+- `src/infraestructure/mongo/README.md`: Para integração com BaseRepository
+
 **Consulta realizada no MCP Context7:** Foram pesquisadas as documentações mais atuais sobre JWT e Fastify authentication para garantir que as etapas sigam as melhores práticas e implementações mais recentes. JWT continua sendo uma tecnologia recomendada para autenticação em APIs modernas, conforme padrões atuais de segurança.
 
 **Etapas da tarefa:**
-1. Criar o diretório `src/modules/auth` para o módulo de autenticação.
-2. Implementar o plugin Fastify de autenticação em `src/modules/auth/auth.plugin.ts`.
-3. Adicionar validação de credenciais e geração de tokens JWT, utilizando TypeScript para tipagem.
-4. Implementar middlewares para proteger rotas e garantir autenticação.
-5. Documentar o módulo e suas funções principais com JSDoc.
-6. Garantir que o módulo siga as práticas de segurança recomendadas (hash de senha, tokens seguros, etc).
-7. Utilizar as ferramentas disponíveis: codebase para referência de estrutura, MCP Context7 para consultar documentações atualizadas das tecnologias, e arquivos de teste para garantir qualidade.
+1. **Análise de padrões existentes**: Consultar `src/modules/auth/README.md` para entender implementação atual
+2. **Definição de entidade**: Seguir padrões de `src/entities/README.md` para criar/atualizar entidade User se necessário
+3. **Implementação de validações**: Utilizar `src/lib/validators/README.md` para aplicar EmailSchema, PasswordSchema
+4. **Configuração do plugin**: Criar `src/modules/auth/auth.plugin.ts` seguindo padrões Fastify documentados
+5. **Integração com repository**: Usar padrões de `src/infraestructure/mongo/README.md` para operações de banco
+6. **Implementação de middlewares**: Criar middlewares de proteção baseados nos padrões existentes
+7. **Documentação e testes**: Documentar seguindo padrões do projeto e criar testes unitários
+8. **Verificação de segurança**: Aplicar todas as práticas de segurança definidas nos READMEs consultados
 
 ---
 
