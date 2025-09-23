@@ -17,11 +17,11 @@ interface RegisterRequest {
   password: string;
 }
 
-// Authentication repository instance
-const authRepository = AuthRepositoryFactory.createAuthRepository();
 const logger = defaultLogger.child({ context: 'auth-controller' });
 
 export default async function authController(fastify: FastifyInstance) {
+  // Create authentication repository with cache injection
+  const authRepository = await AuthRepositoryFactory.createAuthRepositoryWithCache();
 
   // Register route
   fastify.post('/register', {
@@ -370,7 +370,6 @@ export default async function authController(fastify: FastifyInstance) {
       }
 
       const userId = request.authenticatedUser.id.toString();
-      const cacheKey = `user:profile:${userId}`;
 
       // Log profile access attempt (development only)
       if (process.env.NODE_ENV === 'development') {
@@ -382,65 +381,25 @@ export default async function authController(fastify: FastifyInstance) {
         });
       }
 
-      // Try to get user data from cache first
-      let userData = await fastify.cache.get<{
-        id: string;
-        name: string;
-        email: string;
-        role: string;
-        status: string;
-        createdAt: Date;
-      }>(cacheKey);
+      // Get user profile from repository (which has cache support)
+      const user = await authRepository.findByIdForAuth(userId);
 
-      if (!userData) {
-        // Cache miss - fetch from database
-        const user = await authRepository.findByIdForAuth(userId);
-
-        if (!user) {
-          requestLogger.error({
-            message: 'Profile access failed - user not found in database',
-            userId: userId
-          });
-          return ApiResponseHandler.notFound(reply, 'User not found');
-        }
-
-        userData = {
-          id: String(user._id),
-          name: user.name,
-          email: user.email,
-          role: user.role,
-          status: user.status,
-          createdAt: user.createdAt
-        };
-
-        // Cache user data for 15 minutes
-        await fastify.cache.set(cacheKey, userData, { ttl: 900 });
-        
-        // Add cache header for debugging
-        reply.header('X-Data-Source', 'DATABASE');
-
-        // Log cache miss (development only)
-        if (process.env.NODE_ENV === 'development') {
-          requestLogger.info({
-            message: 'User profile loaded from database',
-            userId: userId,
-            dataSource: 'DATABASE',
-            cacheTtl: 900
-          });
-        }
-      } else {
-        // Cache hit
-        reply.header('X-Data-Source', 'CACHE');
-
-        // Log cache hit (development only)
-        if (process.env.NODE_ENV === 'development') {
-          requestLogger.info({
-            message: 'User profile loaded from cache',
-            userId: userId,
-            dataSource: 'CACHE'
-          });
-        }
+      if (!user) {
+        requestLogger.error({
+          message: 'Profile access failed - user not found in database',
+          userId: userId
+        });
+        return ApiResponseHandler.notFound(reply, 'User not found');
       }
+
+      const userData = {
+        id: String(user._id),
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        status: user.status,
+        createdAt: user.createdAt
+      };
 
       // Log successful profile access (development only)
       if (process.env.NODE_ENV === 'development') {

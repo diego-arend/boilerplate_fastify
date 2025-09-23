@@ -1,6 +1,7 @@
 import type { ClientSession } from 'mongoose';
 import type { IUser } from '../../../entities/user/index.js';
 import type { IUserRepository } from '../../../entities/user/index.js';
+import type { ICacheService } from '../../../infraestructure/cache/index.js';
 
 /**
  * Interface for Authentication Repository operations
@@ -21,29 +22,48 @@ export interface IAuthRepository {
 }
 
 /**
- * AuthRepository - Authentication-specific repository using composition
- * This class uses UserRepository via dependency injection instead of inheritance
- * while maintaining access to authentication-focused methods
+ * AuthRepository - Authentication-specific repository using composition with cache support
+ * This class uses UserRepository via dependency injection and includes caching for better performance
  */
 export class AuthRepository implements IAuthRepository {
-  constructor(private userRepository: IUserRepository) {}
+  constructor(
+    private userRepository: IUserRepository,
+    private cacheService?: ICacheService
+  ) {}
 
   /**
-   * Find user by email for authentication
+   * Find user by email for authentication (with caching)
    */
   async findByEmailForAuth(email: string, session?: ClientSession): Promise<IUser | null> {
-    return this.userRepository.findByEmail(email, { ...(session && { session }) });
+    // Try cache first if available and no transaction session
+    if (this.cacheService && !session) {
+      const cachedUser = await this.cacheService.get<IUser>(`user:email:${email.toLowerCase()}`, { namespace: 'auth' });
+      if (cachedUser) {
+        return cachedUser;
+      }
+    }
+
+    // Fetch from database
+    const user = await this.userRepository.findByEmail(email, { ...(session && { session }) });
+    
+    // Cache the result if available and no session
+    if (this.cacheService && user && !session) {
+      await this.cacheService.set(`user:email:${email.toLowerCase()}`, user, { ttl: 1800, namespace: 'auth' }); // 30 minutes
+    }
+
+    return user;
   }
 
   /**
-   * Find user by email including password (for login)
+   * Find user by email including password (for login) - NO CACHING for security
    */
   async findByEmailWithPassword(email: string, session?: ClientSession): Promise<IUser | null> {
+    // Never cache password data for security reasons
     return this.userRepository.findByEmail(email, { includePassword: true, ...(session && { session }) });
   }
 
   /**
-   * Create a new user for registration
+   * Create a new user for registration (with cache invalidation)
    */
   async createUser(userData: {
     name: string;
@@ -58,44 +78,108 @@ export class AuthRepository implements IAuthRepository {
     }
 
     // Create user using UserRepository method
-    return this.userRepository.createUser({
+    const newUser = await this.userRepository.createUser({
       name: userData.name,
       email: userData.email,
       password: userData.password
     }, session);
+
+    // Cache the new user if cache is available and no session
+    if (this.cacheService && !session) {
+      await this.cacheService.set(`user:email:${userData.email.toLowerCase()}`, newUser, { ttl: 1800, namespace: 'auth' });
+      await this.cacheService.set(`user:id:${String(newUser._id)}`, newUser, { ttl: 1800, namespace: 'auth' });
+    }
+
+    return newUser;
   }
 
   /**
-   * Validate user login credentials
+   * Validate user login credentials (with rate limiting)
    */
   async validateLogin(email: string, password: string, session?: ClientSession): Promise<{
     user: IUser | null;
     isValid: boolean;
     reason?: string;
   }> {
-    return this.userRepository.validateCredentials({ email, password }, session);
+    // Check rate limiting if cache service is available
+    if (this.cacheService) {
+      const attempts = await this.cacheService.get<number>(`login:attempts:${email.toLowerCase()}`, { namespace: 'auth' }) || 0;
+      const maxAttempts = 5;
+      
+      if (attempts >= maxAttempts) {
+        // Increment attempts (extend blocking time)
+        await this.cacheService.set(`login:attempts:${email.toLowerCase()}`, attempts + 1, { ttl: 300, namespace: 'auth' }); // 5 minutes
+        return {
+          user: null,
+          isValid: false,
+          reason: `Too many login attempts. Try again later.`
+        };
+      }
+    }
+
+    // Validate credentials
+    const result = await this.userRepository.validateCredentials({ email, password }, session);
+
+    // Handle rate limiting based on result
+    if (this.cacheService) {
+      if (result.isValid) {
+        // Reset attempts on successful login
+        await this.cacheService.del(`login:attempts:${email.toLowerCase()}`, { namespace: 'auth' });
+      } else {
+        // Increment failed attempts
+        const currentAttempts = await this.cacheService.get<number>(`login:attempts:${email.toLowerCase()}`, { namespace: 'auth' }) || 0;
+        await this.cacheService.set(`login:attempts:${email.toLowerCase()}`, currentAttempts + 1, { ttl: 300, namespace: 'auth' });
+      }
+    }
+
+    return result;
   }
 
   /**
-   * Update user last login timestamp
+   * Update user last login timestamp (with cache invalidation)
    */
   async updateLastLogin(userId: string, session?: ClientSession): Promise<IUser | null> {
-    return this.userRepository.updateUser(userId, { 
+    const updatedUser = await this.userRepository.updateUser(userId, { 
       lastLoginAt: new Date() 
     }, session);
+
+    // Invalidate cache for this user if available and no session
+    if (this.cacheService && updatedUser && !session) {
+      await this.cacheService.del(`user:id:${userId}`, { namespace: 'auth' });
+      await this.cacheService.del(`user:email:${updatedUser.email.toLowerCase()}`, { namespace: 'auth' });
+    }
+
+    return updatedUser;
   }
 
   /**
-   * Find user by ID for authentication
+   * Find user by ID for authentication (with caching)
    */
   async findByIdForAuth(id: string, session?: ClientSession): Promise<IUser | null> {
-    return this.userRepository.findById(id, session);
+    // Try cache first if available
+    if (this.cacheService && !session) {
+      const cachedUser = await this.cacheService.get<IUser>(`user:id:${id}`, { namespace: 'auth' });
+      if (cachedUser) {
+        return cachedUser;
+      }
+    }
+
+    // Fetch from database
+    const user = await this.userRepository.findById(id, session);
+    
+    // Cache the result if available and no session
+    if (this.cacheService && user && !session) {
+      await this.cacheService.set(`user:id:${id}`, user, { ttl: 1800, namespace: 'auth' }); // 30 minutes
+    }
+
+    return user;
   }
 
   /**
-   * Check if email exists (uses UserRepository method)
+   * Check if email exists (no caching for accuracy)
    */
   async emailExistsForAuth(email: string, session?: ClientSession): Promise<boolean> {
+    // Don't cache existence checks to ensure accuracy
     return this.userRepository.emailExists(email, session);
   }
 }

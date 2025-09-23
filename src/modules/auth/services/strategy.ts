@@ -1,6 +1,8 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import { defaultLogger } from '../../../lib/logger/index.js';
+import type { ICacheService } from '../../../infraestructure/cache/index.js';
 
 export interface AuthenticatedUser {
   id: number;
@@ -15,13 +17,17 @@ export interface AuthStrategy {
 export class JwtStrategy implements AuthStrategy {
   private logger = defaultLogger.child({ context: 'jwt-strategy' });
   
-  constructor(private secret: string) {
+  constructor(
+    private secret: string,
+    private cacheService?: ICacheService
+  ) {
     // Log strategy initialization (development only)
     if (process.env.NODE_ENV === 'development') {
       this.logger.info({
         message: 'JWT strategy initialized',
         hasSecret: !!secret,
-        secretLength: secret ? secret.length : 0
+        secretLength: secret ? secret.length : 0,
+        hasCacheService: !!cacheService
       });
     }
   }
@@ -65,6 +71,25 @@ export class JwtStrategy implements AuthStrategy {
         });
         return null;
       }
+
+      // Try to get cached token validation first
+      if (this.cacheService) {
+        const tokenHash = this.generateTokenHash(token);
+        const cachedUser = await this.cacheService.get<AuthenticatedUser>(`token:${tokenHash}`, { namespace: 'auth' });
+        if (cachedUser) {
+          // Log cache hit (development only)
+          if (process.env.NODE_ENV === 'development') {
+            authLogger.info({
+              message: 'JWT authentication successful from cache',
+              userId: cachedUser.id,
+              userName: cachedUser.name,
+              userRole: cachedUser.role,
+              source: 'CACHE'
+            });
+          }
+          return cachedUser;
+        }
+      }
       
       // Log token validation attempt (development only)
       if (process.env.NODE_ENV === 'development') {
@@ -72,7 +97,8 @@ export class JwtStrategy implements AuthStrategy {
           message: 'Validating JWT token',
           tokenLength: token.length,
           tokenPrefix: token.substring(0, 20) + '...',
-          hasSecret: !!this.secret
+          hasSecret: !!this.secret,
+          source: 'JWT_VERIFY'
         });
       }
       
@@ -88,6 +114,12 @@ export class JwtStrategy implements AuthStrategy {
         });
         return null;
       }
+
+      // Cache the valid token if cache service is available
+      if (this.cacheService) {
+        const tokenHash = this.generateTokenHash(token);
+        await this.cacheService.set(`token:${tokenHash}`, payload, { ttl: 3600, namespace: 'auth' }); // 1 hour cache
+      }
       
       // Log successful JWT validation (development only)
       if (process.env.NODE_ENV === 'development') {
@@ -96,7 +128,9 @@ export class JwtStrategy implements AuthStrategy {
           userId: payload.id,
           userName: payload.name,
           userRole: payload.role,
-          tokenValid: true
+          tokenValid: true,
+          source: 'JWT_VERIFY',
+          cached: !!this.cacheService
         });
       }
       
@@ -129,5 +163,12 @@ export class JwtStrategy implements AuthStrategy {
       
       return null;
     }
+  }
+
+  /**
+   * Generate a secure hash for token caching
+   */
+  private generateTokenHash(token: string): string {
+    return crypto.createHash('sha256').update(token).digest('hex').substring(0, 16);
   }
 }

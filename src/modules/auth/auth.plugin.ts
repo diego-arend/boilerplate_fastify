@@ -5,6 +5,8 @@ import type {
   FastifyReply,
 } from "fastify";
 import { JwtStrategy, AuthenticateCommand } from "./services/index.js";
+import { CacheServiceFactory, type ICacheService } from "../../infraestructure/cache/index.js";
+import { config } from "../../lib/validators/validateEnv.js";
 import authController from "./auth.controller.js";
 import { defaultLogger } from "../../lib/logger/index.js";
 
@@ -28,7 +30,26 @@ export default async function (
   }
 
   const SECRET = fastify.config.JWT_SECRET;
-  const jwtStrategy = new JwtStrategy(SECRET);
+  
+  // Create cache service for JWT strategy
+  let cacheService: ICacheService | undefined;
+  try {
+    cacheService = await CacheServiceFactory.createDefaultCacheService(config);
+    
+    if (process.env.NODE_ENV === 'development') {
+      logger.info({
+        message: 'Cache service initialized for JWT strategy',
+        cacheReady: cacheService.isReady()
+      });
+    }
+  } catch (error) {
+    logger.error({
+      message: 'Failed to initialize cache service, proceeding without cache',
+      error: error instanceof Error ? error.message : String(error)
+    });
+  }
+  
+  const jwtStrategy = new JwtStrategy(SECRET, cacheService);
   const authCommand = new AuthenticateCommand(jwtStrategy);
 
   fastify.decorate(
@@ -234,7 +255,8 @@ export default async function (
       message: 'Authentication plugin setup completed',
       routes: ['POST /register', 'POST /login', 'GET /me'],
       hasJwtStrategy: !!jwtStrategy,
-      hasAuthCommand: !!authCommand
+      hasAuthCommand: !!authCommand,
+      hasAuthCache: !!cacheService
     });
   }
 }
