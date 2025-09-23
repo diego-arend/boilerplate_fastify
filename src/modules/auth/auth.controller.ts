@@ -1,9 +1,8 @@
 import type { FastifyInstance } from 'fastify';
 import jwt from 'jsonwebtoken';
-import { AuthRepository } from './repository/index.js';
-import { SecurityValidators } from '../../entities/user/index.js';
+import { AuthRepositoryFactory } from './factory/auth.factory.js';
+import { UserValidations } from '../../entities/user/index.js';
 import { ApiResponseHandler } from '../../lib/response/index.js';
-import { PasswordService } from './services/index.js';
 import { z } from 'zod';
 import { defaultLogger } from '../../lib/logger/index.js';
 
@@ -19,7 +18,7 @@ interface RegisterRequest {
 }
 
 // Authentication repository instance
-const authRepository = new AuthRepository();
+const authRepository = AuthRepositoryFactory.createAuthRepository();
 const logger = defaultLogger.child({ context: 'auth-controller' });
 
 export default async function authController(fastify: FastifyInstance) {
@@ -94,11 +93,10 @@ export default async function authController(fastify: FastifyInstance) {
 
       // Validate using Zod schemas
       try {
-        const validatedData = SecurityValidators.validateUserRegistration({
+        const validatedData = UserValidations.validateCreateUser({
           name,
           email,
-          password,
-          role: 'user'
+          password
         });
 
         // Create user using repository (validation already done)
@@ -238,44 +236,24 @@ export default async function authController(fastify: FastifyInstance) {
 
       // Validate using Zod schemas
       try {
-        const validatedData = SecurityValidators.validateUserLogin({
+        const validatedData = UserValidations.validateLogin({
           email,
           password
         });
 
-        // Find user with password (validation already done in repository)
-        const user = await authRepository.findByEmailWithPassword(validatedData.email);
+        // Validate user credentials using repository method
+        const loginResult = await authRepository.validateLogin(validatedData.email, validatedData.password);
 
-        if (!user) {
+        if (!loginResult.isValid || !loginResult.user) {
           requestLogger.error({
-            message: 'Login failed - user not found',
-            email: email?.toLowerCase()
+            message: 'Login failed',
+            email: email?.toLowerCase(),
+            reason: loginResult.reason || 'Invalid credentials'
           });
-          return ApiResponseHandler.authError(reply, 'Invalid credentials');
+          return ApiResponseHandler.authError(reply, loginResult.reason || 'Invalid credentials');
         }
 
-        // Check if user is active
-        if (user.status !== 'active') {
-          requestLogger.error({
-            message: 'Login failed - account deactivated',
-            userId: user._id,
-            email: user.email,
-            userStatus: user.status
-          });
-          return ApiResponseHandler.authError(reply, 'Account deactivated');
-        }
-
-        // Compare password using bcrypt
-        const isPasswordValid = await PasswordService.comparePassword(password, user.password);
-        
-        if (!isPasswordValid) {
-          requestLogger.error({
-            message: 'Login failed - invalid password',
-            userId: user._id,
-            email: user.email
-          });
-          return ApiResponseHandler.authError(reply, 'Invalid credentials');
-        }
+        const user = loginResult.user;
 
         // Generate JWT token
         const token = jwt.sign(
@@ -283,6 +261,9 @@ export default async function authController(fastify: FastifyInstance) {
           fastify.config.JWT_SECRET,
           { expiresIn: '24h' }
         );
+
+        // Update last login timestamp
+        await authRepository.updateLastLogin(String(user._id));
 
         // Log successful login
         if (process.env.NODE_ENV === 'development') {
@@ -413,7 +394,7 @@ export default async function authController(fastify: FastifyInstance) {
 
       if (!userData) {
         // Cache miss - fetch from database
-        const user = await authRepository.findById(userId);
+        const user = await authRepository.findByIdForAuth(userId);
 
         if (!user) {
           requestLogger.error({

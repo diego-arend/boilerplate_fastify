@@ -15,5 +15,11 @@ export {
   MongoQuerySchema,
   RegisterRequestSchema,
   LoginRequestSchema,
-  UserUpdateSchema
+  UserUpdateSchema,
+  ChangePasswordSchema,
+  BaseStatusSchema,
+  BaseRoleSchema,
+  CpfSchema,
+  PhoneSchema,
+  CepSchema
 } from './globalValidators.js';

@@ -157,6 +157,95 @@ export const MongoQuerySchema = z.record(z.string(), z.any())
   });
 
 /**
+ * Change password schema (globally reusable)
+ */
+export const ChangePasswordSchema = z.object({
+  currentPassword: z.string().min(1, "Current password is required"),
+  newPassword: PasswordSchema
+});
+
+/**
+ * Generic status schema for entities (can be customized per entity)
+ */
+export const BaseStatusSchema = z.enum(['active', 'inactive'], {
+  message: 'Status must be active or inactive'
+});
+
+/**
+ * Generic role schema (can be extended per entity)
+ */
+export const BaseRoleSchema = z.enum(['user'], {
+  message: 'Invalid role'
+});
+
+/**
+ * Brazilian CPF validation schema
+ */
+export const CpfSchema = z.string()
+  .min(11, "CPF must have 11 digits")
+  .max(14, "CPF too long") // With formatting: 000.000.000-00
+  .transform((val) => val.replace(/\D/g, '')) // Remove formatting
+  .refine((cpf) => {
+    // Basic CPF validation algorithm
+    if (cpf.length !== 11) return false;
+    
+    // Check for invalid patterns (all same digits)
+    if (/^(\d)\1{10}$/.test(cpf)) return false;
+    
+    // CPF validation algorithm
+    let sum = 0;
+    let remainder;
+    
+    // Validate first digit
+    for (let i = 1; i <= 9; i++) {
+      sum += parseInt(cpf.substring(i - 1, i)) * (11 - i);
+    }
+    remainder = (sum * 10) % 11;
+    if (remainder === 10 || remainder === 11) remainder = 0;
+    if (remainder !== parseInt(cpf.substring(9, 10))) return false;
+    
+    // Validate second digit
+    sum = 0;
+    for (let i = 1; i <= 10; i++) {
+      sum += parseInt(cpf.substring(i - 1, i)) * (12 - i);
+    }
+    remainder = (sum * 10) % 11;
+    if (remainder === 10 || remainder === 11) remainder = 0;
+    if (remainder !== parseInt(cpf.substring(10, 11))) return false;
+    
+    return true;
+  }, {
+    message: "Invalid CPF format"
+  });
+
+/**
+ * Brazilian phone number schema
+ */
+export const PhoneSchema = z.string()
+  .min(10, "Phone number too short")
+  .max(15, "Phone number too long") // With formatting: +55 (11) 99999-9999
+  .transform((val) => val.replace(/\D/g, '')) // Remove formatting
+  .refine((phone) => {
+    // Brazilian phone patterns: 10 digits (landline) or 11 digits (mobile)
+    return phone.length === 10 || phone.length === 11;
+  }, {
+    message: "Invalid Brazilian phone number format"
+  });
+
+/**
+ * Brazilian CEP (postal code) schema
+ */
+export const CepSchema = z.string()
+  .min(8, "CEP must have 8 digits")
+  .max(9, "CEP too long") // With formatting: 00000-000
+  .transform((val) => val.replace(/\D/g, '')) // Remove formatting
+  .refine((cep) => {
+    return cep.length === 8 && /^\d{8}$/.test(cep);
+  }, {
+    message: "Invalid CEP format"
+  });
+
+/**
  * Registration request schema
  */
 export const RegisterRequestSchema = z.object({

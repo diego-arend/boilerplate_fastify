@@ -1,47 +1,45 @@
-import { Model } from 'mongoose';
-import type { FilterQuery, UpdateQuery } from 'mongoose';
-import { BaseRepository } from '../../../infraestructure/mongo/baseRepository.js';
-import { UserModel, type IUser } from '../../../entities/user/index.js';
-import { SecurityValidators } from '../../../entities/user/index.js';
-import { EmailSchema, PasswordSchema } from '../../../lib/validators/index.js';
-import { PasswordService } from '../services/index.js';
-import { z } from 'zod';
+import type { ClientSession } from 'mongoose';
+import type { IUser } from '../../../entities/user/index.js';
+import type { IUserRepository } from '../../../entities/user/index.js';
 
-export class AuthRepository extends BaseRepository<IUser> {
-  constructor() {
-    super(UserModel as Model<IUser>);
-  }
+/**
+ * Interface for Authentication Repository operations
+ */
+export interface IAuthRepository {
+  // Authentication-specific operations
+  findByEmailForAuth(email: string, session?: ClientSession): Promise<IUser | null>;
+  findByEmailWithPassword(email: string, session?: ClientSession): Promise<IUser | null>;
+  createUser(userData: { name: string; email: string; password: string; role?: 'user' | 'admin' }, session?: ClientSession): Promise<IUser>;
+  validateLogin(email: string, password: string, session?: ClientSession): Promise<{
+    user: IUser | null;
+    isValid: boolean;
+    reason?: string;
+  }>;
+  updateLastLogin(userId: string, session?: ClientSession): Promise<IUser | null>;
+  findByIdForAuth(id: string, session?: ClientSession): Promise<IUser | null>;
+  emailExistsForAuth(email: string, session?: ClientSession): Promise<boolean>;
+}
+
+/**
+ * AuthRepository - Authentication-specific repository using composition
+ * This class uses UserRepository via dependency injection instead of inheritance
+ * while maintaining access to authentication-focused methods
+ */
+export class AuthRepository implements IAuthRepository {
+  constructor(private userRepository: IUserRepository) {}
 
   /**
    * Find user by email for authentication
    */
-  async findByEmail(email: string): Promise<IUser | null> {
-    try {
-      // Validate and sanitize email using Zod
-      const validEmail = EmailSchema.parse(email.toLowerCase());
-      return await this.findOne({ email: validEmail });
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        throw new Error('Invalid email format');
-      }
-      throw error;
-    }
+  async findByEmailForAuth(email: string, session?: ClientSession): Promise<IUser | null> {
+    return this.userRepository.findByEmail(email, { ...(session && { session }) });
   }
 
   /**
    * Find user by email including password (for login)
    */
-  async findByEmailWithPassword(email: string): Promise<IUser | null> {
-    try {
-      // Validate and sanitize email using Zod
-      const validEmail = EmailSchema.parse(email.toLowerCase());
-      return await this.model.findOne({ email: validEmail }).select('+password').exec();
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        throw new Error('Invalid email format');
-      }
-      throw error;
-    }
+  async findByEmailWithPassword(email: string, session?: ClientSession): Promise<IUser | null> {
+    return this.userRepository.findByEmail(email, { includePassword: true, ...(session && { session }) });
   }
 
   /**
@@ -52,70 +50,52 @@ export class AuthRepository extends BaseRepository<IUser> {
     email: string;
     password: string;
     role?: 'user' | 'admin';
-  }): Promise<IUser> {
-    try {
-      // Validate user registration data using Zod schema
-      const validatedData = SecurityValidators.validateUserRegistration({
-        name: userData.name,
-        email: userData.email.toLowerCase(),
-        password: userData.password,
-        role: userData.role || 'user'
-      });
-
-      // Check if email already exists
-      const existingUser = await this.findByEmail(validatedData.email);
-      if (existingUser) {
-        throw new Error('Email already registered');
-      }
-
-      // Hash the password before saving
-      const hashedPassword = await PasswordService.hashPassword(validatedData.password);
-
-      // Create user data with hashed password
-      const userDataToSave = {
-        ...validatedData,
-        password: hashedPassword
-      };
-
-      return await this.create(userDataToSave as Partial<IUser>);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        throw new Error(`Validation failed: ${error.issues.map((e) => e.message).join(', ')}`);
-      }
-      throw error;
+  }, session?: ClientSession): Promise<IUser> {
+    // Check if email already exists
+    const existingUser = await this.userRepository.emailExists(userData.email, session);
+    if (existingUser) {
+      throw new Error('Email already registered');
     }
+
+    // Create user using UserRepository method
+    return this.userRepository.createUser({
+      name: userData.name,
+      email: userData.email,
+      password: userData.password
+    }, session);
   }
 
   /**
-   * Find user by ID (for JWT verification)
+   * Validate user login credentials
    */
-  async findByIdForAuth(id: string): Promise<IUser | null> {
-    return await this.findById(id);
+  async validateLogin(email: string, password: string, session?: ClientSession): Promise<{
+    user: IUser | null;
+    isValid: boolean;
+    reason?: string;
+  }> {
+    return this.userRepository.validateCredentials({ email, password }, session);
   }
 
   /**
-   * Check if email exists (for registration)
+   * Update user last login timestamp
    */
-  async emailExists(email: string): Promise<boolean> {
-    try {
-      // Validate email using Zod schema
-      const validEmail = EmailSchema.parse(email.toLowerCase());
-      const count = await this.count({ email: validEmail });
-      return count > 0;
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return false; // Invalid email format, consider as not existing
-      }
-      throw error;
-    }
+  async updateLastLogin(userId: string, session?: ClientSession): Promise<IUser | null> {
+    return this.userRepository.updateUser(userId, { 
+      lastLoginAt: new Date() 
+    }, session);
   }
 
   /**
-   * Update user's last login (optional)
+   * Find user by ID for authentication
    */
-  async updateLastLogin(userId: string): Promise<IUser | null> {
-    return await this.updateById(userId, {
-      updatedAt: new Date()
-    } as UpdateQuery<IUser>);
+  async findByIdForAuth(id: string, session?: ClientSession): Promise<IUser | null> {
+    return this.userRepository.findById(id, session);
+  }
+
+  /**
+   * Check if email exists (uses UserRepository method)
+   */
+  async emailExistsForAuth(email: string, session?: ClientSession): Promise<boolean> {
+    return this.userRepository.emailExists(email, session);
   }
 }

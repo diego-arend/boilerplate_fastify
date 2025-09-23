@@ -1,6 +1,14 @@
 export { default as MongoConnection } from './connection.js';
 export { BaseRepository } from './baseRepository.js';
 
+// Interfaces for dependency injection
+export type { 
+  IBaseRepository,
+  RepositoryOptions,
+  PaginationResult,
+  PaginationOptions
+} from './interfaces.js';
+
 // Transaction management
 export { 
   TransactionManager,

@@ -1,17 +1,12 @@
 import { Model, Document } from 'mongoose';
 import type { FilterQuery, UpdateQuery, ClientSession, SaveOptions, QueryOptions } from 'mongoose';
-
-/**
- * Options for repository operations that may include a session
- */
-interface RepositoryOptions {
-  session?: ClientSession;
-}
+import type { IBaseRepository, RepositoryOptions, PaginationResult } from './interfaces.js';
 
 /**
  * Generic base repository with transaction support
+ * Implements IBaseRepository interface for dependency injection
  */
-export class BaseRepository<T extends Document> {
+export class BaseRepository<T extends Document> implements IBaseRepository<T> {
   constructor(protected model: Model<T>) {}
 
   /**
