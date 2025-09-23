@@ -298,7 +298,7 @@ const userSchema = new Schema<IUser>(
 // ==========================================
 
 // Compound indexes for common queries
-userSchema.index({ email: 1 }); // Unique index automatically created
+// Note: email index is automatically created due to unique: true
 userSchema.index({ status: 1, role: 1 }); // Admin queries
 userSchema.index({ createdAt: -1 }); // Recent users
 userSchema.index({ lastLoginAt: -1 }, { sparse: true }); // Login tracking
