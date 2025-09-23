@@ -32,7 +32,7 @@ export default async function cachePlugin(
   function generateCacheKey(request: FastifyRequest): string {
     const { method, url } = request;
     const userId = request.authenticatedUser?.id || 'anonymous';
-    
+
     // Include user ID for authenticated routes to avoid data leaks
     return `route:${method}:${url}:user:${userId}`;
   }
@@ -75,11 +75,11 @@ export default async function cachePlugin(
 
       if (cached) {
         fastify.log.debug(`Cache hit for ${cacheKey}`);
-        
+
         // Set cache hit header for debugging
         reply.header('X-Cache', 'HIT');
         reply.header('X-Cache-Key', cacheKey);
-        
+
         // Send cached response
         reply.send(cached);
         return;
@@ -88,7 +88,7 @@ export default async function cachePlugin(
       // Cache miss - store key for onSend hook
       request.cacheKey = cacheKey;
       fastify.log.debug(`Cache miss for ${cacheKey}`);
-      
+
     } catch (error) {
       fastify.log.error(`Cache preHandler error: ${(error as Error).message}`);
       // Continue without cache on error
@@ -107,17 +107,17 @@ export default async function cachePlugin(
     try {
       // Determine TTL (can be set per route)
       const ttl = request.cacheTTL || cacheOptions.defaultTTL;
-      
+
       // Save to cache
       await cache.set(request.cacheKey, payload, { ttl });
-      
+
       // Set cache miss header for debugging
       reply.header('X-Cache', 'MISS');
       reply.header('X-Cache-Key', request.cacheKey);
       reply.header('X-Cache-TTL', ttl.toString());
-      
+
       fastify.log.debug(`Cached response for ${request.cacheKey} with TTL ${ttl}s`);
-      
+
     } catch (error) {
       fastify.log.error(`Cache onSend error: ${(error as Error).message}`);
       // Continue without caching on error
@@ -129,21 +129,21 @@ export default async function cachePlugin(
   /**
    * Cache decorator methods for manual cache control
    */
-  fastify.decorate('setCacheForRoute', function(this: FastifyInstance, key: string, data: any, ttl?: number) {
+  fastify.decorate('setCacheForRoute', (key: string, data: any, ttl?: number) => {
     return cache.set(key, data, { ttl: ttl || cacheOptions.defaultTTL });
   });
 
-  fastify.decorate('getCacheForRoute', function(this: FastifyInstance, key: string) {
+  fastify.decorate('getCacheForRoute', (key: string) => {
     return cache.get(key);
   });
 
-  fastify.decorate('invalidateCache', function(this: FastifyInstance, pattern: string) {
+  fastify.decorate('invalidateCache', (pattern: string) => {
     // For simple invalidation, we can delete specific keys
     // For pattern-based, we'd need to implement key scanning
     return cache.del(pattern);
   });
 
-  fastify.decorate('clearRouteCache', function(this: FastifyInstance) {
+  fastify.decorate('clearRouteCache', () => {
     return cache.clear('route');
   });
 

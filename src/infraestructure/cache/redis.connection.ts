@@ -90,8 +90,8 @@ export class RedisConnection {
             }, 'Redis reconnecting...');
             return delay;
           },
-          connectTimeout: 10000, // 10 seconds
-        },
+          connectTimeout: 10000 // 10 seconds
+        }
       });
 
       // Setup event listeners
@@ -99,32 +99,32 @@ export class RedisConnection {
 
       // Connect to Redis
       await this.client.connect();
-      
+
       this.isConnecting = false;
       this.reconnectAttempts = 0;
-      
+
       this.logger.info({
         ...connectionInfo,
         status: 'connected',
         clientReady: this.client.isReady
       }, 'Successfully connected to Redis');
-      
+
       return this.client;
 
     } catch (error) {
       this.isConnecting = false;
       this.reconnectAttempts++;
-      
+
       this.logger.error({
         ...connectionInfo,
         attempt: this.reconnectAttempts,
         error: error instanceof Error ? error : new Error(String(error))
       }, 'Redis connection failed');
-      
+
       if (this.reconnectAttempts >= this.maxReconnectAttempts) {
         throw new Error(`Redis: Failed to connect after ${this.maxReconnectAttempts} attempts`);
       }
-      
+
       // Retry connection after delay
       await this.delay(this.reconnectDelay);
       return this.connect(appConfig);
@@ -203,7 +203,7 @@ export class RedisConnection {
     if (!this.client || !this.client.isOpen) {
       throw new Error('Redis: Not connected');
     }
-    
+
     try {
       const result = await this.client.ping();
       this.logger.debug('Redis ping successful');
@@ -224,19 +224,19 @@ export class RedisConnection {
    */
   private buildRedisUrl(appConfig: typeof config): string {
     const { REDIS_HOST, REDIS_PORT, REDIS_PASSWORD, REDIS_DB } = appConfig;
-    
+
     let url = 'redis://';
-    
+
     if (REDIS_PASSWORD) {
       url += `:${REDIS_PASSWORD}@`;
     }
-    
+
     url += `${REDIS_HOST}:${REDIS_PORT}`;
-    
+
     if (REDIS_DB && REDIS_DB > 0) {
       url += `/${REDIS_DB}`;
     }
-    
+
     return url;
   }
 
@@ -275,7 +275,7 @@ export class RedisConnection {
   private async waitForConnection(): Promise<void> {
     let attempts = 0;
     const maxAttempts = 100; // 10 seconds with 100ms intervals
-    
+
     while (this.isConnecting && attempts < maxAttempts) {
       await this.delay(100);
       attempts++;

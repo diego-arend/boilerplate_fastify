@@ -1,4 +1,4 @@
-import type { FastifyServerOptions } from 'fastify'
+import type { FastifyServerOptions } from 'fastify';
 
 const config: FastifyServerOptions = {
   logger: {
@@ -7,11 +7,11 @@ const config: FastifyServerOptions = {
       target: 'pino-pretty',
       options: {
         translateTime: 'HH:MM:ss Z',
-        ignore: 'pid,hostname',
-      },
-    },
+        ignore: 'pid,hostname'
+      }
+    }
   },
-  pluginTimeout: 30000, // 30 seconds timeout for plugins
-}
+  pluginTimeout: 30000 // 30 seconds timeout for plugins
+};
 
-export default config
+export default config;

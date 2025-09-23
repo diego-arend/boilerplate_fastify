@@ -17,11 +17,11 @@ export class BaseRepository<T extends Document> implements IBaseRepository<T> {
   async create(data: Partial<T>, options: RepositoryOptions = {}): Promise<T> {
     const document = new this.model(data);
     const saveOptions: SaveOptions = {};
-    
+
     if (options.session) {
       saveOptions.session = options.session;
     }
-    
+
     return await document.save(saveOptions);
   }
 
@@ -32,11 +32,11 @@ export class BaseRepository<T extends Document> implements IBaseRepository<T> {
    */
   async createMany(data: Partial<T>[], options: RepositoryOptions = {}): Promise<T[]> {
     const createOptions: any = {};
-    
+
     if (options.session) {
       createOptions.session = options.session;
     }
-    
+
     return await this.model.create(data, createOptions);
   }
 
@@ -47,11 +47,11 @@ export class BaseRepository<T extends Document> implements IBaseRepository<T> {
    */
   async findById(id: string, options: RepositoryOptions = {}): Promise<T | null> {
     const query = this.model.findById(id);
-    
+
     if (options.session) {
       query.session(options.session);
     }
-    
+
     return await query.exec();
   }
 
@@ -62,11 +62,11 @@ export class BaseRepository<T extends Document> implements IBaseRepository<T> {
    */
   async findOne(filter: FilterQuery<T>, options: RepositoryOptions = {}): Promise<T | null> {
     const query = this.model.findOne(filter);
-    
+
     if (options.session) {
       query.session(options.session);
     }
-    
+
     return await query.exec();
   }
 
@@ -77,11 +77,11 @@ export class BaseRepository<T extends Document> implements IBaseRepository<T> {
    */
   async find(filter: FilterQuery<T> = {}, options: RepositoryOptions = {}): Promise<T[]> {
     const query = this.model.find(filter);
-    
+
     if (options.session) {
       query.session(options.session);
     }
-    
+
     return await query.exec();
   }
 
@@ -93,11 +93,11 @@ export class BaseRepository<T extends Document> implements IBaseRepository<T> {
    */
   async updateById(id: string, update: UpdateQuery<T>, options: RepositoryOptions = {}): Promise<T | null> {
     const queryOptions: QueryOptions = { new: true };
-    
+
     if (options.session) {
       queryOptions.session = options.session;
     }
-    
+
     return await this.model.findByIdAndUpdate(id, update, queryOptions).exec();
   }
 
@@ -109,11 +109,11 @@ export class BaseRepository<T extends Document> implements IBaseRepository<T> {
    */
   async updateOne(filter: FilterQuery<T>, update: UpdateQuery<T>, options: RepositoryOptions = {}): Promise<T | null> {
     const queryOptions: QueryOptions = { new: true };
-    
+
     if (options.session) {
       queryOptions.session = options.session;
     }
-    
+
     return await this.model.findOneAndUpdate(filter, update, queryOptions).exec();
   }
 
@@ -125,11 +125,11 @@ export class BaseRepository<T extends Document> implements IBaseRepository<T> {
    */
   async updateMany(filter: FilterQuery<T>, update: UpdateQuery<T>, options: RepositoryOptions = {}): Promise<{ modifiedCount: number }> {
     const queryOptions: any = {};
-    
+
     if (options.session) {
       queryOptions.session = options.session;
     }
-    
+
     const result = await this.model.updateMany(filter, update, queryOptions).exec();
     return { modifiedCount: result.modifiedCount };
   }
@@ -141,11 +141,11 @@ export class BaseRepository<T extends Document> implements IBaseRepository<T> {
    */
   async deleteById(id: string, options: RepositoryOptions = {}): Promise<boolean> {
     const queryOptions: QueryOptions = {};
-    
+
     if (options.session) {
       queryOptions.session = options.session;
     }
-    
+
     const result = await this.model.findByIdAndDelete(id, queryOptions).exec();
     return result !== null;
   }
@@ -157,11 +157,11 @@ export class BaseRepository<T extends Document> implements IBaseRepository<T> {
    */
   async deleteOne(filter: FilterQuery<T>, options: RepositoryOptions = {}): Promise<boolean> {
     const queryOptions: QueryOptions = {};
-    
+
     if (options.session) {
       queryOptions.session = options.session;
     }
-    
+
     const result = await this.model.findOneAndDelete(filter, queryOptions).exec();
     return result !== null;
   }
@@ -173,11 +173,11 @@ export class BaseRepository<T extends Document> implements IBaseRepository<T> {
    */
   async deleteMany(filter: FilterQuery<T>, options: RepositoryOptions = {}): Promise<{ deletedCount: number }> {
     const queryOptions: any = {};
-    
+
     if (options.session) {
       queryOptions.session = options.session;
     }
-    
+
     const result = await this.model.deleteMany(filter, queryOptions).exec();
     return { deletedCount: result.deletedCount || 0 };
   }
@@ -189,11 +189,11 @@ export class BaseRepository<T extends Document> implements IBaseRepository<T> {
    */
   async count(filter: FilterQuery<T> = {}, options: RepositoryOptions = {}): Promise<number> {
     const query = this.model.countDocuments(filter);
-    
+
     if (options.session) {
       query.session(options.session);
     }
-    
+
     return await query.exec();
   }
 
@@ -223,17 +223,17 @@ export class BaseRepository<T extends Document> implements IBaseRepository<T> {
     const skip = (page - 1) * limit;
     const total = await this.count(filter, options);
     const totalPages = Math.ceil(total / limit);
-    
+
     const query = this.model
       .find(filter)
       .sort(sort)
       .skip(skip)
       .limit(limit);
-    
+
     if (options.session) {
       query.session(options.session);
     }
-    
+
     const data = await query.exec();
 
     return {
@@ -243,7 +243,7 @@ export class BaseRepository<T extends Document> implements IBaseRepository<T> {
       limit,
       totalPages,
       hasNext: page < totalPages,
-      hasPrev: page > 1,
+      hasPrev: page > 1
     };
   }
 
@@ -254,11 +254,11 @@ export class BaseRepository<T extends Document> implements IBaseRepository<T> {
    */
   async exists(filter: FilterQuery<T>, options: RepositoryOptions = {}): Promise<boolean> {
     const query = this.model.exists(filter);
-    
+
     if (options.session) {
       query.session(options.session);
     }
-    
+
     const result = await query.exec();
     return result !== null;
   }
@@ -271,11 +271,11 @@ export class BaseRepository<T extends Document> implements IBaseRepository<T> {
    */
   async replaceOne(filter: FilterQuery<T>, replacement: Partial<T>, options: RepositoryOptions = {}): Promise<T | null> {
     const queryOptions: QueryOptions = { new: true };
-    
+
     if (options.session) {
       queryOptions.session = options.session;
     }
-    
+
     return await this.model.findOneAndReplace(filter, replacement, queryOptions).exec();
   }
 }

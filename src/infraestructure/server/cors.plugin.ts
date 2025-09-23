@@ -23,16 +23,16 @@ export default async function corsPlugin(
   // Parse origin configuration from environment
   const parseOrigin = (originEnv?: string): FastifyCorsOptions['origin'] => {
     if (!originEnv) return false;
-    
+
     // Handle special values
     if (originEnv === '*') return true;
     if (originEnv === 'false' || originEnv === 'null') return false;
-    
+
     // Handle array of origins (comma-separated)
     if (originEnv.includes(',')) {
       return originEnv.split(',').map(origin => origin.trim()).filter(Boolean);
     }
-    
+
     // Handle regex pattern
     if (originEnv.startsWith('/') && originEnv.endsWith('/')) {
       const regexPattern = originEnv.slice(1, -1);
@@ -47,7 +47,7 @@ export default async function corsPlugin(
         return originEnv;
       }
     }
-    
+
     // Single origin string
     return originEnv;
   };
@@ -55,30 +55,30 @@ export default async function corsPlugin(
   // Configuration with environment variables and defaults
   const corsConfig: FastifyCorsOptions = {
     // Origin configuration - restrictive by default in production
-    origin: opts.origin !== undefined 
-      ? opts.origin 
+    origin: opts.origin !== undefined
+      ? opts.origin
       : parseOrigin(config.CORS_ORIGIN) || (config.NODE_ENV === 'production' ? false : true),
-    
+
     // Credentials - only allow if explicitly set
-    credentials: opts.credentials !== undefined 
-      ? opts.credentials 
+    credentials: opts.credentials !== undefined
+      ? opts.credentials
       : config.CORS_ALLOW_CREDENTIALS || false,
-    
+
     // Allowed HTTP methods
     methods: opts.methods || ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'],
-    
+
     // Allowed headers - include common ones used by modern web applications
     allowedHeaders: opts.allowedHeaders || [
       'Origin',
-      'X-Requested-With', 
-      'Content-Type', 
+      'X-Requested-With',
+      'Content-Type',
       'Accept',
       'Authorization',
       'X-API-Key',
       'X-Request-ID',
       'Cache-Control'
     ],
-    
+
     // Exposed headers - headers that the browser can access
     exposedHeaders: opts.exposedHeaders || [
       'X-Request-ID',
@@ -87,18 +87,18 @@ export default async function corsPlugin(
       'X-RateLimit-Remaining',
       'X-RateLimit-Reset'
     ],
-    
+
     // Preflight cache duration (24 hours)
     maxAge: opts.maxAge !== undefined ? opts.maxAge : 86400,
-    
+
     // Continue to next handler after preflight
     preflightContinue: opts.preflightContinue || false,
-    
+
     // Success status for preflight requests
     optionsSuccessStatus: opts.optionsSuccessStatus || 204
   };
 
-    // Security validations for production environment
+  // Security validations for production environment
   if (config.NODE_ENV === 'production') {
     // Check for wildcard origin
     if (corsConfig.origin === '*') {
@@ -114,8 +114,8 @@ export default async function corsPlugin(
   logger.info({
     message: 'Initializing CORS plugin',
     config: {
-      origin: typeof corsConfig.origin === 'function' 
-        ? 'function' 
+      origin: typeof corsConfig.origin === 'function'
+        ? 'function'
         : corsConfig.origin,
       credentials: corsConfig.credentials,
       methods: corsConfig.methods,
@@ -129,17 +129,17 @@ export default async function corsPlugin(
   // Register the CORS plugin
   try {
     await fastify.register(cors, corsConfig);
-    
+
     logger.info({
       message: 'CORS plugin registered successfully',
-      originType: Array.isArray(corsConfig.origin) 
-        ? 'array' 
+      originType: Array.isArray(corsConfig.origin)
+        ? 'array'
         : typeof corsConfig.origin,
       credentialsEnabled: corsConfig.credentials,
       methodsCount: corsConfig.methods?.length || 0,
       environment: config.NODE_ENV
     });
-    
+
     // Add development warning if CORS is wide open
     if (config.NODE_ENV === 'development' && corsConfig.origin === true) {
       logger.warn({
@@ -147,7 +147,7 @@ export default async function corsPlugin(
         security: 'This should be restricted in production environments'
       });
     }
-    
+
   } catch (error) {
     logger.error({
       message: 'Failed to register CORS plugin',

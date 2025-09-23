@@ -6,7 +6,7 @@ import type { Logger, LoggerOptions } from 'pino';
  */
 export enum LogLevel {
   FATAL = 'fatal',
-  ERROR = 'error', 
+  ERROR = 'error',
   WARN = 'warn',
   INFO = 'info',
   DEBUG = 'debug',
@@ -59,10 +59,10 @@ const SENSITIVE_FIELDS = [
 
 /**
  * Logger Manager class providing centralized logging functionality
- * 
+ *
  * This class implements a comprehensive logging solution using Pino library,
  * designed for high-performance applications with structured logging support.
- * 
+ *
  * Features:
  * - Multiple log levels (fatal, error, warn, info, debug, trace)
  * - Environment-based configuration
@@ -72,17 +72,17 @@ const SENSITIVE_FIELDS = [
  * - JSON structured logs for production
  * - Child logger support
  * - Integration with Fastify
- * 
+ *
  * Usage:
  * ```typescript
  * // Basic usage
  * const logger = LoggerManager.getInstance();
  * logger.info('Application started', { port: 3000 });
- * 
+ *
  * // With context
  * const contextLogger = logger.child({ requestId: 'req-123' });
  * contextLogger.error('Database error', { error: err });
- * 
+ *
  * // Custom configuration
  * const customLogger = LoggerManager.createLogger({
  *   serviceName: 'user-service',
@@ -159,7 +159,7 @@ export class LoggerManager {
    */
   public error(message: string, meta?: LogContext & { error?: Error }): void {
     const sanitizedMeta = this.sanitizeObject(meta || {});
-    
+
     // Handle error object specially to include stack trace
     if (meta?.error && meta.error instanceof Error) {
       sanitizedMeta.error = {
@@ -168,7 +168,7 @@ export class LoggerManager {
         stack: meta.error.stack
       };
     }
-    
+
     this.logger.error(sanitizedMeta, message);
   }
 
@@ -216,10 +216,10 @@ export class LoggerManager {
   private buildConfig(userConfig: LoggerConfig): LoggerConfig {
     const environment = process.env.NODE_ENV || 'development';
     const isDevelopment = environment === 'development';
-    
+
     return {
       serviceName: userConfig.serviceName || process.env.SERVICE_NAME || 'fastify-app',
-      level: userConfig.level || (process.env.LOG_LEVEL as LogLevel) || 
+      level: userConfig.level || (process.env.LOG_LEVEL as LogLevel) ||
              (isDevelopment ? LogLevel.DEBUG : LogLevel.INFO),
       environment: userConfig.environment || environment,
       prettyPrint: userConfig.prettyPrint !== undefined ? userConfig.prettyPrint : isDevelopment,
@@ -256,10 +256,10 @@ export class LoggerManager {
       formatters: {
         // Custom formatter to add consistent structure
         level: (label: string) => ({ level: label }),
-        bindings: (bindings: any) => ({ 
-          pid: bindings.pid, 
+        bindings: (bindings: any) => ({
+          pid: bindings.pid,
           hostname: bindings.hostname,
-          ...bindings 
+          ...bindings
         })
       }
     };
@@ -298,12 +298,12 @@ export class LoggerManager {
     }
 
     const sanitized: any = {};
-    
+
     for (const [key, value] of Object.entries(obj)) {
       const lowerKey = key.toLowerCase();
-      
+
       // Check if the key contains sensitive information
-      const isSensitive = SENSITIVE_FIELDS.some(field => 
+      const isSensitive = SENSITIVE_FIELDS.some(field =>
         lowerKey.includes(field.toLowerCase())
       );
 
@@ -361,19 +361,19 @@ export class LoggerManager {
 
 /**
  * Default logger instance for application-wide use
- * 
+ *
  * This is a convenience export that provides a pre-configured logger instance
  * ready for immediate use throughout the application.
- * 
+ *
  * Environment Variables for Configuration:
  * - LOG_LEVEL: Minimum log level (fatal, error, warn, info, debug, trace)
  * - NODE_ENV: Environment (development enables pretty printing)
  * - SERVICE_NAME: Name of the service for log identification
- * 
+ *
  * Usage:
  * ```typescript
  * import { defaultLogger } from './lib/logger';
- * 
+ *
  * defaultLogger.info('Server starting', { port: 3000 });
  * defaultLogger.error('Database connection failed', { error: err });
  * ```

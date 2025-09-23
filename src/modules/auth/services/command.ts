@@ -8,7 +8,7 @@ export interface AuthCommand {
 
 export class AuthenticateCommand implements AuthCommand {
   private logger = defaultLogger.child({ context: 'auth-command' });
-  
+
   constructor(private strategy: AuthStrategy) {
     // Log command initialization (development only)
     if (process.env.NODE_ENV === 'development') {
@@ -19,11 +19,11 @@ export class AuthenticateCommand implements AuthCommand {
       });
     }
   }
-  
+
   async execute(request: FastifyRequest, reply: FastifyReply): Promise<AuthenticatedUser | null> {
     const requestId = request.id || Math.random().toString(36).substr(2, 9);
     const operationLogger = this.logger.child({ requestId, operation: 'execute-auth' });
-    
+
     try {
       // Log authentication execution attempt (development only)
       if (process.env.NODE_ENV === 'development') {
@@ -36,9 +36,9 @@ export class AuthenticateCommand implements AuthCommand {
           ip: request.ip
         });
       }
-      
+
       const authenticatedUser = await this.strategy.authenticate(request, reply);
-      
+
       if (!authenticatedUser) {
         operationLogger.error({
           message: 'Authentication command execution failed',
@@ -49,7 +49,7 @@ export class AuthenticateCommand implements AuthCommand {
         });
         return null;
       }
-      
+
       // Log successful authentication (development only)
       if (process.env.NODE_ENV === 'development') {
         operationLogger.info({
@@ -60,7 +60,7 @@ export class AuthenticateCommand implements AuthCommand {
           strategyType: this.strategy.constructor.name
         });
       }
-      
+
       return authenticatedUser;
     } catch (error) {
       operationLogger.error({

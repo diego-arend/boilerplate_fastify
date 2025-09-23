@@ -5,18 +5,18 @@
 
 import { Queue, Job, Worker } from 'bullmq';
 import type { FastifyBaseLogger } from 'fastify';
-import type { 
-  JobType, 
-  JobData, 
-  JobOptions, 
-  QueueConfig, 
+import type {
+  JobType,
+  JobData,
+  JobOptions,
+  QueueConfig,
   QueueStats,
-  JobResult 
+  JobResult
 } from './queue.types.js';
 
 export enum SystemHealth {
   HEALTHY = 'healthy',
-  DEGRADED = 'degraded', 
+  DEGRADED = 'degraded',
   CRITICAL = 'critical',
   DOWN = 'down'
 }
@@ -80,12 +80,12 @@ class RedisCircuitBreaker {
 
     try {
       const result = await operation();
-      
+
       if (this.state === 'HALF_OPEN') {
         this.reset();
         this.logger.info('Circuit breaker reset to CLOSED - Redis recovered');
       }
-      
+
       return result;
     } catch (error) {
       this.recordFailure();
@@ -103,7 +103,7 @@ class RedisCircuitBreaker {
         failureCount: this.failureCount,
         threshold: this.failureThreshold
       }, 'Circuit breaker opened - Redis operations blocked');
-      
+
       // Auto-reset after timeout
       setTimeout(() => {
         if (this.state === 'OPEN') {
@@ -142,7 +142,7 @@ class MemoryFallbackQueue {
 
   async addJob(jobType: JobType, data: JobData, options: JobOptions = {}): Promise<string> {
     const jobId = `fallback:${Date.now()}:${Math.random().toString(36).substr(2, 9)}`;
-    
+
     const fallbackJob: FallbackJobData = {
       ...data,
       fallbackId: jobId,
@@ -153,7 +153,7 @@ class MemoryFallbackQueue {
     };
 
     this.jobs.set(jobId, fallbackJob);
-    
+
     this.logger.warn({
       jobId,
       jobType,
@@ -185,7 +185,7 @@ class MemoryFallbackQueue {
     }
 
     this.processing.add(jobId);
-    
+
     try {
       // Simulate job processing (in real implementation, call actual handlers)
       const result: JobResult = {
@@ -209,7 +209,7 @@ class MemoryFallbackQueue {
     } catch (error) {
       this.processing.delete(jobId);
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-      
+
       this.failed.set(jobId, {
         error: errorMsg,
         attempts: job.retryCount + 1
@@ -260,7 +260,7 @@ export class ResilientQueueManager {
     this.logger = logger.child({ module: 'resilient-queue' });
     this.circuitBreaker = new RedisCircuitBreaker(this.logger);
     this.memoryFallback = new MemoryFallbackQueue(this.logger);
-    
+
     this.healthStatus = {
       overall: SystemHealth.DOWN,
       redis: {
@@ -311,14 +311,14 @@ export class ResilientQueueManager {
 
       // Setup Redis event listeners
       this.setupRedisEventListeners();
-      
+
       // Test connection
       await this.testRedisConnection();
-      
+
       this.updateHealthStatus({
-        redis: { 
-          status: 'connected', 
-          consecutiveFailures: 0 
+        redis: {
+          status: 'connected',
+          consecutiveFailures: 0
         },
         overall: SystemHealth.HEALTHY
       });
@@ -329,10 +329,10 @@ export class ResilientQueueManager {
       this.logger.error({
         error: error instanceof Error ? error.message : 'Unknown error'
       }, 'Failed to initialize primary Redis queue');
-      
+
       this.updateHealthStatus({
-        redis: { 
-          status: 'error', 
+        redis: {
+          status: 'error',
           lastError: error instanceof Error ? error.message : 'Unknown error',
           consecutiveFailures: this.healthStatus.redis.consecutiveFailures + 1
         },
@@ -364,10 +364,10 @@ export class ResilientQueueManager {
         error: error.message,
         consecutiveFailures: this.healthStatus.redis.consecutiveFailures + 1
       }, 'Redis connection error');
-      
+
       this.updateHealthStatus({
-        redis: { 
-          status: 'error', 
+        redis: {
+          status: 'error',
           lastError: error.message,
           consecutiveFailures: this.healthStatus.redis.consecutiveFailures + 1
         },
@@ -402,20 +402,20 @@ export class ResilientQueueManager {
         const redis = (this.primaryQueue as any).client;
         await redis.ping();
       });
-      
+
       const latency = Date.now() - startTime;
       this.updateHealthStatus({
-        redis: { 
-          status: 'connected', 
-          latency, 
-          consecutiveFailures: 0 
+        redis: {
+          status: 'connected',
+          latency,
+          consecutiveFailures: 0
         }
       });
-      
+
       return true;
     } catch (error) {
       this.updateHealthStatus({
-        redis: { 
+        redis: {
           status: 'error',
           lastError: error instanceof Error ? error.message : 'Unknown error',
           consecutiveFailures: this.healthStatus.redis.consecutiveFailures + 1
@@ -462,8 +462,8 @@ export class ResilientQueueManager {
     const fallbackJobId = await this.memoryFallback.addJob(jobType, jobData, options);
     this.healthStatus.metrics.fallbackJobs++;
     this.updateHealthStatus({
-      fallback: { 
-        active: true, 
+      fallback: {
+        active: true,
         type: 'memory',
         queuedJobs: this.healthStatus.fallback.queuedJobs + 1
       }
@@ -491,7 +491,7 @@ export class ResilientQueueManager {
       try {
         const [waiting, active, completed, failed, delayed] = await Promise.all([
           this.primaryQueue.getWaiting(),
-          this.primaryQueue.getActive(), 
+          this.primaryQueue.getActive(),
           this.primaryQueue.getCompleted(),
           this.primaryQueue.getFailed(),
           this.primaryQueue.getDelayed()
@@ -534,14 +534,14 @@ export class ResilientQueueManager {
    */
   private async performHealthCheck(): Promise<void> {
     const isRedisHealthy = await this.testRedisConnection();
-    
+
     if (isRedisHealthy && this.healthStatus.fallback.active) {
       await this.attemptFallbackRecovery();
     }
 
     // Update overall system health
     let overallHealth = SystemHealth.DOWN;
-    
+
     if (isRedisHealthy) {
       overallHealth = SystemHealth.HEALTHY;
     } else if (this.healthStatus.fallback.active) {
@@ -560,7 +560,7 @@ export class ResilientQueueManager {
     }
 
     const fallbackJobs = await this.memoryFallback.getJobs();
-    
+
     if (fallbackJobs.length === 0) {
       this.updateHealthStatus({
         fallback: { active: false, type: null, queuedJobs: 0 }
@@ -595,7 +595,7 @@ export class ResilientQueueManager {
       this.logger.info({
         recoveredJobs: recovered
       }, 'Successfully recovered jobs from fallback to Redis');
-      
+
       this.updateHealthStatus({
         fallback: { active: false, type: null, queuedJobs: 0 }
       });
@@ -622,7 +622,7 @@ export class ResilientQueueManager {
     if (this.healthCheckInterval) {
       clearInterval(this.healthCheckInterval);
     }
-    
+
     if (this.reconnectInterval) {
       clearInterval(this.reconnectInterval);
     }
@@ -632,7 +632,7 @@ export class ResilientQueueManager {
     }
 
     await this.memoryFallback.clear();
-    
+
     this.logger.info('Resilient Queue Manager shutdown complete');
   }
 }

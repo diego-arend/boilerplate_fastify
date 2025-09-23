@@ -1,11 +1,11 @@
 import mongoose from 'mongoose';
 import { defaultLogger } from '../../lib/logger/index.js';
 import type { ClientSession } from 'mongoose';
-import type { 
-  TransactionOptions, 
-  TransactionResult, 
+import type {
+  TransactionOptions,
+  TransactionResult,
   TransactionStats,
-  TransactionalFunction 
+  TransactionalFunction
 } from './transaction.types.js';
 
 /**
@@ -39,7 +39,7 @@ export class TransactionManager {
       ...(options.readConcern && { readConcern: options.readConcern }),
       ...(options.writeConcern && { writeConcern: options.writeConcern }),
       ...(options.readPreference && { readPreference: options.readPreference }),
-      maxTimeMS: options.maxTimeMS || 30000,
+      maxTimeMS: options.maxTimeMS || 30000
     });
 
     const transactionId = this.generateTransactionId();
@@ -51,7 +51,7 @@ export class TransactionManager {
     };
 
     this.activeTransactions.set(transactionId, transactionStats);
-    
+
     this.logger.info({ transactionId }, 'Transaction session started');
     return session;
   }
@@ -99,7 +99,7 @@ export class TransactionManager {
     // Check if MongoDB connection supports transactions
     if (!this.supportsTransactions()) {
       this.logger.warn('MongoDB connection does not support transactions. Running without transaction.');
-      
+
       try {
         const result = await operation();
         return {
@@ -119,7 +119,7 @@ export class TransactionManager {
     }
 
     const session = await mongoose.startSession();
-    
+
     const transactionStats: TransactionStats = {
       transactionId,
       startTime: new Date(startTime),
@@ -141,7 +141,7 @@ export class TransactionManager {
           ...(options.readConcern && { readConcern: options.readConcern }),
           ...(options.writeConcern && { writeConcern: options.writeConcern }),
           ...(options.readPreference && { readPreference: options.readPreference }),
-          maxTimeMS: options.maxTimeMS || 30000, // Default 30 seconds
+          maxTimeMS: options.maxTimeMS || 30000 // Default 30 seconds
         }
       );
 
@@ -184,7 +184,7 @@ export class TransactionManager {
 
     } finally {
       await session.endSession();
-      
+
       // Clean up old transaction stats after 1 hour
       setTimeout(() => {
         this.activeTransactions.delete(transactionId);
@@ -201,12 +201,12 @@ export class TransactionManager {
   ): Promise<TransactionResult<T[]>> {
     return this.withTransaction(async (session) => {
       const results: any[] = [];
-      
+
       for (const operation of operations) {
         const result = await operation(session);
         results.push(result);
       }
-      
+
       return results;
     }, options);
   }
@@ -216,7 +216,7 @@ export class TransactionManager {
    */
   private supportsTransactions(): boolean {
     const connection = mongoose.connection;
-    
+
     // Transactions require replica set or sharded cluster
     if (!connection.db) {
       return false;

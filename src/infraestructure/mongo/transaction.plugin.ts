@@ -17,16 +17,16 @@ declare module 'fastify' {
 export interface TransactionPluginOptions extends FastifyPluginOptions {
   // Timeout padrão para transações (em ms)
   defaultTimeout?: number;
-  
+
   // Se deve logar transações
   enableLogging?: boolean;
-  
+
   // Configurações de isolamento padrão
   defaultOptions?: Partial<TransactionOptions>;
-  
+
   // Rotas que devem usar transações automaticamente
   autoTransactionRoutes?: string[] | RegExp[];
-  
+
   // Se deve abortar transação em caso de erro de validação
   abortOnValidationError?: boolean;
 }
@@ -44,7 +44,7 @@ export interface RouteTransactionConfig {
 
 /**
  * Plugin do Fastify para gerenciamento automático de transações MongoDB
- * 
+ *
  * Este plugin adiciona suporte para transações automáticas em rotas,
  * seguindo o padrão de arquitetura do Fastify
  */
@@ -61,7 +61,7 @@ async function transactionPlugin(
   } = options;
 
   // Registra helper para configurar transações em rotas
-  fastify.decorate('withTransaction', function(routeConfig: RouteTransactionConfig) {
+  fastify.decorate('withTransaction', (routeConfig: RouteTransactionConfig) => {
     return {
       [TRANSACTION_ROUTE_CONFIG]: routeConfig
     };
@@ -70,7 +70,7 @@ async function transactionPlugin(
   // Hook que executa antes de processar a requisição
   fastify.addHook('onRequest', async (request: FastifyRequest, reply: FastifyReply) => {
     const routeConfig = getRouteTransactionConfig(request);
-    
+
     // Verifica se deve usar transação para esta rota
     if (shouldUseTransaction(request, routeConfig, autoTransactionRoutes)) {
       try {
@@ -83,7 +83,7 @@ async function transactionPlugin(
         // Inicia nova transação
         const transactionManager = TransactionManager.getInstance();
         const session = await transactionManager.startTransaction(transactionOptions as TransactionOptions);
-        
+
         request.mongoSession = session;
         request.transactionId = session.id?.toString();
 
@@ -101,7 +101,7 @@ async function transactionPlugin(
           url: request.url,
           error: error instanceof Error ? error.message : String(error)
         }, 'Failed to start transaction');
-        
+
         throw error;
       }
     }
@@ -111,7 +111,7 @@ async function transactionPlugin(
   fastify.addHook('onResponse', async (request: FastifyRequest, reply: FastifyReply) => {
     if (request.mongoSession) {
       const routeConfig = getRouteTransactionConfig(request);
-      
+
       try {
         // Verifica se deve fazer rollback baseado no status code
         const shouldRollback = shouldRollbackOnStatusCode(
@@ -122,7 +122,7 @@ async function transactionPlugin(
         if (shouldRollback) {
           const transactionManager = TransactionManager.getInstance();
           await transactionManager.rollbackTransaction(request.mongoSession);
-          
+
           if (enableLogging) {
             fastify.log.warn({
               transactionId: request.transactionId,
@@ -135,7 +135,7 @@ async function transactionPlugin(
           // Commit da transação
           const transactionManager = TransactionManager.getInstance();
           await transactionManager.commitTransaction(request.mongoSession);
-          
+
           if (enableLogging) {
             fastify.log.info({
               transactionId: request.transactionId,
@@ -153,7 +153,7 @@ async function transactionPlugin(
           url: request.url,
           error: error instanceof Error ? error.message : String(error)
         }, 'Error during transaction finalization');
-        
+
         // Tenta fazer rollback em caso de erro
         try {
           const transactionManager = TransactionManager.getInstance();
@@ -178,7 +178,7 @@ async function transactionPlugin(
       try {
         const transactionManager = TransactionManager.getInstance();
         await transactionManager.rollbackTransaction(request.mongoSession);
-        
+
         if (enableLogging) {
           fastify.log.info({
             transactionId: request.transactionId,

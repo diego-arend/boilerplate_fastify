@@ -2,7 +2,7 @@ export { default as MongoConnection } from './connection.js';
 export { BaseRepository } from './baseRepository.js';
 
 // Interfaces for dependency injection
-export type { 
+export type {
   IBaseRepository,
   RepositoryOptions,
   PaginationResult,
@@ -10,7 +10,7 @@ export type {
 } from './interfaces.js';
 
 // Transaction management
-export { 
+export {
   TransactionManager,
   getTransactionManager,
   withTransaction,
@@ -18,19 +18,19 @@ export {
 } from './transactionManager.js';
 
 // Transaction plugin (recommended for Fastify applications)
-export { 
+export {
   default as transactionPlugin,
   transactionPlugin as namedTransactionPlugin,
   TRANSACTION_ROUTE_CONFIG
 } from './transaction.plugin.js';
 
-export type { 
+export type {
   TransactionPluginOptions,
   RouteTransactionConfig
 } from './transaction.plugin.js';
 
 // Transaction types
-export type { 
+export type {
   TransactionContext,
   TransactionalFunction,
   TransactionOptions,

@@ -30,7 +30,7 @@ export interface TransactionOptions {
   readConcern?: {
     level: 'local' | 'available' | 'majority' | 'linearizable' | 'snapshot';
   };
-  
+
   /**
    * Transaction write concern
    */
@@ -39,17 +39,17 @@ export interface TransactionOptions {
     j?: boolean;
     wtimeout?: number;
   };
-  
+
   /**
    * Transaction read preference
    */
   readPreference?: 'primary' | 'primaryPreferred' | 'secondary' | 'secondaryPreferred' | 'nearest';
-  
+
   /**
    * Maximum time transaction can run (milliseconds)
    */
   maxTimeMS?: number;
-  
+
   /**
    * Maximum number of retry attempts
    */

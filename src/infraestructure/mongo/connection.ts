@@ -37,10 +37,10 @@ class MongoConnection {
         serverSelectionTimeoutMS: 5000, // Server selection timeout
         socketTimeoutMS: 45000, // Socket timeout
         bufferCommands: false, // Disable command buffering
-        maxPoolSize: 10, // Maximum connection pool size
+        maxPoolSize: 10 // Maximum connection pool size
       });
       this.isConnected = true;
-      
+
       this.logger.info({
         ...connectionInfo,
         readyState: mongoose.connection.readyState,

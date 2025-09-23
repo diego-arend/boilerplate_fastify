@@ -44,7 +44,7 @@ export default async function rateLimitPlugin(
   const rateLimitOptions: any = {
     max: rateLimitConfig.max,
     timeWindow: rateLimitConfig.timeWindow,
-    
+
     // Skip specific routes that shouldn't be rate limited
     skip: (request: any) => {
       const shouldSkip = rateLimitConfig.skipRoutes.some(route => {
@@ -53,7 +53,7 @@ export default async function rateLimitPlugin(
         }
         return request.url === route || request.url.startsWith(route + '?');
       });
-      
+
       if (shouldSkip && config.NODE_ENV === 'development') {
         logger.info({
           message: 'Rate limit skipped for route',
@@ -62,7 +62,7 @@ export default async function rateLimitPlugin(
           userAgent: request.headers['user-agent']
         });
       }
-      
+
       return shouldSkip;
     },
 
@@ -70,19 +70,19 @@ export default async function rateLimitPlugin(
     keyGenerator: (request: any) => {
       // Use IP address as default key
       const key = request.ip || request.connection.remoteAddress || 'unknown';
-      
+
       // You can extend this to use user ID for authenticated routes
       if (request.authenticatedUser) {
         return `user:${request.authenticatedUser.id}`;
       }
-      
+
       return `ip:${key}`;
     },
 
     // Error response when rate limit is exceeded
     errorResponseBuilder: (request: any, context: any) => {
       const remainingTime = Math.ceil(context.ttl / 1000); // seconds
-      
+
       // Log rate limit exceeded
       logger.error({
         message: 'Rate limit exceeded',
@@ -95,7 +95,7 @@ export default async function rateLimitPlugin(
         remainingTtl: remainingTime,
         totalRequests: context.totalRequests
       });
-      
+
       return {
         error: 'Too Many Requests',
         message: `Rate limit exceeded. Maximum ${context.max} requests per ${Math.ceil(context.timeWindow / 1000)} seconds.`,
@@ -126,10 +126,10 @@ export default async function rateLimitPlugin(
     try {
       // Get Redis client from cache plugin if available
       const redisClient = (fastify as any).redis || (fastify as any).cache?.redis;
-      
+
       if (redisClient) {
         rateLimitOptions.redis = redisClient;
-        
+
         if (config.NODE_ENV === 'development') {
           logger.info({
             message: 'Rate limit using Redis store',
@@ -175,7 +175,7 @@ export default async function rateLimitPlugin(
         remaining: reply.getHeader('x-ratelimit-remaining'),
         reset: reply.getHeader('x-ratelimit-reset')
       };
-      
+
       // Only log if rate limit headers are present
       if (rateLimitHeaders.limit) {
         logger.info({
@@ -196,7 +196,7 @@ export default async function rateLimitPlugin(
     request.addHook?.('onResponse', async (req: any, reply: any) => {
       const remaining = parseInt(reply.getHeader('x-ratelimit-remaining') as string);
       const limit = parseInt(reply.getHeader('x-ratelimit-limit') as string);
-      
+
       // Warn when client is using 80% of their limit
       if (remaining && limit && remaining < limit * 0.2) {
         logger.warn({

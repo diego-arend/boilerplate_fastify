@@ -45,7 +45,7 @@ export class AuthRepository implements IAuthRepository {
 
     // Fetch from database
     const user = await this.userRepository.findByEmail(email, { ...(session && { session }) });
-    
+
     // Cache the result if available and no session
     if (this.cacheService && user && !session) {
       await this.cacheService.set(`user:email:${email.toLowerCase()}`, user, { ttl: 1800, namespace: 'auth' }); // 30 minutes
@@ -105,14 +105,14 @@ export class AuthRepository implements IAuthRepository {
     if (this.cacheService) {
       const attempts = await this.cacheService.get<number>(`login:attempts:${email.toLowerCase()}`, { namespace: 'auth' }) || 0;
       const maxAttempts = 5;
-      
+
       if (attempts >= maxAttempts) {
         // Increment attempts (extend blocking time)
         await this.cacheService.set(`login:attempts:${email.toLowerCase()}`, attempts + 1, { ttl: 300, namespace: 'auth' }); // 5 minutes
         return {
           user: null,
           isValid: false,
-          reason: `Too many login attempts. Try again later.`
+          reason: 'Too many login attempts. Try again later.'
         };
       }
     }
@@ -139,8 +139,8 @@ export class AuthRepository implements IAuthRepository {
    * Update user last login timestamp (with cache invalidation)
    */
   async updateLastLogin(userId: string, session?: ClientSession): Promise<IUser | null> {
-    const updatedUser = await this.userRepository.updateUser(userId, { 
-      lastLoginAt: new Date() 
+    const updatedUser = await this.userRepository.updateUser(userId, {
+      lastLoginAt: new Date()
     }, session);
 
     // Invalidate cache for this user if available and no session
@@ -166,7 +166,7 @@ export class AuthRepository implements IAuthRepository {
 
     // Fetch from database
     const user = await this.userRepository.findById(id, session);
-    
+
     // Cache the result if available and no session
     if (this.cacheService && user && !session) {
       await this.cacheService.set(`user:id:${id}`, user, { ttl: 1800, namespace: 'auth' }); // 30 minutes

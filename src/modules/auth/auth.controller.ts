@@ -137,7 +137,7 @@ export default async function authController(fastify: FastifyInstance) {
       } catch (validationError) {
         if (validationError instanceof z.ZodError) {
           const errorMessages = validationError.issues.map((issue) => issue.message).join(', ');
-          
+
           // Log validation error
           requestLogger.error({
             message: 'User registration validation failed',
@@ -149,7 +149,7 @@ export default async function authController(fastify: FastifyInstance) {
               code: issue.code
             }))
           });
-          
+
           return ApiResponseHandler.validationError(reply, `Validation failed: ${errorMessages}`);
         }
         throw validationError;

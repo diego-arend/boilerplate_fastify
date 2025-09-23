@@ -1,8 +1,8 @@
 import dotenv from 'dotenv';
-import { fastify } from "fastify";
-import configFastify from "./infraestructure/server/fastify.config.js";
-import app from "./app.js";
-import { config, validateCriticalEnvs } from "./lib/validators/validateEnv.js";
+import { fastify } from 'fastify';
+import configFastify from './infraestructure/server/fastify.config.js';
+import app from './app.js';
+import { config, validateCriticalEnvs } from './lib/validators/validateEnv.js';
 
 // Load environment variables first
 dotenv.config({ debug: false });
@@ -15,7 +15,7 @@ console.log('✅ Environment variables validation passed!');
 
 const server = fastify(configFastify);
 
-server.decorate("config", config);
+server.decorate('config', config);
 
 server.register(app);
 
@@ -24,15 +24,15 @@ const start = async () => {
     console.log('🚀 Starting server...');
     console.log(`📊 Environment: ${config.NODE_ENV}`);
     console.log(`🌐 Port: ${config.PORT}`);
-    
-    await server.listen({ port: config.PORT, host: "0.0.0.0" });
-    
+
+    await server.listen({ port: config.PORT, host: '0.0.0.0' });
+
     server.log.info(`🎉 Server successfully running on http://localhost:${config.PORT}`);
-    
+
     if (config.NODE_ENV === 'development') {
       server.log.info(`📚 API Documentation available at http://localhost:${config.PORT}/docs`);
     }
-    
+
   } catch (err) {
     server.log.error({
       message: 'Failed to start server',
@@ -41,10 +41,10 @@ const start = async () => {
       port: config.PORT,
       environment: config.NODE_ENV
     });
-    
+
     console.error('🚨 FATAL ERROR: Failed to start server!');
     console.error(err instanceof Error ? err.message : String(err));
-    
+
     process.exit(1);
   }
 };
@@ -59,20 +59,20 @@ const shutdown = async (signal: string) => {
     environment: config.NODE_ENV,
     uptime: process.uptime()
   });
-  
+
   console.log(`🛑 Received ${signal}. Shutting down gracefully...`);
-  
+
   try {
     await server.close();
-    
+
     server.log.info({
       message: 'Server shutdown completed successfully',
       signal
     });
-    
-    console.log("✅ Server closed successfully. Exiting process.");
+
+    console.log('✅ Server closed successfully. Exiting process.');
     process.exit(0);
-    
+
   } catch (err) {
     server.log.error({
       message: 'Error during graceful shutdown',
@@ -80,11 +80,11 @@ const shutdown = async (signal: string) => {
       error: err instanceof Error ? err.message : String(err),
       stack: err instanceof Error ? err.stack : undefined
     });
-    
+
     console.error(`🚨 Error during shutdown: ${err instanceof Error ? err.message : String(err)}`);
     process.exit(1);
   }
 };
 
-process.on("SIGINT", () => shutdown("SIGINT"));
-process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('SIGTERM', () => shutdown('SIGTERM'));

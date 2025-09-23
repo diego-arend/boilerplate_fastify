@@ -21,7 +21,7 @@ export interface IUser extends Document {
   passwordResetExpires?: Date;
   createdAt: Date;
   updatedAt: Date;
-  
+
   // Methods
   comparePassword(candidatePassword: string): Promise<boolean>;
   isLocked(): boolean;
@@ -40,17 +40,17 @@ export class UserValidations {
   // Status enum specific to User entity
   static readonly USER_STATUSES = ['active', 'inactive', 'suspended'] as const;
   static readonly USER_ROLES = ['user', 'admin'] as const;
-  
+
   // User status validation (extends global base status and adds user-specific statuses)
   static readonly StatusSchema = z.enum(['active', 'inactive', 'suspended'], {
     message: 'Status must be: active, inactive or suspended'
   });
-  
+
   // User role validation (extends global base role and adds admin role)
   static readonly RoleSchema = z.enum(['user', 'admin'], {
     message: 'Role must be: user or admin'
   });
-  
+
   // Login attempts validation (entity-specific business rule)
   static readonly LoginAttemptsSchema = z.number()
     .int()
@@ -81,13 +81,13 @@ export class UserValidations {
     passwordResetToken: z.string().optional(),
     passwordResetExpires: z.date().optional()
   }).refine((data) => Object.keys(data).length > 0, {
-    message: "At least one field must be provided for update"
+    message: 'At least one field must be provided for update'
   });
 
   // Login schema
   static readonly LoginSchema = z.object({
     email: EmailSchema,
-    password: z.string().min(1, "Password is required")
+    password: z.string().min(1, 'Password is required')
   });
 
   // Password change schema (uses global schema)
@@ -175,7 +175,7 @@ const userSchema = new Schema<IUser>({
       message: 'Name contains invalid characters or format'
     }
   },
-  
+
   email: {
     type: String,
     required: [true, 'Email is required'],
@@ -194,7 +194,7 @@ const userSchema = new Schema<IUser>({
       message: 'Invalid email format'
     }
   },
-  
+
   password: {
     type: String,
     required: [true, 'Password is required'],
@@ -213,7 +213,7 @@ const userSchema = new Schema<IUser>({
       message: 'Password must contain at least one lowercase, uppercase, number and special character'
     }
   },
-  
+
   status: {
     type: String,
     enum: {
@@ -222,7 +222,7 @@ const userSchema = new Schema<IUser>({
     },
     default: 'active'
   },
-  
+
   role: {
     type: String,
     enum: {
@@ -404,7 +404,7 @@ userSchema.statics.findByRole = function(role: string, page = 1, limit = 20) {
 
 // Find active users
 userSchema.statics.findActiveUsers = function() {
-  return this.find({ 
+  return this.find({
     status: 'active',
     $or: [
       { lockUntil: null },

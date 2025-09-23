@@ -29,7 +29,7 @@ export class QueueManager {
    */
   constructor(queueName: string = 'main') {
     const redisPassword = process.env.REDIS_PASSWORD;
-    
+
     this.config = {
       name: queueName,
       redis: {
@@ -54,14 +54,14 @@ export class QueueManager {
       connection: this.getRedisConfig(),
       ...(this.config.defaultJobOptions && { defaultJobOptions: this.config.defaultJobOptions })
     });
-    
+
     // Initialize Dead Letter Queue Manager
     this.dlqManager = new DeadLetterQueueManager(
       this.queue,
       defaultLogger.child({ module: 'queue-manager' }),
       `${queueName}-dlq`
     );
-    
+
     this.initialized = true;
   }
 
@@ -151,7 +151,7 @@ export class QueueManager {
     if (!job) return null;
 
     const state = await job.getState();
-    
+
     if (state === 'completed') {
       return {
         success: true,

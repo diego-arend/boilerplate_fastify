@@ -2,7 +2,7 @@
  * Validators index - Central export for all validation utilities
  */
 export { GlobalValidators } from './globalValidators.js';
-export { 
+export {
   sanitizeInput,
   hasInjectionAttempt,
   BaseStringSchema,

@@ -1,14 +1,14 @@
-import type { FastifyInstance, FastifyPluginOptions } from 'fastify'
-import authPlugin from './modules/auth/auth.plugin.js'
-import healthPlugin from './modules/health/health.plugin.js'
-import cachePlugin from './infraestructure/cache/cache.plugin.js'
-import rateLimitPlugin from './infraestructure/server/rateLimit.plugin.js'
-import corsPlugin from './infraestructure/server/cors.plugin.js'
-import { registerModule } from './infraestructure/server/modules.js'
-import MongoConnection from './infraestructure/mongo/connection.js'
-import { errorHandler, notFoundHandler } from './lib/response/index.js'
-import fastifySwagger from '@fastify/swagger'
-import fastifySwaggerUi from '@fastify/swagger-ui'
+import type { FastifyInstance, FastifyPluginOptions } from 'fastify';
+import authPlugin from './modules/auth/auth.plugin.js';
+import healthPlugin from './modules/health/health.plugin.js';
+import cachePlugin from './infraestructure/cache/cache.plugin.js';
+import rateLimitPlugin from './infraestructure/server/rateLimit.plugin.js';
+import corsPlugin from './infraestructure/server/cors.plugin.js';
+import { registerModule } from './infraestructure/server/modules.js';
+import MongoConnection from './infraestructure/mongo/connection.js';
+import { errorHandler, notFoundHandler } from './lib/response/index.js';
+import fastifySwagger from '@fastify/swagger';
+import fastifySwaggerUi from '@fastify/swagger-ui';
 
 export default async function app(fastify: FastifyInstance, opts: FastifyPluginOptions) {
   // Configure global response handling middlewares
@@ -63,13 +63,13 @@ export default async function app(fastify: FastifyInstance, opts: FastifyPluginO
     await fastify.register(fastifySwaggerUi, {
       routePrefix: '/docs'
     });
-    
+
     fastify.log.info('Swagger registrado em /docs');
   }
 
   // Register modules
-  await registerModule(fastify, healthPlugin, '', 'health')
-  await registerModule(fastify, authPlugin, '/auth', 'auth')
+  await registerModule(fastify, healthPlugin, '', 'health');
+  await registerModule(fastify, authPlugin, '/auth', 'auth');
 
   // MongoDB connection will be handled in server.ts
   fastify.addHook('onReady', async () => {
@@ -93,4 +93,4 @@ export default async function app(fastify: FastifyInstance, opts: FastifyPluginO
 
 export const options = {
   name: 'app'
-}
+};

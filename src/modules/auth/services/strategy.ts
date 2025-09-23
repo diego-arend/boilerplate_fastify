@@ -16,7 +16,7 @@ export interface AuthStrategy {
 
 export class JwtStrategy implements AuthStrategy {
   private logger = defaultLogger.child({ context: 'jwt-strategy' });
-  
+
   constructor(
     private secret: string,
     private cacheService?: ICacheService
@@ -35,10 +35,10 @@ export class JwtStrategy implements AuthStrategy {
   async authenticate(request: FastifyRequest, reply: FastifyReply): Promise<AuthenticatedUser | null> {
     const requestId = request.id || Math.random().toString(36).substr(2, 9);
     const authLogger = this.logger.child({ requestId, operation: 'jwt-authenticate' });
-    
+
     try {
       const authHeader = request.headers['authorization'];
-      
+
       if (!authHeader) {
         authLogger.error({
           message: 'JWT authentication failed - missing authorization header',
@@ -49,7 +49,7 @@ export class JwtStrategy implements AuthStrategy {
         });
         return null;
       }
-      
+
       if (!authHeader.startsWith('Bearer ')) {
         authLogger.error({
           message: 'JWT authentication failed - invalid authorization header format',
@@ -60,9 +60,9 @@ export class JwtStrategy implements AuthStrategy {
         });
         return null;
       }
-      
+
       const token = authHeader.slice(7);
-      
+
       if (!token) {
         authLogger.error({
           message: 'JWT authentication failed - empty token',
@@ -90,7 +90,7 @@ export class JwtStrategy implements AuthStrategy {
           return cachedUser;
         }
       }
-      
+
       // Log token validation attempt (development only)
       if (process.env.NODE_ENV === 'development') {
         authLogger.info({
@@ -101,9 +101,9 @@ export class JwtStrategy implements AuthStrategy {
           source: 'JWT_VERIFY'
         });
       }
-      
+
       const payload = jwt.verify(token, this.secret) as AuthenticatedUser;
-      
+
       if (!payload || !payload.id || !payload.name || !payload.role) {
         authLogger.error({
           message: 'JWT authentication failed - invalid token payload',
@@ -120,7 +120,7 @@ export class JwtStrategy implements AuthStrategy {
         const tokenHash = this.generateTokenHash(token);
         await this.cacheService.set(`token:${tokenHash}`, payload, { ttl: 3600, namespace: 'auth' }); // 1 hour cache
       }
-      
+
       // Log successful JWT validation (development only)
       if (process.env.NODE_ENV === 'development') {
         authLogger.info({
@@ -133,13 +133,13 @@ export class JwtStrategy implements AuthStrategy {
           cached: !!this.cacheService
         });
       }
-      
+
       return payload;
     } catch (error) {
       // Determine error type for better logging
       let errorType = 'Unknown';
       let errorMessage = 'JWT authentication failed';
-      
+
       if (error instanceof jwt.JsonWebTokenError) {
         errorType = 'InvalidToken';
         errorMessage = 'JWT authentication failed - invalid token';
@@ -150,7 +150,7 @@ export class JwtStrategy implements AuthStrategy {
         errorType = 'TokenNotActive';
         errorMessage = 'JWT authentication failed - token not active';
       }
-      
+
       authLogger.error({
         message: errorMessage,
         errorType,
@@ -160,7 +160,7 @@ export class JwtStrategy implements AuthStrategy {
         tokenProvided: !!request.headers['authorization'],
         stack: error instanceof Error ? error.stack : undefined
       });
-      
+
       return null;
     }
   }

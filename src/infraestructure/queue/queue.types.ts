@@ -11,7 +11,7 @@ export const JobType = {
   DATA_EXPORT: 'data:export',
   FILE_PROCESS: 'file:process',
   CACHE_WARM: 'cache:warm',
-  CLEANUP: 'cleanup',
+  CLEANUP: 'cleanup'
 } as const;
 
 export type JobType = typeof JobType[keyof typeof JobType];
@@ -110,7 +110,7 @@ export interface CleanupJobData extends BaseJobData {
 /**
  * Union type for all job data types
  */
-export type JobData = 
+export type JobData =
   | EmailJobData
   | UserNotificationJobData
   | DataExportJobData

@@ -22,10 +22,10 @@ export class AuthRepositoryFactory {
    */
   static async createAuthRepositoryWithCache(): Promise<IAuthRepository> {
     const userRepository = UserRepositoryFactory.createUserRepository();
-    
+
     // Create cache service for auth
     const cacheService = await CacheServiceFactory.createDefaultCacheService(config);
-    
+
     return new AuthRepository(userRepository, cacheService);
   }
 
@@ -35,7 +35,7 @@ export class AuthRepositoryFactory {
    * @param mockCacheService - Optional mocked cache service
    */
   static createAuthRepositoryForTesting(
-    mockUserRepository: any, 
+    mockUserRepository: any,
     mockCacheService?: any
   ): IAuthRepository {
     return new AuthRepository(mockUserRepository, mockCacheService);
@@ -47,7 +47,7 @@ export class AuthRepositoryFactory {
   static createAuthRepositoryWithMemoryCache(): IAuthRepository {
     const userRepository = UserRepositoryFactory.createUserRepository();
     const memoryCacheService = CacheServiceFactory.createMemoryCacheService();
-    
+
     return new AuthRepository(userRepository, memoryCacheService);
   }
 }

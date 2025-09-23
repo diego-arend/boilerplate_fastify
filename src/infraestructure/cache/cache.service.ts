@@ -10,16 +10,16 @@ export interface ICacheService {
   set<T>(key: string, value: T, options?: { ttl?: number; namespace?: string }): Promise<void>;
   del(key: string, options?: { namespace?: string }): Promise<boolean>;
   exists(key: string, options?: { namespace?: string }): Promise<boolean>;
-  
+
   // Advanced operations
   expire(key: string, ttl: number, options?: { namespace?: string }): Promise<boolean>;
   ttl(key: string, options?: { namespace?: string }): Promise<number>;
   clear(namespace?: string): Promise<number>;
-  
+
   // Utility methods
   ping(): Promise<string>;
   isReady(): boolean;
-  
+
   // Statistics (optional - can return null for implementations that don't support it)
   getStats?(): { hits: number; misses: number; sets: number; deletes: number; errors: number } | null;
   getHitRatio?(): number;
@@ -131,11 +131,11 @@ export class MemoryCacheService implements ICacheService {
     const fullKey = this.buildKey(key, options?.namespace);
     const existed = this.cache.has(fullKey);
     this.cache.delete(fullKey);
-    
+
     if (existed) {
       this.stats.deletes++;
     }
-    
+
     return existed;
   }
 
@@ -186,7 +186,7 @@ export class MemoryCacheService implements ICacheService {
 
     let count = 0;
     const pattern = `${namespace}:`;
-    
+
     for (const key of this.cache.keys()) {
       if (key.startsWith(pattern)) {
         this.cache.delete(key);

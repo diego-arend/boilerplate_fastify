@@ -82,7 +82,7 @@ export class CacheManager {
    */
   public async set<T>(key: string, value: T, options: CacheOptions = {}): Promise<void> {
     this.ensureInitialized();
-    
+
     try {
       const fullKey = this.buildKey(key, options.namespace);
       const serializedValue = this.serialize(value);
@@ -146,7 +146,7 @@ export class CacheManager {
     try {
       const fullKey = this.buildKey(key, options.namespace);
       const result = await this.redis!.del(fullKey);
-      
+
       this.stats.deletes++;
       console.debug(`CacheManager: Deleted key '${fullKey}' (existed: ${result > 0})`);
       return result > 0;
@@ -232,7 +232,7 @@ export class CacheManager {
     try {
       const pattern = `${namespace || this.defaultNamespace}:*`;
       const keys = await this.redis!.keys(pattern);
-      
+
       if (keys.length === 0) {
         console.debug(`CacheManager: No keys found for pattern '${pattern}'`);
         return 0;

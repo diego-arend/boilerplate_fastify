@@ -28,14 +28,14 @@ class QueueWorker {
 
   constructor(queueName: string = 'main') {
     // Initialize logger with worker context
-    this.logger = defaultLogger.child({ 
+    this.logger = defaultLogger.child({
       module: 'queue-worker',
-      queueName 
+      queueName
     });
 
     // Load and validate environment
     const appConfig = config;
-    
+
     // Worker configuration
     this.config = {
       concurrency: 5, // Process up to 5 jobs concurrently
@@ -85,7 +85,7 @@ class QueueWorker {
     );
 
     this.setupEventListeners();
-    
+
     this.logger.info({
       ...redisInfo,
       concurrency: this.config.concurrency,
@@ -100,15 +100,15 @@ class QueueWorker {
   private async processJob(job: Job): Promise<JobResult> {
     const startTime = Date.now();
     const jobType = job.name;
-    const jobLogger = this.logger.child({ 
-      jobId: job.id, 
+    const jobLogger = this.logger.child({
+      jobId: job.id,
       jobType,
       attemptsMade: job.attemptsMade,
       maxAttempts: job.opts.attempts || 1
     });
-    
+
     jobLogger.info('Starting job processing');
-    
+
     try {
       // Get handler for job type
       const handler = this.handlers.get(jobType);
@@ -123,14 +123,14 @@ class QueueWorker {
 
       // Process job with handler
       const result = await handler(job.data, job.id || 'unknown', jobLogger);
-      
+
       const processingTime = Date.now() - startTime;
-      
+
       jobLogger.info({
         processingTime,
         result: result.success
       }, 'Job completed successfully');
-      
+
       return {
         ...result,
         processedAt: Date.now(),
@@ -140,14 +140,14 @@ class QueueWorker {
     } catch (error) {
       const processingTime = Date.now() - startTime;
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      
+
       jobLogger.error({
         error: error instanceof Error ? error : new Error(String(error)),
         processingTime,
         attemptsMade: job.attemptsMade,
         willRetry: job.attemptsMade < (job.opts.attempts || 1)
       }, 'Job processing failed');
-      
+
       return {
         success: false,
         error: errorMessage,
@@ -256,7 +256,7 @@ class QueueWorker {
    */
   private async gracefulShutdown(signal: string): Promise<void> {
     this.logger.info({ signal }, 'Received shutdown signal, starting graceful shutdown');
-    
+
     try {
       await this.worker.close();
       this.logger.info('Worker closed gracefully');
@@ -284,9 +284,9 @@ class QueueWorker {
  */
 if (import.meta.url === `file://${process.argv[1]}`) {
   const queueName = process.env.QUEUE_NAME || 'main';
-  const logger = defaultLogger.child({ 
+  const logger = defaultLogger.child({
     module: 'queue-worker-main',
-    queueName 
+    queueName
   });
 
   try {
@@ -295,11 +295,11 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       environment: process.env.NODE_ENV || 'development',
       nodeVersion: process.version
     }, 'Starting Queue Worker process');
-    
+
     const worker = new QueueWorker(queueName);
-    
+
     logger.info('Queue Worker is running successfully. Press Ctrl+C to stop.');
-    
+
   } catch (error) {
     logger.fatal({
       error: error instanceof Error ? error : new Error(String(error)),

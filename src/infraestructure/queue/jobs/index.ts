@@ -1,7 +1,7 @@
 /**
  * Job handlers index file
  * Centralizes all job handler imports for easy management
- * 
+ *
  * Structure:
  * - Core async business jobs: From business/ subfolder
  * - Maintenance system jobs: From maintenance/ subfolder
@@ -51,12 +51,12 @@ export const JOB_HANDLERS: Record<string, JobHandler> = {
   [JobType.DATA_EXPORT]: handleDataExport,
   [JobType.FILE_PROCESS]: handleFileProcess,
   [JobType.CACHE_WARM]: handleCacheWarm,
-  [JobType.CLEANUP]: handleCleanup,
+  [JobType.CLEANUP]: handleCleanup
 } as const;
 
 /**
  * Gets a handler for a specific job type
- * 
+ *
  * @param jobType - The type of job to get a handler for
  * @returns The handler function or undefined if not found
  */
@@ -66,7 +66,7 @@ export function getJobHandler(jobType: string): JobHandler | undefined {
 
 /**
  * Gets all registered job types
- * 
+ *
  * @returns Array of all registered job type keys
  */
 export function getRegisteredJobTypes(): string[] {
@@ -75,7 +75,7 @@ export function getRegisteredJobTypes(): string[] {
 
 /**
  * Validates if a job type has a registered handler
- * 
+ *
  * @param jobType - The job type to validate
  * @returns True if handler exists, false otherwise
  */

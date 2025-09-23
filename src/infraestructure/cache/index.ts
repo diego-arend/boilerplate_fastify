@@ -23,7 +23,7 @@ import { getCacheManager } from './cache.manager.js';
  * Get the default cache manager instance with standard configuration
  * TTL: 1 hour (3600 seconds)
  * Namespace: 'app'
- * 
+ *
  * @deprecated Use CacheServiceFactory.createDefaultCacheService() instead
  * @returns {CacheManager} Pre-configured cache manager instance
  */
@@ -33,7 +33,7 @@ export const getDefaultCache = () => getCacheManager(3600, 'app');
  * Get a cache manager for session data
  * TTL: 24 hours (86400 seconds)
  * Namespace: 'session'
- * 
+ *
  * @deprecated Use CacheServiceFactory.createSessionCacheService() instead
  * @returns {CacheManager} Session cache manager instance
  */
@@ -43,7 +43,7 @@ export const getSessionCache = () => getCacheManager(86400, 'session');
  * Get a cache manager for temporary data
  * TTL: 5 minutes (300 seconds)
  * Namespace: 'temp'
- * 
+ *
  * @deprecated Use CacheServiceFactory.createTempCacheService() instead
  * @returns {CacheManager} Temporary cache manager instance
  */

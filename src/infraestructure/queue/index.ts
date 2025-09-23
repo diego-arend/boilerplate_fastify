@@ -1,6 +1,6 @@
 // Queue infrastructure exports
 export { getDefaultQueueManager } from './queue.manager.js';
-export type { 
+export type {
   JobType,
   JobPriority,
   JobData,

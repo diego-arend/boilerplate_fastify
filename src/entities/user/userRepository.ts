@@ -3,11 +3,11 @@ import crypto from 'crypto';
 import type { FilterQuery, ClientSession } from 'mongoose';
 import type { IUser } from './userEntity.js';
 import { UserModel, UserValidations } from './userEntity.js';
-import type { 
-  IBaseRepository, 
-  RepositoryOptions, 
-  PaginationOptions, 
-  PaginationResult 
+import type {
+  IBaseRepository,
+  RepositoryOptions,
+  PaginationOptions,
+  PaginationResult
 } from '../../infraestructure/mongo/index.js';
 
 /**
@@ -207,7 +207,7 @@ export class UserRepository implements IUserRepository {
     session?: ClientSession
   ): Promise<PaginationResult<IUser>> {
     const searchRegex = new RegExp(searchTerm, 'i');
-    
+
     return this.findUsersWithPagination({
       $or: [
         { name: searchRegex },
@@ -235,8 +235,8 @@ export class UserRepository implements IUserRepository {
     const { email, password } = UserValidations.validateLogin(loginData);
 
     // Find user with password
-    const user = await this.findByEmail(email, { 
-      includePassword: true, 
+    const user = await this.findByEmail(email, {
+      includePassword: true,
       ...(session && { session })
     });
 
@@ -480,7 +480,7 @@ export class UserRepository implements IUserRepository {
     emailVerified: number;
   }> {
     const repoOptions = this.getRepoOptions(session);
-    
+
     const [total, active, inactive, suspended, admins, emailVerified] = await Promise.all([
       this.baseRepository.count({}, repoOptions),
       this.baseRepository.count({ status: 'active' }, repoOptions),

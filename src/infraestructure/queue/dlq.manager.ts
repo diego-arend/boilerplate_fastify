@@ -61,14 +61,14 @@ export class DeadLetterQueueManager {
   ) {
     this.sourceQueue = sourceQueue;
     this.logger = logger.child({ module: 'dlq-manager' });
-    
+
     // Create dedicated DLQ queue
     this.dlqQueue = new Queue(dlqName, {
       connection: sourceQueue.opts.connection,
       defaultJobOptions: {
         removeOnComplete: 1000, // Keep more DLQ jobs for analysis
         removeOnFail: 100,
-        attempts: 1, // DLQ jobs shouldn't retry
+        attempts: 1 // DLQ jobs shouldn't retry
       }
     });
 
@@ -119,7 +119,7 @@ export class DeadLetterQueueManager {
         dlqData,
         {
           priority: 10, // High priority for monitoring
-          jobId: `dlq:${job.id}:${Date.now()}`,
+          jobId: `dlq:${job.id}:${Date.now()}`
         }
       );
 
@@ -148,7 +148,7 @@ export class DeadLetterQueueManager {
    */
   private extractAttemptHistory(job: Job, finalError: Error): DLQJobData['attemptHistory'] {
     const history: DLQJobData['attemptHistory'] = [];
-    
+
     // Add all previous attempts if available
     for (let i = 1; i <= job.attemptsMade; i++) {
       history.push({
@@ -167,7 +167,7 @@ export class DeadLetterQueueManager {
   private async sendDLQAlert(dlqData: DLQJobData): Promise<void> {
     // Critical job types that require immediate attention
     const criticalJobTypes: JobType[] = ['email:send', 'user:notification'];
-    
+
     if (criticalJobTypes.includes(dlqData.originalJobType)) {
       this.logger.error({
         jobType: dlqData.originalJobType,
@@ -189,7 +189,7 @@ export class DeadLetterQueueManager {
   public async getStats(): Promise<DLQStats> {
     try {
       const dlqJobs = await this.dlqQueue.getJobs(['waiting', 'completed'], 0, -1);
-      
+
       const stats: DLQStats = {
         total: dlqJobs.length,
         byJobType: {},
@@ -201,15 +201,15 @@ export class DeadLetterQueueManager {
 
       dlqJobs.forEach(job => {
         const dlqData = job.data as DLQJobData;
-        
+
         // Count by job type
         const jobType = dlqData.originalJobType;
         stats.byJobType[jobType] = (stats.byJobType[jobType] || 0) + 1;
-        
+
         // Count by error type (simplified)
         const errorType = this.categorizeError(dlqData.finalError);
         stats.byErrorType[errorType] = (stats.byErrorType[errorType] || 0) + 1;
-        
+
         // Track oldest job
         if (dlqData.lastFailedAt < oldestJobTimestamp && job.id) {
           oldestJobTimestamp = dlqData.lastFailedAt;
@@ -250,7 +250,7 @@ export class DeadLetterQueueManager {
    * Reprocess job from DLQ back to main queue
    */
   public async reprocessJob(
-    dlqJobId: string, 
+    dlqJobId: string,
     options: DLQRecoveryOptions = {}
   ): Promise<{ success: boolean; newJobId?: string; error?: string }> {
     try {
@@ -260,10 +260,10 @@ export class DeadLetterQueueManager {
       }
 
       const dlqData = dlqJob.data as DLQJobData;
-      
+
       // Prepare job data for reprocessing - reconstruct original job data
       const originalJobData = this.reconstructOriginalJobData(dlqData);
-      
+
       // Apply data modifications if provided
       const jobData = options.modifyData ? options.modifyData(originalJobData) : originalJobData;
 
@@ -287,8 +287,8 @@ export class DeadLetterQueueManager {
         originalJobType: dlqData.originalJobType
       }, 'Job successfully reprocessed from DLQ');
 
-      return { 
-        success: true, 
+      return {
+        success: true,
         ...(newJob.id && { newJobId: newJob.id })
       };
 
@@ -297,10 +297,10 @@ export class DeadLetterQueueManager {
         dlqJobId,
         error: error instanceof Error ? error.message : 'Unknown error'
       }, 'Failed to reprocess job from DLQ');
-      
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
+
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
       };
     }
   }
@@ -319,54 +319,54 @@ export class DeadLetterQueueManager {
 
     // Return appropriate job data based on job type - using unknown cast for TypeScript compatibility
     switch (dlqData.originalJobType) {
-      case 'email:send':
-        return {
-          ...baseData,
-          to: 'placeholder@example.com', // Should be replaced with actual data
-          subject: 'Recovery Processing',
-          body: 'Job recovered from DLQ'
-        } as unknown as JobData;
-      
-      case 'user:notification':
-        return {
-          ...baseData,
-          userId: dlqData.userId || 'unknown',
-          title: 'Recovery Processing',
-          message: 'Job recovered from DLQ',
-          type: 'info' as const
-        } as unknown as JobData;
-      
-      case 'data:export':
-        return {
-          ...baseData,
-          userId: dlqData.userId || 'unknown',
-          format: 'csv' as const
-        } as unknown as JobData;
-      
-      case 'file:process':
-        return {
-          ...baseData,
-          fileId: 'recovery-placeholder',
-          filePath: '/tmp/recovery',
-          operation: 'analyze' as const
-        } as unknown as JobData;
-      
-      case 'cache:warm':
-        return {
-          ...baseData,
-          cacheKey: 'recovery-key',
-          dataSource: 'recovery-source'
-        } as unknown as JobData;
-      
-      case 'cleanup':
-        return {
-          ...baseData,
-          target: 'temp_files' as const
-        } as unknown as JobData;
-      
-      default:
-        // Fallback for unknown job types
-        return baseData as unknown as JobData;
+    case 'email:send':
+      return {
+        ...baseData,
+        to: 'placeholder@example.com', // Should be replaced with actual data
+        subject: 'Recovery Processing',
+        body: 'Job recovered from DLQ'
+      } as unknown as JobData;
+
+    case 'user:notification':
+      return {
+        ...baseData,
+        userId: dlqData.userId || 'unknown',
+        title: 'Recovery Processing',
+        message: 'Job recovered from DLQ',
+        type: 'info' as const
+      } as unknown as JobData;
+
+    case 'data:export':
+      return {
+        ...baseData,
+        userId: dlqData.userId || 'unknown',
+        format: 'csv' as const
+      } as unknown as JobData;
+
+    case 'file:process':
+      return {
+        ...baseData,
+        fileId: 'recovery-placeholder',
+        filePath: '/tmp/recovery',
+        operation: 'analyze' as const
+      } as unknown as JobData;
+
+    case 'cache:warm':
+      return {
+        ...baseData,
+        cacheKey: 'recovery-key',
+        dataSource: 'recovery-source'
+      } as unknown as JobData;
+
+    case 'cleanup':
+      return {
+        ...baseData,
+        target: 'temp_files' as const
+      } as unknown as JobData;
+
+    default:
+      // Fallback for unknown job types
+      return baseData as unknown as JobData;
     }
   }
 
@@ -374,7 +374,7 @@ export class DeadLetterQueueManager {
    * Reprocess multiple jobs by job type
    */
   public async reprocessJobsByType(
-    jobType: JobType, 
+    jobType: JobType,
     options: DLQRecoveryOptions = {}
   ): Promise<{ processed: number; errors: number }> {
     let processed = 0;
@@ -418,7 +418,7 @@ export class DeadLetterQueueManager {
         jobType,
         error: error instanceof Error ? error.message : 'Unknown error'
       }, 'Failed batch reprocessing from DLQ');
-      
+
       return { processed, errors: errors + 1 };
     }
   }
@@ -430,7 +430,7 @@ export class DeadLetterQueueManager {
     try {
       const cutoffTime = Date.now() - (olderThanDays * 24 * 60 * 60 * 1000);
       const cleaned = await this.dlqQueue.clean(cutoffTime, 0);
-      
+
       this.logger.info({
         olderThanDays,
         cleanedCount: cleaned.length
@@ -443,7 +443,7 @@ export class DeadLetterQueueManager {
         error: error instanceof Error ? error.message : 'Unknown error',
         olderThanDays
       }, 'Failed to clean old DLQ jobs');
-      
+
       return 0;
     }
   }
