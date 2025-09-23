@@ -63,31 +63,40 @@ export class RedisConnection {
 
     this.isConnecting = true;
 
-    this.logger.info({
-      ...connectionInfo,
-      attempt: this.reconnectAttempts + 1,
-      maxAttempts: this.maxReconnectAttempts
-    }, 'Attempting to connect to Redis');
+    this.logger.info(
+      {
+        ...connectionInfo,
+        attempt: this.reconnectAttempts + 1,
+        maxAttempts: this.maxReconnectAttempts
+      },
+      'Attempting to connect to Redis'
+    );
 
     try {
       // Create Redis client with configuration
       this.client = createClient({
         url: this.buildRedisUrl(appConfig),
         socket: {
-          reconnectStrategy: (retries) => {
+          reconnectStrategy: retries => {
             if (retries >= this.maxReconnectAttempts) {
-              this.logger.error({
-                ...connectionInfo,
-                attempts: retries + 1
-              }, 'Redis max reconnection attempts reached');
+              this.logger.error(
+                {
+                  ...connectionInfo,
+                  attempts: retries + 1
+                },
+                'Redis max reconnection attempts reached'
+              );
               return false;
             }
             const delay = Math.min(this.reconnectDelay * Math.pow(2, retries), 30000);
-            this.logger.warn({
-              ...connectionInfo,
-              attempt: retries + 1,
-              delayMs: delay
-            }, 'Redis reconnecting...');
+            this.logger.warn(
+              {
+                ...connectionInfo,
+                attempt: retries + 1,
+                delayMs: delay
+              },
+              'Redis reconnecting...'
+            );
             return delay;
           },
           connectTimeout: 10000 // 10 seconds
@@ -103,23 +112,28 @@ export class RedisConnection {
       this.isConnecting = false;
       this.reconnectAttempts = 0;
 
-      this.logger.info({
-        ...connectionInfo,
-        status: 'connected',
-        clientReady: this.client.isReady
-      }, 'Successfully connected to Redis');
+      this.logger.info(
+        {
+          ...connectionInfo,
+          status: 'connected',
+          clientReady: this.client.isReady
+        },
+        'Successfully connected to Redis'
+      );
 
       return this.client;
-
     } catch (error) {
       this.isConnecting = false;
       this.reconnectAttempts++;
 
-      this.logger.error({
-        ...connectionInfo,
-        attempt: this.reconnectAttempts,
-        error: error instanceof Error ? error : new Error(String(error))
-      }, 'Redis connection failed');
+      this.logger.error(
+        {
+          ...connectionInfo,
+          attempt: this.reconnectAttempts,
+          error: error instanceof Error ? error : new Error(String(error))
+        },
+        'Redis connection failed'
+      );
 
       if (this.reconnectAttempts >= this.maxReconnectAttempts) {
         throw new Error(`Redis: Failed to connect after ${this.maxReconnectAttempts} attempts`);
@@ -158,9 +172,12 @@ export class RedisConnection {
         await this.client.quit();
         this.logger.info('Redis disconnected gracefully');
       } catch (error) {
-        this.logger.error({
-          error: error instanceof Error ? error : new Error(String(error))
-        }, 'Error during Redis disconnect');
+        this.logger.error(
+          {
+            error: error instanceof Error ? error : new Error(String(error))
+          },
+          'Error during Redis disconnect'
+        );
       } finally {
         this.client = null;
         this.isConnecting = false;
@@ -183,9 +200,12 @@ export class RedisConnection {
         await this.client.disconnect();
         this.logger.info('Redis connection destroyed');
       } catch (error) {
-        this.logger.error({
-          error: error instanceof Error ? error : new Error(String(error))
-        }, 'Error during Redis destroy');
+        this.logger.error(
+          {
+            error: error instanceof Error ? error : new Error(String(error))
+          },
+          'Error during Redis destroy'
+        );
       } finally {
         this.client = null;
         this.isConnecting = false;
@@ -209,9 +229,12 @@ export class RedisConnection {
       this.logger.debug('Redis ping successful');
       return result;
     } catch (error) {
-      this.logger.error({
-        error: error instanceof Error ? error : new Error(String(error))
-      }, 'Redis ping failed');
+      this.logger.error(
+        {
+          error: error instanceof Error ? error : new Error(String(error))
+        },
+        'Redis ping failed'
+      );
       throw new Error('Redis: Ping failed');
     }
   }
@@ -247,7 +270,7 @@ export class RedisConnection {
   private setupEventListeners(): void {
     if (!this.client) return;
 
-    this.client.on('error', (error) => {
+    this.client.on('error', error => {
       this.logger.error({ error }, 'Redis client error');
     });
 

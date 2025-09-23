@@ -14,10 +14,7 @@ export interface CorsOptions extends FastifyPluginOptions {
   optionsSuccessStatus?: number;
 }
 
-export default async function corsPlugin(
-  fastify: FastifyInstance,
-  opts: CorsOptions = {}
-) {
+export default async function corsPlugin(fastify: FastifyInstance, opts: CorsOptions = {}) {
   const logger = defaultLogger.child({ context: 'cors-plugin' });
 
   // Parse origin configuration from environment
@@ -30,7 +27,10 @@ export default async function corsPlugin(
 
     // Handle array of origins (comma-separated)
     if (originEnv.includes(',')) {
-      return originEnv.split(',').map(origin => origin.trim()).filter(Boolean);
+      return originEnv
+        .split(',')
+        .map(origin => origin.trim())
+        .filter(Boolean);
     }
 
     // Handle regex pattern
@@ -55,14 +55,14 @@ export default async function corsPlugin(
   // Configuration with environment variables and defaults
   const corsConfig: FastifyCorsOptions = {
     // Origin configuration - restrictive by default in production
-    origin: opts.origin !== undefined
-      ? opts.origin
-      : parseOrigin(config.CORS_ORIGIN) || (config.NODE_ENV === 'production' ? false : true),
+    origin:
+      opts.origin !== undefined
+        ? opts.origin
+        : parseOrigin(config.CORS_ORIGIN) || (config.NODE_ENV === 'production' ? false : true),
 
     // Credentials - only allow if explicitly set
-    credentials: opts.credentials !== undefined
-      ? opts.credentials
-      : config.CORS_ALLOW_CREDENTIALS || false,
+    credentials:
+      opts.credentials !== undefined ? opts.credentials : config.CORS_ALLOW_CREDENTIALS || false,
 
     // Allowed HTTP methods
     methods: opts.methods || ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'],
@@ -114,9 +114,7 @@ export default async function corsPlugin(
   logger.info({
     message: 'Initializing CORS plugin',
     config: {
-      origin: typeof corsConfig.origin === 'function'
-        ? 'function'
-        : corsConfig.origin,
+      origin: typeof corsConfig.origin === 'function' ? 'function' : corsConfig.origin,
       credentials: corsConfig.credentials,
       methods: corsConfig.methods,
       allowedHeaders: corsConfig.allowedHeaders?.length || 0,
@@ -132,9 +130,7 @@ export default async function corsPlugin(
 
     logger.info({
       message: 'CORS plugin registered successfully',
-      originType: Array.isArray(corsConfig.origin)
-        ? 'array'
-        : typeof corsConfig.origin,
+      originType: Array.isArray(corsConfig.origin) ? 'array' : typeof corsConfig.origin,
       credentialsEnabled: corsConfig.credentials,
       methodsCount: corsConfig.methods?.length || 0,
       environment: config.NODE_ENV
@@ -147,7 +143,6 @@ export default async function corsPlugin(
         security: 'This should be restricted in production environments'
       });
     }
-
   } catch (error) {
     logger.error({
       message: 'Failed to register CORS plugin',

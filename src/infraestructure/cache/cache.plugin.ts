@@ -88,7 +88,6 @@ export default async function cachePlugin(
       // Cache miss - store key for onSend hook
       request.cacheKey = cacheKey;
       fastify.log.debug(`Cache miss for ${cacheKey}`);
-
     } catch (error) {
       fastify.log.error(`Cache preHandler error: ${(error as Error).message}`);
       // Continue without cache on error
@@ -117,7 +116,6 @@ export default async function cachePlugin(
       reply.header('X-Cache-TTL', ttl.toString());
 
       fastify.log.debug(`Cached response for ${request.cacheKey} with TTL ${ttl}s`);
-
     } catch (error) {
       fastify.log.error(`Cache onSend error: ${(error as Error).message}`);
       // Continue without caching on error

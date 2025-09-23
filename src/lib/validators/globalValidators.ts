@@ -49,46 +49,57 @@ export function hasInjectionAttempt(input: string): boolean {
 /**
  * Base string schema with sanitization and injection detection
  */
-export const BaseStringSchema = z.string()
-  .transform((val) => sanitizeInput(val))
-  .refine((val) => !hasInjectionAttempt(val), {
+export const BaseStringSchema = z
+  .string()
+  .transform(val => sanitizeInput(val))
+  .refine(val => !hasInjectionAttempt(val), {
     message: 'Input contains potentially dangerous content'
   });
 
 /**
  * Email validation schema with security checks
  */
-export const EmailSchema = z.string()
+export const EmailSchema = z
+  .string()
   .email('Invalid email format')
   .max(254, 'Email too long')
-  .transform((val) => sanitizeInput(val))
-  .refine((email: string) => {
-    // Additional security checks
-    return !/\.\./.test(email) && email.trim() === email && !hasInjectionAttempt(email);
-  }, {
-    message: 'Email contains invalid patterns'
-  });
+  .transform(val => sanitizeInput(val))
+  .refine(
+    (email: string) => {
+      // Additional security checks
+      return !/\.\./.test(email) && email.trim() === email && !hasInjectionAttempt(email);
+    },
+    {
+      message: 'Email contains invalid patterns'
+    }
+  );
 
 /**
  * Strong password schema with comprehensive security requirements
  */
-export const PasswordSchema = z.string()
+export const PasswordSchema = z
+  .string()
   .min(8, 'Password must be at least 8 characters')
   .max(128, 'Password too long')
-  .refine((password) => {
-    const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/;
-    return strongPasswordRegex.test(password);
-  }, {
-    message: 'Password must contain at least one lowercase, uppercase, number and special character'
-  });
+  .refine(
+    password => {
+      const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/;
+      return strongPasswordRegex.test(password);
+    },
+    {
+      message:
+        'Password must contain at least one lowercase, uppercase, number and special character'
+    }
+  );
 
 /**
  * Name validation schema (for user names, etc.)
  */
-export const NameSchema = z.string()
+export const NameSchema = z
+  .string()
   .min(2, 'Name too short')
   .max(100, 'Name too long')
-  .transform((val) => sanitizeInput(val))
+  .transform(val => sanitizeInput(val))
   .refine((name: string) => /^[a-zA-Z0-9\s\-_'\.]+$/.test(name), {
     message: 'Name contains invalid characters'
   })
@@ -99,34 +110,38 @@ export const NameSchema = z.string()
 /**
  * URL validation schema with security checks
  */
-export const UrlSchema = z.string()
+export const UrlSchema = z
+  .string()
   .url('Invalid URL format')
   .max(2048, 'URL too long')
-  .refine((url) => {
-    try {
-      const parsedUrl = new URL(url);
-      // Only allow HTTP/HTTPS protocols
-      return ['http:', 'https:'].includes(parsedUrl.protocol);
-    } catch {
-      return false;
+  .refine(
+    url => {
+      try {
+        const parsedUrl = new URL(url);
+        // Only allow HTTP/HTTPS protocols
+        return ['http:', 'https:'].includes(parsedUrl.protocol);
+      } catch {
+        return false;
+      }
+    },
+    {
+      message: 'URL must use HTTP or HTTPS protocol'
     }
-  }, {
-    message: 'URL must use HTTP or HTTPS protocol'
-  });
+  );
 
 /**
  * MongoDB ObjectId validation schema
  */
-export const ObjectIdSchema = z.string()
-  .regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId format');
+export const ObjectIdSchema = z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId format');
 
 /**
  * Generic text content schema with length limits
  */
-export const TextContentSchema = z.string()
+export const TextContentSchema = z
+  .string()
   .min(1, 'Content cannot be empty')
   .max(5000, 'Content too long')
-  .transform((val) => sanitizeInput(val))
+  .transform(val => sanitizeInput(val))
   .refine((content: string) => !hasInjectionAttempt(content), {
     message: 'Content contains potentially dangerous content'
   });
@@ -134,27 +149,26 @@ export const TextContentSchema = z.string()
 /**
  * MongoDB query sanitization schema
  */
-export const MongoQuerySchema = z.record(z.string(), z.any())
-  .transform((query) => {
-    if (!query || typeof query !== 'object') return query;
+export const MongoQuerySchema = z.record(z.string(), z.any()).transform(query => {
+  if (!query || typeof query !== 'object') return query;
 
-    const sanitized = { ...query };
-    const dangerousOperators = ['$where', '$function', '$accumulator'];
+  const sanitized = { ...query };
+  const dangerousOperators = ['$where', '$function', '$accumulator'];
 
-    // Remove dangerous operators
-    for (const key in sanitized) {
-      if (dangerousOperators.includes(key)) {
-        delete sanitized[key];
-      }
-
-      // Recursively sanitize nested objects
-      if (typeof sanitized[key] === 'object' && sanitized[key] !== null) {
-        sanitized[key] = MongoQuerySchema.parse(sanitized[key]);
-      }
+  // Remove dangerous operators
+  for (const key in sanitized) {
+    if (dangerousOperators.includes(key)) {
+      delete sanitized[key];
     }
 
-    return sanitized;
-  });
+    // Recursively sanitize nested objects
+    if (typeof sanitized[key] === 'object' && sanitized[key] !== null) {
+      sanitized[key] = MongoQuerySchema.parse(sanitized[key]);
+    }
+  }
+
+  return sanitized;
+});
 
 /**
  * Change password schema (globally reusable)
@@ -181,69 +195,81 @@ export const BaseRoleSchema = z.enum(['user'], {
 /**
  * Brazilian CPF validation schema
  */
-export const CpfSchema = z.string()
+export const CpfSchema = z
+  .string()
   .min(11, 'CPF must have 11 digits')
   .max(14, 'CPF too long') // With formatting: 000.000.000-00
-  .transform((val) => val.replace(/\D/g, '')) // Remove formatting
-  .refine((cpf) => {
-    // Basic CPF validation algorithm
-    if (cpf.length !== 11) return false;
+  .transform(val => val.replace(/\D/g, '')) // Remove formatting
+  .refine(
+    cpf => {
+      // Basic CPF validation algorithm
+      if (cpf.length !== 11) return false;
 
-    // Check for invalid patterns (all same digits)
-    if (/^(\d)\1{10}$/.test(cpf)) return false;
+      // Check for invalid patterns (all same digits)
+      if (/^(\d)\1{10}$/.test(cpf)) return false;
 
-    // CPF validation algorithm
-    let sum = 0;
-    let remainder;
+      // CPF validation algorithm
+      let sum = 0;
+      let remainder;
 
-    // Validate first digit
-    for (let i = 1; i <= 9; i++) {
-      sum += parseInt(cpf.substring(i - 1, i)) * (11 - i);
+      // Validate first digit
+      for (let i = 1; i <= 9; i++) {
+        sum += parseInt(cpf.substring(i - 1, i)) * (11 - i);
+      }
+      remainder = (sum * 10) % 11;
+      if (remainder === 10 || remainder === 11) remainder = 0;
+      if (remainder !== parseInt(cpf.substring(9, 10))) return false;
+
+      // Validate second digit
+      sum = 0;
+      for (let i = 1; i <= 10; i++) {
+        sum += parseInt(cpf.substring(i - 1, i)) * (12 - i);
+      }
+      remainder = (sum * 10) % 11;
+      if (remainder === 10 || remainder === 11) remainder = 0;
+      if (remainder !== parseInt(cpf.substring(10, 11))) return false;
+
+      return true;
+    },
+    {
+      message: 'Invalid CPF format'
     }
-    remainder = (sum * 10) % 11;
-    if (remainder === 10 || remainder === 11) remainder = 0;
-    if (remainder !== parseInt(cpf.substring(9, 10))) return false;
-
-    // Validate second digit
-    sum = 0;
-    for (let i = 1; i <= 10; i++) {
-      sum += parseInt(cpf.substring(i - 1, i)) * (12 - i);
-    }
-    remainder = (sum * 10) % 11;
-    if (remainder === 10 || remainder === 11) remainder = 0;
-    if (remainder !== parseInt(cpf.substring(10, 11))) return false;
-
-    return true;
-  }, {
-    message: 'Invalid CPF format'
-  });
+  );
 
 /**
  * Brazilian phone number schema
  */
-export const PhoneSchema = z.string()
+export const PhoneSchema = z
+  .string()
   .min(10, 'Phone number too short')
   .max(15, 'Phone number too long') // With formatting: +55 (11) 99999-9999
-  .transform((val) => val.replace(/\D/g, '')) // Remove formatting
-  .refine((phone) => {
-    // Brazilian phone patterns: 10 digits (landline) or 11 digits (mobile)
-    return phone.length === 10 || phone.length === 11;
-  }, {
-    message: 'Invalid Brazilian phone number format'
-  });
+  .transform(val => val.replace(/\D/g, '')) // Remove formatting
+  .refine(
+    phone => {
+      // Brazilian phone patterns: 10 digits (landline) or 11 digits (mobile)
+      return phone.length === 10 || phone.length === 11;
+    },
+    {
+      message: 'Invalid Brazilian phone number format'
+    }
+  );
 
 /**
  * Brazilian CEP (postal code) schema
  */
-export const CepSchema = z.string()
+export const CepSchema = z
+  .string()
   .min(8, 'CEP must have 8 digits')
   .max(9, 'CEP too long') // With formatting: 00000-000
-  .transform((val) => val.replace(/\D/g, '')) // Remove formatting
-  .refine((cep) => {
-    return cep.length === 8 && /^\d{8}$/.test(cep);
-  }, {
-    message: 'Invalid CEP format'
-  });
+  .transform(val => val.replace(/\D/g, '')) // Remove formatting
+  .refine(
+    cep => {
+      return cep.length === 8 && /^\d{8}$/.test(cep);
+    },
+    {
+      message: 'Invalid CEP format'
+    }
+  );
 
 /**
  * Registration request schema
@@ -265,19 +291,20 @@ export const LoginRequestSchema = z.object({
 /**
  * User update schema
  */
-export const UserUpdateSchema = z.object({
-  name: NameSchema.optional(),
-  email: EmailSchema.optional()
-}).refine((data) => Object.keys(data).length > 0, {
-  message: 'At least one field must be provided for update'
-});
+export const UserUpdateSchema = z
+  .object({
+    name: NameSchema.optional(),
+    email: EmailSchema.optional()
+  })
+  .refine(data => Object.keys(data).length > 0, {
+    message: 'At least one field must be provided for update'
+  });
 
 /**
  * Legacy GlobalValidators class for backward compatibility
  * @deprecated Use Zod schemas directly instead
  */
 export class GlobalValidators {
-
   /**
    * Sanitize input by removing dangerous characters
    * @deprecated Use sanitizeInput function instead
@@ -331,7 +358,9 @@ export class GlobalValidators {
     const hasNumbers = /\d/.test(password);
     const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
 
-    return hasMinLength && hasMaxLength && hasUpperCase && hasLowerCase && hasNumbers && hasSpecialChar;
+    return (
+      hasMinLength && hasMaxLength && hasUpperCase && hasLowerCase && hasNumbers && hasSpecialChar
+    );
   }
 
   /**
@@ -358,7 +387,11 @@ export class GlobalValidators {
    * Validate string length within specified range
    * @deprecated Create custom Zod schema instead
    */
-  static isValidLength(input: string, minLength: number = 0, maxLength: number = Infinity): boolean {
+  static isValidLength(
+    input: string,
+    minLength: number = 0,
+    maxLength: number = Infinity
+  ): boolean {
     if (!input || typeof input !== 'string') return false;
     return input.length >= minLength && input.length <= maxLength;
   }

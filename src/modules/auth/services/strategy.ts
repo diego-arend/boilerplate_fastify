@@ -32,7 +32,10 @@ export class JwtStrategy implements AuthStrategy {
     }
   }
 
-  async authenticate(request: FastifyRequest, reply: FastifyReply): Promise<AuthenticatedUser | null> {
+  async authenticate(
+    request: FastifyRequest,
+    reply: FastifyReply
+  ): Promise<AuthenticatedUser | null> {
     const requestId = request.id || Math.random().toString(36).substr(2, 9);
     const authLogger = this.logger.child({ requestId, operation: 'jwt-authenticate' });
 
@@ -75,7 +78,9 @@ export class JwtStrategy implements AuthStrategy {
       // Try to get cached token validation first
       if (this.cacheService) {
         const tokenHash = this.generateTokenHash(token);
-        const cachedUser = await this.cacheService.get<AuthenticatedUser>(`token:${tokenHash}`, { namespace: 'auth' });
+        const cachedUser = await this.cacheService.get<AuthenticatedUser>(`token:${tokenHash}`, {
+          namespace: 'auth'
+        });
         if (cachedUser) {
           // Log cache hit (development only)
           if (process.env.NODE_ENV === 'development') {
@@ -118,7 +123,10 @@ export class JwtStrategy implements AuthStrategy {
       // Cache the valid token if cache service is available
       if (this.cacheService) {
         const tokenHash = this.generateTokenHash(token);
-        await this.cacheService.set(`token:${tokenHash}`, payload, { ttl: 3600, namespace: 'auth' }); // 1 hour cache
+        await this.cacheService.set(`token:${tokenHash}`, payload, {
+          ttl: 3600,
+          namespace: 'auth'
+        }); // 1 hour cache
       }
 
       // Log successful JWT validation (development only)

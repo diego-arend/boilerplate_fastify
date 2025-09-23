@@ -20,12 +20,15 @@ export async function handleFileProcess(
 ): Promise<JobResult> {
   const startTime = Date.now();
 
-  logger.info({
-    fileId: data.fileId,
-    filePath: data.filePath,
-    operation: data.operation,
-    hasOptions: !!data.options && Object.keys(data.options).length > 0
-  }, 'Processing file operation job');
+  logger.info(
+    {
+      fileId: data.fileId,
+      filePath: data.filePath,
+      operation: data.operation,
+      hasOptions: !!data.options && Object.keys(data.options).length > 0
+    },
+    'Processing file operation job'
+  );
 
   try {
     // Validate file processing data
@@ -34,25 +37,31 @@ export async function handleFileProcess(
     // Get file information
     const fileInfo = await getFileInfo(data.filePath, logger);
 
-    logger.debug({
-      fileSize: fileInfo.size,
-      fileType: fileInfo.type,
-      lastModified: fileInfo.lastModified
-    }, 'File information retrieved');
+    logger.debug(
+      {
+        fileSize: fileInfo.size,
+        fileType: fileInfo.type,
+        lastModified: fileInfo.lastModified
+      },
+      'File information retrieved'
+    );
 
     // Process file based on operation type
     const processResult = await processFile(data, fileInfo, logger);
 
     const processingTime = Date.now() - startTime;
 
-    logger.info({
-      fileId: data.fileId,
-      operation: data.operation,
-      originalSize: fileInfo.size,
-      processedSize: processResult.processedSize,
-      compressionRatio: calculateCompressionRatio(fileInfo.size, processResult.processedSize),
-      processingTime
-    }, 'File processing completed successfully');
+    logger.info(
+      {
+        fileId: data.fileId,
+        operation: data.operation,
+        originalSize: fileInfo.size,
+        processedSize: processResult.processedSize,
+        compressionRatio: calculateCompressionRatio(fileInfo.size, processResult.processedSize),
+        processingTime
+      },
+      'File processing completed successfully'
+    );
 
     return {
       success: true,
@@ -78,18 +87,20 @@ export async function handleFileProcess(
       processedAt: Date.now(),
       processingTime
     };
-
   } catch (error) {
     const processingTime = Date.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : 'Unknown file processing error';
 
-    logger.error({
-      error,
-      processingTime,
-      fileId: data.fileId,
-      filePath: data.filePath,
-      operation: data.operation
-    }, 'Failed to process file');
+    logger.error(
+      {
+        error,
+        processingTime,
+        fileId: data.fileId,
+        filePath: data.filePath,
+        operation: data.operation
+      },
+      'Failed to process file'
+    );
 
     return {
       success: false,
@@ -152,56 +163,66 @@ async function validateOperationSpecificData(data: FileProcessJobData): Promise<
   const fileExt = extname(data.filePath).toLowerCase();
 
   switch (data.operation) {
-  case 'resize':
-    // Only allow image files for resize operation
-    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'];
-    if (!imageExtensions.includes(fileExt)) {
-      throw new Error(`Resize operation not supported for file type: ${fileExt}`);
-    }
+    case 'resize':
+      // Only allow image files for resize operation
+      const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'];
+      if (!imageExtensions.includes(fileExt)) {
+        throw new Error(`Resize operation not supported for file type: ${fileExt}`);
+      }
 
-    if (data.options?.width && (typeof data.options.width !== 'number' || data.options.width <= 0)) {
-      throw new Error('Width must be a positive number');
-    }
+      if (
+        data.options?.width &&
+        (typeof data.options.width !== 'number' || data.options.width <= 0)
+      ) {
+        throw new Error('Width must be a positive number');
+      }
 
-    if (data.options?.height && (typeof data.options.height !== 'number' || data.options.height <= 0)) {
-      throw new Error('Height must be a positive number');
-    }
-    break;
+      if (
+        data.options?.height &&
+        (typeof data.options.height !== 'number' || data.options.height <= 0)
+      ) {
+        throw new Error('Height must be a positive number');
+      }
+      break;
 
-  case 'compress':
-    // Check file size - don't compress tiny files
-    const stats = await stat(data.filePath);
-    if (stats.size < 1024) { // Less than 1KB
-      throw new Error('File too small to compress effectively');
-    }
-    break;
+    case 'compress':
+      // Check file size - don't compress tiny files
+      const stats = await stat(data.filePath);
+      if (stats.size < 1024) {
+        // Less than 1KB
+        throw new Error('File too small to compress effectively');
+      }
+      break;
 
-  case 'convert':
-    if (!data.options?.targetFormat) {
-      throw new Error('Target format is required for conversion');
-    }
+    case 'convert':
+      if (!data.options?.targetFormat) {
+        throw new Error('Target format is required for conversion');
+      }
 
-    const supportedFormats = ['jpg', 'png', 'webp', 'pdf', 'gif'];
-    if (!supportedFormats.includes(data.options.targetFormat)) {
-      throw new Error(`Unsupported target format: ${data.options.targetFormat}`);
-    }
-    break;
+      const supportedFormats = ['jpg', 'png', 'webp', 'pdf', 'gif'];
+      if (!supportedFormats.includes(data.options.targetFormat)) {
+        throw new Error(`Unsupported target format: ${data.options.targetFormat}`);
+      }
+      break;
 
-  case 'analyze':
-    // No specific validation needed for analyze operation
-    break;
+    case 'analyze':
+      // No specific validation needed for analyze operation
+      break;
   }
 }
 
 /**
  * Gets file information
  */
-async function getFileInfo(filePath: string, logger: FastifyBaseLogger): Promise<{
-  size: number
-  type: string
-  lastModified: string
-  extension: string
-  baseName: string
+async function getFileInfo(
+  filePath: string,
+  logger: FastifyBaseLogger
+): Promise<{
+  size: number;
+  type: string;
+  lastModified: string;
+  extension: string;
+  baseName: string;
 }> {
   try {
     const stats = await stat(filePath);
@@ -256,42 +277,45 @@ async function processFile(
   fileInfo: { size: number; type: string; extension: string; baseName: string },
   logger: FastifyBaseLogger
 ): Promise<{
-  outputPath: string
-  processedSize: number
-  outputType: string
-  operationTime: number
-  metadata: Record<string, any>
+  outputPath: string;
+  processedSize: number;
+  outputType: string;
+  operationTime: number;
+  metadata: Record<string, any>;
 }> {
   const operationStart = Date.now();
 
-  logger.debug({
-    operation: data.operation,
-    fileSize: fileInfo.size,
-    fileType: fileInfo.type
-  }, `Starting ${data.operation} operation`);
+  logger.debug(
+    {
+      operation: data.operation,
+      fileSize: fileInfo.size,
+      fileType: fileInfo.type
+    },
+    `Starting ${data.operation} operation`
+  );
 
   let result: {
-    outputPath: string
-    processedSize: number
-    outputType: string
-    metadata: Record<string, any>
+    outputPath: string;
+    processedSize: number;
+    outputType: string;
+    metadata: Record<string, any>;
   };
 
   switch (data.operation) {
-  case 'compress':
-    result = await simulateCompress(data, fileInfo, logger);
-    break;
-  case 'resize':
-    result = await simulateResize(data, fileInfo, logger);
-    break;
-  case 'convert':
-    result = await simulateConvert(data, fileInfo, logger);
-    break;
-  case 'analyze':
-    result = await simulateAnalyze(data, fileInfo, logger);
-    break;
-  default:
-    throw new Error(`Unsupported operation: ${data.operation}`);
+    case 'compress':
+      result = await simulateCompress(data, fileInfo, logger);
+      break;
+    case 'resize':
+      result = await simulateResize(data, fileInfo, logger);
+      break;
+    case 'convert':
+      result = await simulateConvert(data, fileInfo, logger);
+      break;
+    case 'analyze':
+      result = await simulateAnalyze(data, fileInfo, logger);
+      break;
+    default:
+      throw new Error(`Unsupported operation: ${data.operation}`);
   }
 
   const operationTime = Date.now() - operationStart;
@@ -310,10 +334,10 @@ async function simulateCompress(
   fileInfo: { size: number; extension: string; baseName: string },
   logger: FastifyBaseLogger
 ): Promise<{
-  outputPath: string
-  processedSize: number
-  outputType: string
-  metadata: Record<string, any>
+  outputPath: string;
+  processedSize: number;
+  outputType: string;
+  metadata: Record<string, any>;
 }> {
   // Simulate compression time based on file size
   const processingTime = Math.min(2000 + (fileInfo.size / 1024) * 10, 10000);
@@ -325,11 +349,14 @@ async function simulateCompress(
 
   const outputPath = `${dirname(data.filePath)}/${fileInfo.baseName}_compressed${fileInfo.extension}`;
 
-  logger.debug({
-    originalSize: fileInfo.size,
-    compressedSize: processedSize,
-    compressionRatio: Math.round((1 - compressionRatio) * 100)
-  }, 'Compression completed');
+  logger.debug(
+    {
+      originalSize: fileInfo.size,
+      compressedSize: processedSize,
+      compressionRatio: Math.round((1 - compressionRatio) * 100)
+    },
+    'Compression completed'
+  );
 
   return {
     outputPath,
@@ -352,10 +379,10 @@ async function simulateResize(
   fileInfo: { size: number; extension: string; baseName: string },
   logger: FastifyBaseLogger
 ): Promise<{
-  outputPath: string
-  processedSize: number
-  outputType: string
-  metadata: Record<string, any>
+  outputPath: string;
+  processedSize: number;
+  outputType: string;
+  metadata: Record<string, any>;
 }> {
   // Simulate resize time based on dimensions and file size
   const processingTime = 1000 + Math.random() * 3000;
@@ -373,11 +400,14 @@ async function simulateResize(
 
   const outputPath = `${dirname(data.filePath)}/${fileInfo.baseName}_${newWidth}x${newHeight}${fileInfo.extension}`;
 
-  logger.debug({
-    originalDimensions: `${originalWidth}x${originalHeight}`,
-    newDimensions: `${newWidth}x${newHeight}`,
-    sizeChange: processedSize - fileInfo.size
-  }, 'Resize completed');
+  logger.debug(
+    {
+      originalDimensions: `${originalWidth}x${originalHeight}`,
+      newDimensions: `${newWidth}x${newHeight}`,
+      sizeChange: processedSize - fileInfo.size
+    },
+    'Resize completed'
+  );
 
   return {
     outputPath,
@@ -400,10 +430,10 @@ async function simulateConvert(
   fileInfo: { size: number; extension: string; baseName: string },
   logger: FastifyBaseLogger
 ): Promise<{
-  outputPath: string
-  processedSize: number
-  outputType: string
-  metadata: Record<string, any>
+  outputPath: string;
+  processedSize: number;
+  outputType: string;
+  metadata: Record<string, any>;
 }> {
   const targetFormat = data.options?.targetFormat;
 
@@ -413,11 +443,11 @@ async function simulateConvert(
 
   // Estimate size change based on format conversion
   const formatSizeMultipliers: Record<string, number> = {
-    jpg: 0.7,   // JPEG compression
-    png: 1.2,   // Lossless, often larger
-    webp: 0.6,  // Efficient compression
-    pdf: 0.9,   // Document format
-    gif: 0.8    // Limited colors
+    jpg: 0.7, // JPEG compression
+    png: 1.2, // Lossless, often larger
+    webp: 0.6, // Efficient compression
+    pdf: 0.9, // Document format
+    gif: 0.8 // Limited colors
   };
 
   const sizeMultiplier = formatSizeMultipliers[targetFormat!] || 1.0;
@@ -425,11 +455,14 @@ async function simulateConvert(
 
   const outputPath = `${dirname(data.filePath)}/${fileInfo.baseName}_converted.${targetFormat}`;
 
-  logger.debug({
-    fromFormat: fileInfo.extension,
-    toFormat: targetFormat,
-    sizeChange: processedSize - fileInfo.size
-  }, 'Format conversion completed');
+  logger.debug(
+    {
+      fromFormat: fileInfo.extension,
+      toFormat: targetFormat,
+      sizeChange: processedSize - fileInfo.size
+    },
+    'Format conversion completed'
+  );
 
   return {
     outputPath,
@@ -452,10 +485,10 @@ async function simulateAnalyze(
   fileInfo: { size: number; extension: string; baseName: string },
   logger: FastifyBaseLogger
 ): Promise<{
-  outputPath: string
-  processedSize: number
-  outputType: string
-  metadata: Record<string, any>
+  outputPath: string;
+  processedSize: number;
+  outputType: string;
+  metadata: Record<string, any>;
 }> {
   // Simulate analysis time
   const processingTime = 500 + Math.random() * 2000;
@@ -473,10 +506,13 @@ async function simulateAnalyze(
   const reportSize = JSON.stringify(analysisReport).length;
   const outputPath = `${dirname(data.filePath)}/${fileInfo.baseName}_analysis.json`;
 
-  logger.debug({
-    analysisPoints: Object.keys(analysisReport.characteristics).length,
-    reportSize
-  }, 'File analysis completed');
+  logger.debug(
+    {
+      analysisPoints: Object.keys(analysisReport.characteristics).length,
+      reportSize
+    },
+    'File analysis completed'
+  );
 
   return {
     outputPath,
@@ -489,7 +525,10 @@ async function simulateAnalyze(
 /**
  * Generates file characteristics for analysis
  */
-function generateFileCharacteristics(fileInfo: { size: number; extension: string }): Record<string, any> {
+function generateFileCharacteristics(fileInfo: {
+  size: number;
+  extension: string;
+}): Record<string, any> {
   const characteristics: Record<string, any> = {
     sizeCategory: fileInfo.size < 1024 ? 'tiny' : fileInfo.size < 1024 * 1024 ? 'small' : 'large',
     fileFormat: fileInfo.extension,
@@ -526,7 +565,8 @@ function performSecurityScan(): Record<string, any> {
 function generateRecommendations(fileInfo: { size: number; extension: string }): string[] {
   const recommendations: string[] = [];
 
-  if (fileInfo.size > 10 * 1024 * 1024) { // > 10MB
+  if (fileInfo.size > 10 * 1024 * 1024) {
+    // > 10MB
     recommendations.push('Consider compressing the file to reduce size');
   }
 

@@ -28,7 +28,7 @@ Adicione ao seu arquivo `.env`:
 ```bash
 # Redis Configuration
 REDIS_HOST=localhost      # Host do Redis (padrão: localhost)
-REDIS_PORT=6379          # Porta do Redis (padrão: 6379)  
+REDIS_PORT=6379          # Porta do Redis (padrão: 6379)
 REDIS_PASSWORD=          # Senha do Redis (opcional)
 REDIS_DB=0              # Número do database (padrão: 0)
 ```
@@ -49,10 +49,10 @@ await cacheManager.initialize(config);
 ### Instâncias Pré-configuradas
 
 ```typescript
-import { 
-  getDefaultCache,  // TTL: 1 hora, namespace: 'app'
-  getSessionCache,  // TTL: 24 horas, namespace: 'session' 
-  getTempCache      // TTL: 5 minutos, namespace: 'temp'
+import {
+  getDefaultCache, // TTL: 1 hora, namespace: 'app'
+  getSessionCache, // TTL: 24 horas, namespace: 'session'
+  getTempCache // TTL: 5 minutos, namespace: 'temp'
 } from '../infraestructure/cache/index.js';
 
 // Inicializar as instâncias
@@ -124,10 +124,7 @@ const pong = await cache.ping(); // 'PONG'
 import type { FastifyInstance, FastifyPluginOptions } from 'fastify';
 import { getDefaultCache } from '../infraestructure/cache/index.js';
 
-export default async function cachePlugin(
-  fastify: FastifyInstance, 
-  opts: FastifyPluginOptions
-) {
+export default async function cachePlugin(fastify: FastifyInstance, opts: FastifyPluginOptions) {
   // Inicializar cache
   const cache = getDefaultCache();
   await cache.initialize(fastify.config);
@@ -140,12 +137,12 @@ export default async function cachePlugin(
     if (request.method === 'GET') {
       const cacheKey = `route:${request.url}`;
       const cached = await cache.get(cacheKey);
-      
+
       if (cached) {
         reply.send(cached);
         return;
       }
-      
+
       // Armazenar chave para usar no onSend
       request.cacheKey = cacheKey;
     }
@@ -172,27 +169,27 @@ export default async function authController(fastify: FastifyInstance) {
   fastify.get('/auth/profile/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
     const cacheKey = `profile:${id}`;
-    
+
     // Tentar buscar no cache primeiro
     let profile = await fastify.cache.get(cacheKey);
-    
+
     if (!profile) {
       // Não está no cache, buscar no banco
       profile = await getUserProfile(id);
-      
+
       // Salvar no cache por 1 hora
       await fastify.cache.set(cacheKey, profile, { ttl: 3600 });
     }
-    
+
     return { profile };
   });
 
   fastify.post('/auth/login', async (request, reply) => {
     // ... lógica de login ...
-    
+
     // Invalidar cache do perfil após login
     await fastify.cache.del(`profile:${user.id}`);
-    
+
     return { token, user };
   });
 }
@@ -205,20 +202,20 @@ export default async function authController(fastify: FastifyInstance) {
 ```typescript
 async function getUserData(userId: string) {
   const cacheKey = `user:${userId}`;
-  
+
   // Tentar cache primeiro
   let user = await cache.get<User>(cacheKey);
-  
+
   if (!user) {
     // Cache miss - buscar no banco
     user = await userRepository.findById(userId);
-    
+
     if (user) {
       // Salvar no cache
       await cache.set(cacheKey, user, { ttl: 3600 });
     }
   }
-  
+
   return user;
 }
 ```
@@ -229,11 +226,11 @@ async function getUserData(userId: string) {
 async function updateUser(userId: string, data: Partial<User>) {
   // Atualizar banco primeiro
   const user = await userRepository.update(userId, data);
-  
+
   // Atualizar cache também
   const cacheKey = `user:${userId}`;
   await cache.set(cacheKey, user, { ttl: 3600 });
-  
+
   return user;
 }
 ```
@@ -243,10 +240,10 @@ async function updateUser(userId: string, data: Partial<User>) {
 ```typescript
 async function updateUserAsync(userId: string, data: Partial<User>) {
   const cacheKey = `user:${userId}`;
-  
+
   // Atualizar cache imediatamente
-  await cache.set(cacheKey, { ...await getUserFromCache(userId), ...data });
-  
+  await cache.set(cacheKey, { ...(await getUserFromCache(userId)), ...data });
+
   // Agendar atualização do banco (queue, timer, etc.)
   scheduleDBUpdate(userId, data);
 }
@@ -265,7 +262,7 @@ O sistema de cache registra automaticamente erros e informações importantes:
 // Sucesso na conexão
 // Redis: Successfully connected
 
-// Erro de conexão  
+// Erro de conexão
 // Redis: Connection failed Error: connect ECONNREFUSED 127.0.0.1:6379
 
 // Cache hits/misses (debug level)
@@ -285,13 +282,13 @@ console.log({
 
 ```typescript
 // middleware de logging
-fastify.addHook('preHandler', async (request) => {
+fastify.addHook('preHandler', async request => {
   const startTime = Date.now();
-  
+
   request.onResponseComplete = () => {
     const duration = Date.now() - startTime;
     const stats = fastify.cache.getStats();
-    
+
     fastify.log.info({
       url: request.url,
       method: request.method,
@@ -308,6 +305,7 @@ fastify.addHook('preHandler', async (request) => {
 ### Sanitização de Chaves
 
 O CacheManager automaticamente sanitiza as chaves para prevenir:
+
 - Injection attacks
 - Caracteres inválidos no Redis
 - Chaves muito longas
@@ -331,12 +329,14 @@ await cache.set('user:123', sensitiveData, { namespace: 'private' });
 ### Problemas Comuns
 
 1. **Erro de conexão Redis**:
+
    ```bash
    # Verificar se Redis está rodando
    redis-cli ping
    ```
 
 2. **TTL não funcionando**:
+
    ```typescript
    // Verificar TTL
    const ttl = await cache.ttl('key');
@@ -363,7 +363,7 @@ const cache = new CacheManager();
 ### Benchmarks Internos
 
 - **Set**: ~0.5ms por operação
-- **Get**: ~0.3ms por operação  
+- **Get**: ~0.3ms por operação
 - **Hit ratio**: Aim for >80%
 - **Memory usage**: Monitore com Redis INFO
 

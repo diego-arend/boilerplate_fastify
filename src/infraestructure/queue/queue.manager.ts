@@ -87,7 +87,6 @@ export class QueueManager {
     jobData: T,
     options: JobOptions = {}
   ): Promise<Job<T>> {
-
     try {
       // Validate job data
       this.validateJobData(jobData);
@@ -105,7 +104,6 @@ export class QueueManager {
 
       console.log(`QueueManager: Added job ${job.id} of type ${jobType}`);
       return job;
-
     } catch (error) {
       console.error(`QueueManager: Failed to add job ${jobType}`, error);
       throw new Error(`Failed to add job: ${error}`);
@@ -118,7 +116,6 @@ export class QueueManager {
    * @returns Job instance or null if not found
    */
   public async getJob(jobId: string): Promise<Job | null> {
-
     try {
       const job = await this.queue.getJob(jobId);
       return job || null;
@@ -177,7 +174,6 @@ export class QueueManager {
    * @returns True if removed successfully
    */
   public async removeJob(jobId: string): Promise<boolean> {
-
     try {
       const job = await this.getJob(jobId);
       if (!job) return false;
@@ -185,7 +181,6 @@ export class QueueManager {
       await job.remove();
       console.log(`QueueManager: Removed job ${jobId}`);
       return true;
-
     } catch (error) {
       console.error(`QueueManager: Failed to remove job ${jobId}`, error);
       return false;
@@ -197,7 +192,6 @@ export class QueueManager {
    * @returns Queue statistics
    */
   public async getStats(): Promise<QueueStats> {
-
     try {
       const waiting = await this.queue.getWaiting();
       const active = await this.queue.getActive();
@@ -211,9 +205,8 @@ export class QueueManager {
         completed: completed.length,
         failed: failed.length,
         delayed: delayed.length,
-        paused: await this.queue.isPaused() ? 1 : 0
+        paused: (await this.queue.isPaused()) ? 1 : 0
       };
-
     } catch (error) {
       console.error('QueueManager: Failed to get stats', error);
       return {
@@ -248,13 +241,14 @@ export class QueueManager {
    * @param grace - Grace period in milliseconds
    * @param limit - Maximum number of jobs to clean
    */
-  public async cleanCompleted(grace: number = 24 * 60 * 60 * 1000, limit: number = 100): Promise<number> {
-
+  public async cleanCompleted(
+    grace: number = 24 * 60 * 60 * 1000,
+    limit: number = 100
+  ): Promise<number> {
     try {
       const jobs = await this.queue.clean(grace, limit, 'completed');
       console.log(`QueueManager: Cleaned ${jobs.length} completed jobs`);
       return jobs.length;
-
     } catch (error) {
       console.error('QueueManager: Failed to clean completed jobs', error);
       return 0;
@@ -266,13 +260,14 @@ export class QueueManager {
    * @param grace - Grace period in milliseconds
    * @param limit - Maximum number of jobs to clean
    */
-  public async cleanFailed(grace: number = 24 * 60 * 60 * 1000, limit: number = 100): Promise<number> {
-
+  public async cleanFailed(
+    grace: number = 24 * 60 * 60 * 1000,
+    limit: number = 100
+  ): Promise<number> {
     try {
       const jobs = await this.queue.clean(grace, limit, 'failed');
       console.log(`QueueManager: Cleaned ${jobs.length} failed jobs`);
       return jobs.length;
-
     } catch (error) {
       console.error('QueueManager: Failed to clean failed jobs', error);
       return 0;

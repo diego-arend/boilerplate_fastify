@@ -32,7 +32,6 @@ const start = async () => {
     if (config.NODE_ENV === 'development') {
       server.log.info(`📚 API Documentation available at http://localhost:${config.PORT}/docs`);
     }
-
   } catch (err) {
     server.log.error({
       message: 'Failed to start server',
@@ -72,7 +71,6 @@ const shutdown = async (signal: string) => {
 
     console.log('✅ Server closed successfully. Exiting process.');
     process.exit(0);
-
   } catch (err) {
     server.log.error({
       message: 'Error during graceful shutdown',

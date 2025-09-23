@@ -24,10 +24,7 @@ export {
   TRANSACTION_ROUTE_CONFIG
 } from './transaction.plugin.js';
 
-export type {
-  TransactionPluginOptions,
-  RouteTransactionConfig
-} from './transaction.plugin.js';
+export type { TransactionPluginOptions, RouteTransactionConfig } from './transaction.plugin.js';
 
 // Transaction types
 export type {

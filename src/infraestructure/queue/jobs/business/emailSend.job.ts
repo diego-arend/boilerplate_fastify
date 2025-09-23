@@ -17,12 +17,15 @@ export async function handleEmailSend(
 ): Promise<JobResult> {
   const startTime = Date.now();
 
-  logger.info({
-    to: data.to,
-    subject: data.subject,
-    template: data.template,
-    hasVariables: !!data.variables && Object.keys(data.variables).length > 0
-  }, 'Processing email send job');
+  logger.info(
+    {
+      to: data.to,
+      subject: data.subject,
+      template: data.template,
+      hasVariables: !!data.variables && Object.keys(data.variables).length > 0
+    },
+    'Processing email send job'
+  );
 
   try {
     // Validate required email data
@@ -40,11 +43,14 @@ export async function handleEmailSend(
 
     const processingTime = Date.now() - startTime;
 
-    logger.info({
-      messageId: deliveryResult.messageId,
-      processingTime,
-      to: data.to
-    }, 'Email sent successfully');
+    logger.info(
+      {
+        messageId: deliveryResult.messageId,
+        processingTime,
+        to: data.to
+      },
+      'Email sent successfully'
+    );
 
     return {
       success: true,
@@ -59,17 +65,19 @@ export async function handleEmailSend(
       processedAt: Date.now(),
       processingTime
     };
-
   } catch (error) {
     const processingTime = Date.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : 'Unknown email sending error';
 
-    logger.error({
-      error,
-      processingTime,
-      to: data.to,
-      subject: data.subject
-    }, 'Failed to send email');
+    logger.error(
+      {
+        error,
+        processingTime,
+        to: data.to,
+        subject: data.subject
+      },
+      'Failed to send email'
+    );
 
     return {
       success: false,
@@ -136,9 +144,9 @@ async function simulateTemplateRendering(
  * Simulates email delivery through provider
  */
 async function simulateEmailDelivery(data: EmailJobData): Promise<{
-  messageId: string
-  provider: string
-  deliveryTime: number
+  messageId: string;
+  provider: string;
+  deliveryTime: number;
 }> {
   const deliveryStart = Date.now();
 
@@ -148,7 +156,8 @@ async function simulateEmailDelivery(data: EmailJobData): Promise<{
   const bodyBonus = Math.min(data.body.length * 0.5, 500);
   const variablesBonus = data.variables ? Object.keys(data.variables).length * 10 : 0;
 
-  const totalDeliveryTime = baseDeliveryTime + subjectBonus + bodyBonus + variablesBonus + Math.random() * 1000;
+  const totalDeliveryTime =
+    baseDeliveryTime + subjectBonus + bodyBonus + variablesBonus + Math.random() * 1000;
 
   // Simulate network delay
   await new Promise(resolve => setTimeout(resolve, totalDeliveryTime));

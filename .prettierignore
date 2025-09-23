@@ -1,0 +1,45 @@
+# Build outputs
+dist/
+build/
+coverage/
+
+# Dependencies
+node_modules/
+
+# Environment files
+.env*
+
+# Logs
+*.log
+*.log.*
+
+# Cache directories
+.cache/
+.temp/
+
+# IDE files
+.vscode/
+.idea/
+
+# Package manager files
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+# Docker files
+Dockerfile*
+docker-compose*.yml
+
+# Git files
+.git/
+.gitignore
+
+# Configuration files that should keep their format
+*.min.js
+*.min.css
+
+# Markdown files (optional - remove if you want to format markdown)
+# *.md
+
+# JSON files that should keep their format
+tsconfig.json

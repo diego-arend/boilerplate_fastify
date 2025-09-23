@@ -20,12 +20,15 @@ export async function handleDataExport(
 ): Promise<JobResult> {
   const startTime = Date.now();
 
-  logger.info({
-    userId: data.userId,
-    format: data.format,
-    outputPath: data.outputPath,
-    hasFilters: !!data.filters && Object.keys(data.filters).length > 0
-  }, 'Processing data export job');
+  logger.info(
+    {
+      userId: data.userId,
+      format: data.format,
+      outputPath: data.outputPath,
+      hasFilters: !!data.filters && Object.keys(data.filters).length > 0
+    },
+    'Processing data export job'
+  );
 
   try {
     // Validate export data
@@ -47,14 +50,17 @@ export async function handleDataExport(
 
     const processingTime = Date.now() - startTime;
 
-    logger.info({
-      userId: data.userId,
-      format: data.format,
-      recordCount: exportStats.recordCount,
-      fileSize: fileStats.fileSize,
-      outputPath,
-      processingTime
-    }, 'Data export completed successfully');
+    logger.info(
+      {
+        userId: data.userId,
+        format: data.format,
+        recordCount: exportStats.recordCount,
+        fileSize: fileStats.fileSize,
+        outputPath,
+        processingTime
+      },
+      'Data export completed successfully'
+    );
 
     return {
       success: true,
@@ -74,17 +80,19 @@ export async function handleDataExport(
       processedAt: Date.now(),
       processingTime
     };
-
   } catch (error) {
     const processingTime = Date.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : 'Unknown export error';
 
-    logger.error({
-      error,
-      processingTime,
-      userId: data.userId,
-      format: data.format
-    }, 'Failed to process data export');
+    logger.error(
+      {
+        error,
+        processingTime,
+        userId: data.userId,
+        format: data.format
+      },
+      'Failed to process data export'
+    );
 
     return {
       success: false,
@@ -132,7 +140,14 @@ function validateExportData(data: DataExportJobData): void {
   // Check for potentially dangerous filter values
   if (data.filters) {
     const filterString = JSON.stringify(data.filters);
-    const dangerousPatterns = ['<script', 'javascript:', 'eval(', 'function(', 'setTimeout', 'setInterval'];
+    const dangerousPatterns = [
+      '<script',
+      'javascript:',
+      'eval(',
+      'function(',
+      'setTimeout',
+      'setInterval'
+    ];
 
     for (const pattern of dangerousPatterns) {
       if (filterString.toLowerCase().includes(pattern)) {
@@ -171,16 +186,19 @@ async function retrieveExportData(
   data: DataExportJobData,
   logger: FastifyBaseLogger
 ): Promise<{
-  recordCount: number
-  estimatedSize: number
-  queryTime: number
+  recordCount: number;
+  estimatedSize: number;
+  queryTime: number;
 }> {
   const queryStart = Date.now();
 
-  logger.debug({
-    userId: data.userId,
-    filters: data.filters
-  }, 'Retrieving data for export');
+  logger.debug(
+    {
+      userId: data.userId,
+      filters: data.filters
+    },
+    'Retrieving data for export'
+  );
 
   // Simulate database query time based on complexity
   const baseQueryTime = 500;
@@ -192,7 +210,9 @@ async function retrieveExportData(
   // Simulate record count based on filters
   const baseRecordCount = 10000;
   const filterReduction = data.filters ? Object.keys(data.filters).length * 0.1 : 0;
-  const recordCount = Math.floor(baseRecordCount * (1 - filterReduction) * (0.8 + Math.random() * 0.4));
+  const recordCount = Math.floor(
+    baseRecordCount * (1 - filterReduction) * (0.8 + Math.random() * 0.4)
+  );
 
   // Estimate file size based on format and record count
   const bytesPerRecord = {
@@ -204,11 +224,14 @@ async function retrieveExportData(
   const estimatedSize = recordCount * bytesPerRecord[data.format];
   const actualQueryTime = Date.now() - queryStart;
 
-  logger.debug({
-    recordCount,
-    estimatedSize,
-    queryTime: actualQueryTime
-  }, 'Data retrieval completed');
+  logger.debug(
+    {
+      recordCount,
+      estimatedSize,
+      queryTime: actualQueryTime
+    },
+    'Data retrieval completed'
+  );
 
   return {
     recordCount,
@@ -226,32 +249,40 @@ async function generateExportFile(
   exportStats: { recordCount: number },
   logger: FastifyBaseLogger
 ): Promise<{
-  fileName: string
-  fileSize: number
-  generationTime: number
+  fileName: string;
+  fileSize: number;
+  generationTime: number;
 }> {
   const generationStart = Date.now();
 
-  logger.debug({
-    format: data.format,
-    outputPath,
-    recordCount: exportStats.recordCount
-  }, 'Generating export file');
+  logger.debug(
+    {
+      format: data.format,
+      outputPath,
+      recordCount: exportStats.recordCount
+    },
+    'Generating export file'
+  );
 
   // Simulate file generation based on format
   const generationTime = await simulateFileGeneration(data.format, exportStats.recordCount);
 
   // Simulate file creation (in real implementation, this would write actual data)
   const fileName = outputPath.split('/').pop() || `export_${Date.now()}.${data.format}`;
-  const fileSize = Math.floor(exportStats.recordCount * getAverageBytesPerRecord(data.format) * (0.9 + Math.random() * 0.2));
+  const fileSize = Math.floor(
+    exportStats.recordCount * getAverageBytesPerRecord(data.format) * (0.9 + Math.random() * 0.2)
+  );
 
   const actualGenerationTime = Date.now() - generationStart;
 
-  logger.debug({
-    fileName,
-    fileSize,
-    generationTime: actualGenerationTime
-  }, 'Export file generated');
+  logger.debug(
+    {
+      fileName,
+      fileSize,
+      generationTime: actualGenerationTime
+    },
+    'Export file generated'
+  );
 
   return {
     fileName,
@@ -266,9 +297,9 @@ async function generateExportFile(
 async function simulateFileGeneration(format: string, recordCount: number): Promise<number> {
   // Different formats have different processing times
   const processingTimePerRecord: Record<string, number> = {
-    csv: 0.1,   // Fastest - simple format
-    json: 0.2,  // Medium - structured format
-    xlsx: 0.5   // Slowest - complex format with styling
+    csv: 0.1, // Fastest - simple format
+    json: 0.2, // Medium - structured format
+    xlsx: 0.5 // Slowest - complex format with styling
   };
 
   const baseTime = 1000; // Base processing time in ms
@@ -286,9 +317,9 @@ async function simulateFileGeneration(format: string, recordCount: number): Prom
  */
 function getAverageBytesPerRecord(format: string): number {
   const bytesPerRecord: Record<string, number> = {
-    csv: 120,   // Compact text format
-    json: 280,  // Structured with metadata
-    xlsx: 180   // Compressed binary format
+    csv: 120, // Compact text format
+    json: 280, // Structured with metadata
+    xlsx: 180 // Compressed binary format
   };
 
   return bytesPerRecord[format] || 150;

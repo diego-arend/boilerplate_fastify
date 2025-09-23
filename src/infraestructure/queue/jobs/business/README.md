@@ -5,6 +5,7 @@ Este diretório contém todos os **job handlers para operações de negócio ass
 ## 🎯 Propósito
 
 Os jobs de negócio são responsáveis por:
+
 - **Operações críticas**: Transações que impactam diretamente usuários
 - **Processamento assíncrono**: Tarefas que não podem bloquear requisições HTTP
 - **Escalabilidade**: Operações que podem ser distribuídas e executadas em paralelo
@@ -13,8 +14,9 @@ Os jobs de negócio são responsáveis por:
 ## 📁 Jobs Disponíveis
 
 ### `emailSend.job.ts` - Envio de Emails
+
 - **Propósito**: Envio de emails transacionais e promocionais
-- **Casos de Uso**: 
+- **Casos de Uso**:
   - Confirmações de pedido
   - Recuperação de senha
   - Notificações importantes
@@ -22,6 +24,7 @@ Os jobs de negócio são responsáveis por:
 - **Prioridade**: CRITICAL para transacionais, NORMAL para promocionais
 
 ### `userNotification.job.ts` - Notificações de Usuário
+
 - **Propósito**: Entrega multi-canal de notificações para usuários
 - **Casos de Uso**:
   - Notificações push mobile
@@ -31,6 +34,7 @@ Os jobs de negócio são responsáveis por:
 - **Prioridade**: HIGH para alerts, NORMAL para notificações gerais
 
 ### `dataExport.job.ts` - Exportação de Dados
+
 - **Propósito**: Geração de relatórios e exportações de dados
 - **Casos de Uso**:
   - Relatórios de vendas
@@ -40,6 +44,7 @@ Os jobs de negócio são responsáveis por:
 - **Prioridade**: NORMAL (pode ser processado de forma batch)
 
 ### `fileProcess.job.ts` - Processamento de Arquivos
+
 - **Propósito**: Transformações e manipulações de arquivos uploaded
 - **Casos de Uso**:
   - Redimensionamento de imagens
@@ -51,39 +56,49 @@ Os jobs de negócio são responsáveis por:
 ## 🔧 Como Usar
 
 ### Exemplo Básico
+
 ```typescript
 import { queueManager } from '../queue.manager.js';
 import { JobType, JobPriority } from '../queue.types.js';
 
 // Email transacional crítico
-await queueManager.addJob(JobType.EMAIL_SEND, {
-  to: 'customer@example.com',
-  subject: 'Order Confirmation #12345',
-  body: 'Your order has been confirmed.',
-  template: 'order_confirmation',
-  variables: { orderNumber: '12345' },
-  timestamp: Date.now()
-}, {
-  priority: JobPriority.CRITICAL,
-  attempts: 5,
-  delay: 0 // Imediato
-});
+await queueManager.addJob(
+  JobType.EMAIL_SEND,
+  {
+    to: 'customer@example.com',
+    subject: 'Order Confirmation #12345',
+    body: 'Your order has been confirmed.',
+    template: 'order_confirmation',
+    variables: { orderNumber: '12345' },
+    timestamp: Date.now()
+  },
+  {
+    priority: JobPriority.CRITICAL,
+    attempts: 5,
+    delay: 0 // Imediato
+  }
+);
 
 // Notificação para usuário
-await queueManager.addJob(JobType.USER_NOTIFICATION, {
-  userId: 'user_123',
-  title: 'Payment Processed',
-  message: 'Your payment has been successfully processed.',
-  type: 'success',
-  channels: ['push', 'email'],
-  timestamp: Date.now()
-}, {
-  priority: JobPriority.HIGH,
-  attempts: 3
-});
+await queueManager.addJob(
+  JobType.USER_NOTIFICATION,
+  {
+    userId: 'user_123',
+    title: 'Payment Processed',
+    message: 'Your payment has been successfully processed.',
+    type: 'success',
+    channels: ['push', 'email'],
+    timestamp: Date.now()
+  },
+  {
+    priority: JobPriority.HIGH,
+    attempts: 3
+  }
+);
 ```
 
 ### Configuração de Prioridades
+
 ```typescript
 // Prioridades recomendadas para jobs de negócio:
 
@@ -106,12 +121,14 @@ await queueManager.addJob(JobType.USER_NOTIFICATION, {
 ## 📊 Monitoramento e Métricas
 
 ### Métricas Importantes
+
 - **Taxa de sucesso**: % de jobs completados com sucesso
 - **Tempo médio de processamento**: Latência por tipo de job
 - **Jobs com falha**: Identificar padrões de erro
 - **Throughput**: Jobs processados por minuto
 
 ### Alertas Recomendados
+
 ```typescript
 // Configurar alertas para:
 - Taxa de falha > 5% em jobs CRITICAL
@@ -123,12 +140,14 @@ await queueManager.addJob(JobType.USER_NOTIFICATION, {
 ## 🔒 Segurança e Validação
 
 ### Validações Implementadas
+
 - **Input sanitization**: Todos os dados são validados
-- **Rate limiting**: Prevenção de spam e abuso  
+- **Rate limiting**: Prevenção de spam e abuso
 - **Authorization**: Verificação de permissões
 - **Data encryption**: Dados sensíveis criptografados
 
 ### Exemplo de Validação
+
 ```typescript
 // Exemplo de como os jobs validam dados
 export async function handleEmailSend(
@@ -145,7 +164,7 @@ export async function handleEmailSend(
   const sanitizedData = sanitizeEmailData(data);
 
   // 3. Validação de rate limiting
-  if (!await checkRateLimit(data.to)) {
+  if (!(await checkRateLimit(data.to))) {
     return { success: false, error: 'Rate limit exceeded' };
   }
 
@@ -157,34 +176,36 @@ export async function handleEmailSend(
 ## 🚀 Performance
 
 ### Otimizações Implementadas
+
 - **Batch processing**: Agrupamento de operações similares
 - **Connection pooling**: Reutilização de conexões DB/API
 - **Caching**: Cache de dados frequentemente acessados
 - **Parallel execution**: Processamento paralelo quando possível
 
 ### Configurações Recomendadas
+
 ```typescript
 // Configurações de performance por job type
 const JOB_CONFIGS = {
   [JobType.EMAIL_SEND]: {
-    concurrency: 5,      // Emails simultâneos
-    batchSize: 10,       // Emails por batch
-    timeout: 30000       // 30s timeout
+    concurrency: 5, // Emails simultâneos
+    batchSize: 10, // Emails por batch
+    timeout: 30000 // 30s timeout
   },
   [JobType.USER_NOTIFICATION]: {
-    concurrency: 10,     // Notificações simultâneas
-    batchSize: 50,       // Notificações por batch
-    timeout: 15000       // 15s timeout
+    concurrency: 10, // Notificações simultâneas
+    batchSize: 50, // Notificações por batch
+    timeout: 15000 // 15s timeout
   },
   [JobType.DATA_EXPORT]: {
-    concurrency: 2,      // Exports simultâneos (resource intensive)
-    batchSize: 1,        // Processar um por vez
-    timeout: 300000      // 5min timeout
+    concurrency: 2, // Exports simultâneos (resource intensive)
+    batchSize: 1, // Processar um por vez
+    timeout: 300000 // 5min timeout
   },
   [JobType.FILE_PROCESS]: {
-    concurrency: 3,      // Files simultâneos
-    batchSize: 5,        // Files por batch
-    timeout: 60000       // 1min timeout
+    concurrency: 3, // Files simultâneos
+    batchSize: 5, // Files por batch
+    timeout: 60000 // 1min timeout
   }
 };
 ```
@@ -192,19 +213,24 @@ const JOB_CONFIGS = {
 ## 🔍 Debugging e Troubleshooting
 
 ### Logs Estruturados
+
 Todos os jobs de negócio implementam logging estruturado:
 
 ```typescript
-logger.info({
-  jobId,
-  jobType: 'EMAIL_SEND',
-  userId: data.userId,
-  status: 'started',
-  metadata: { template: data.template }
-}, 'Email job started');
+logger.info(
+  {
+    jobId,
+    jobType: 'EMAIL_SEND',
+    userId: data.userId,
+    status: 'started',
+    metadata: { template: data.template }
+  },
+  'Email job started'
+);
 ```
 
 ### Ferramentas de Debug
+
 - **Queue dashboard**: Visualização em tempo real
 - **Job inspector**: Detalhes de execução por job
 - **Error tracking**: Monitoramento de falhas
@@ -215,7 +241,7 @@ logger.info({
 ## 📚 Recursos Adicionais
 
 - [Queue Types Documentation](../queue.types.ts)
-- [Queue Manager Documentation](../queue.manager.ts)  
+- [Queue Manager Documentation](../queue.manager.ts)
 - [BullMQ Documentation](https://docs.bullmq.io/)
 - [Fastify Logging](https://fastify.dev/docs/latest/Reference/Logging/)
 

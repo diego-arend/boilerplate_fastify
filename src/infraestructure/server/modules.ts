@@ -9,4 +9,3 @@ export async function registerModule(
   await fastify.register(plugin, { prefix });
   fastify.log.info(`Module registered: ${moduleName}`);
 }
-

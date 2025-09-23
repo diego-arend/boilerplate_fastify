@@ -99,10 +99,13 @@ class RedisCircuitBreaker {
 
     if (this.failureCount >= this.failureThreshold) {
       this.state = 'OPEN';
-      this.logger.error({
-        failureCount: this.failureCount,
-        threshold: this.failureThreshold
-      }, 'Circuit breaker opened - Redis operations blocked');
+      this.logger.error(
+        {
+          failureCount: this.failureCount,
+          threshold: this.failureThreshold
+        },
+        'Circuit breaker opened - Redis operations blocked'
+      );
 
       // Auto-reset after timeout
       setTimeout(() => {
@@ -154,11 +157,14 @@ class MemoryFallbackQueue {
 
     this.jobs.set(jobId, fallbackJob);
 
-    this.logger.warn({
-      jobId,
-      jobType,
-      fallbackReason: 'Redis unavailable'
-    }, 'Job added to memory fallback queue');
+    this.logger.warn(
+      {
+        jobId,
+        jobType,
+        fallbackReason: 'Redis unavailable'
+      },
+      'Job added to memory fallback queue'
+    );
 
     return jobId;
   }
@@ -199,13 +205,15 @@ class MemoryFallbackQueue {
       this.jobs.delete(jobId);
       this.processing.delete(jobId);
 
-      this.logger.info({
-        jobId,
-        jobType: job.originalJobType
-      }, 'Fallback job processed successfully');
+      this.logger.info(
+        {
+          jobId,
+          jobType: job.originalJobType
+        },
+        'Fallback job processed successfully'
+      );
 
       return result;
-
     } catch (error) {
       this.processing.delete(jobId);
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
@@ -215,12 +223,15 @@ class MemoryFallbackQueue {
         attempts: job.retryCount + 1
       });
 
-      this.logger.error({
-        jobId,
-        jobType: job.originalJobType,
-        error: errorMsg,
-        attempts: job.retryCount + 1
-      }, 'Fallback job processing failed');
+      this.logger.error(
+        {
+          jobId,
+          jobType: job.originalJobType,
+          error: errorMsg,
+          attempts: job.retryCount + 1
+        },
+        'Fallback job processing failed'
+      );
 
       return {
         success: false,
@@ -324,11 +335,13 @@ export class ResilientQueueManager {
       });
 
       this.logger.info('Primary Redis queue initialized successfully');
-
     } catch (error) {
-      this.logger.error({
-        error: error instanceof Error ? error.message : 'Unknown error'
-      }, 'Failed to initialize primary Redis queue');
+      this.logger.error(
+        {
+          error: error instanceof Error ? error.message : 'Unknown error'
+        },
+        'Failed to initialize primary Redis queue'
+      );
 
       this.updateHealthStatus({
         redis: {
@@ -360,10 +373,13 @@ export class ResilientQueueManager {
     });
 
     redis.on('error', (error: Error) => {
-      this.logger.error({
-        error: error.message,
-        consecutiveFailures: this.healthStatus.redis.consecutiveFailures + 1
-      }, 'Redis connection error');
+      this.logger.error(
+        {
+          error: error.message,
+          consecutiveFailures: this.healthStatus.redis.consecutiveFailures + 1
+        },
+        'Redis connection error'
+      );
 
       this.updateHealthStatus({
         redis: {
@@ -443,18 +459,23 @@ export class ResilientQueueManager {
         });
 
         this.healthStatus.metrics.successfulJobs++;
-        this.logger.info({
-          jobId: job.id,
-          jobType
-        }, 'Job added to primary Redis queue');
+        this.logger.info(
+          {
+            jobId: job.id,
+            jobType
+          },
+          'Job added to primary Redis queue'
+        );
 
         return { jobId: job.id!, fallback: false };
-
       } catch (error) {
-        this.logger.warn({
-          jobType,
-          error: error instanceof Error ? error.message : 'Unknown error'
-        }, 'Primary queue failed, using fallback');
+        this.logger.warn(
+          {
+            jobType,
+            error: error instanceof Error ? error.message : 'Unknown error'
+          },
+          'Primary queue failed, using fallback'
+        );
       }
     }
 
@@ -484,7 +505,12 @@ export class ResilientQueueManager {
    */
   public async getStats(): Promise<QueueStats & { fallbackStats?: QueueStats }> {
     let primaryStats: QueueStats = {
-      waiting: 0, active: 0, completed: 0, failed: 0, delayed: 0, paused: 0
+      waiting: 0,
+      active: 0,
+      completed: 0,
+      failed: 0,
+      delayed: 0,
+      paused: 0
     };
 
     if (this.primaryQueue && this.healthStatus.redis.status === 'connected') {
@@ -503,7 +529,7 @@ export class ResilientQueueManager {
           completed: completed.length,
           failed: failed.length,
           delayed: delayed.length,
-          paused: await this.primaryQueue.isPaused() ? 1 : 0
+          paused: (await this.primaryQueue.isPaused()) ? 1 : 0
         };
       } catch (error) {
         this.logger.error({ error }, 'Failed to get primary queue stats');
@@ -568,9 +594,12 @@ export class ResilientQueueManager {
       return;
     }
 
-    this.logger.info({
-      jobCount: fallbackJobs.length
-    }, 'Attempting to recover jobs from fallback to Redis');
+    this.logger.info(
+      {
+        jobCount: fallbackJobs.length
+      },
+      'Attempting to recover jobs from fallback to Redis'
+    );
 
     let recovered = 0;
     for (const fallbackJob of fallbackJobs) {
@@ -582,19 +611,25 @@ export class ResilientQueueManager {
         );
         recovered++;
       } catch (error) {
-        this.logger.error({
-          fallbackJobId: fallbackJob.fallbackId,
-          error: error instanceof Error ? error.message : 'Unknown error'
-        }, 'Failed to recover job from fallback');
+        this.logger.error(
+          {
+            fallbackJobId: fallbackJob.fallbackId,
+            error: error instanceof Error ? error.message : 'Unknown error'
+          },
+          'Failed to recover job from fallback'
+        );
         break; // Stop recovery on first failure
       }
     }
 
     if (recovered > 0) {
       await this.memoryFallback.clear();
-      this.logger.info({
-        recoveredJobs: recovered
-      }, 'Successfully recovered jobs from fallback to Redis');
+      this.logger.info(
+        {
+          recoveredJobs: recovered
+        },
+        'Successfully recovered jobs from fallback to Redis'
+      );
 
       this.updateHealthStatus({
         fallback: { active: false, type: null, queuedJobs: 0 }

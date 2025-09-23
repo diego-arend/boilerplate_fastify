@@ -52,9 +52,23 @@ export interface LogContext {
  * Sanitization configuration for sensitive data
  */
 const SENSITIVE_FIELDS = [
-  'password', 'token', 'authorization', 'auth', 'secret', 'key', 'apiKey',
-  'accessToken', 'refreshToken', 'sessionId', 'cookie', 'credit_card',
-  'creditCard', 'ssn', 'social_security', 'cpf', 'cnpj'
+  'password',
+  'token',
+  'authorization',
+  'auth',
+  'secret',
+  'key',
+  'apiKey',
+  'accessToken',
+  'refreshToken',
+  'sessionId',
+  'cookie',
+  'credit_card',
+  'creditCard',
+  'ssn',
+  'social_security',
+  'cpf',
+  'cnpj'
 ];
 
 /**
@@ -219,8 +233,10 @@ export class LoggerManager {
 
     return {
       serviceName: userConfig.serviceName || process.env.SERVICE_NAME || 'fastify-app',
-      level: userConfig.level || (process.env.LOG_LEVEL as LogLevel) ||
-             (isDevelopment ? LogLevel.DEBUG : LogLevel.INFO),
+      level:
+        userConfig.level ||
+        (process.env.LOG_LEVEL as LogLevel) ||
+        (isDevelopment ? LogLevel.DEBUG : LogLevel.INFO),
       environment: userConfig.environment || environment,
       prettyPrint: userConfig.prettyPrint !== undefined ? userConfig.prettyPrint : isDevelopment,
       timestamp: userConfig.timestamp !== undefined ? userConfig.timestamp : true,
@@ -303,9 +319,7 @@ export class LoggerManager {
       const lowerKey = key.toLowerCase();
 
       // Check if the key contains sensitive information
-      const isSensitive = SENSITIVE_FIELDS.some(field =>
-        lowerKey.includes(field.toLowerCase())
-      );
+      const isSensitive = SENSITIVE_FIELDS.some(field => lowerKey.includes(field.toLowerCase()));
 
       if (isSensitive) {
         sanitized[key] = '[REDACTED]';
@@ -349,7 +363,7 @@ export class LoggerManager {
    */
   public async flush(): Promise<void> {
     // Pino automatically flushes on process exit, but this can be useful for testing
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       // For destinations that support flushing
       if (this.logger.flush) {
         this.logger.flush();

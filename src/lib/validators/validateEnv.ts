@@ -64,7 +64,9 @@ if (!parsed.success) {
   // Also log to console for immediate visibility
   console.error('🚨 FATAL ERROR: Environment variables validation failed!');
   console.error('❌ Validation errors:', JSON.stringify(errorDetails, null, 2));
-  console.error('💡 Please check your .env file and ensure all required variables are set correctly.');
+  console.error(
+    '💡 Please check your .env file and ensure all required variables are set correctly.'
+  );
   console.error('📖 Refer to .env.example for the correct format.');
 
   process.exit(1);
@@ -73,7 +75,7 @@ if (!parsed.success) {
 export const config = Object.freeze(parsed.data);
 
 export function validateEnv(requiredVars: string[]) {
-  const missing = requiredVars.filter((key) => !process.env[key]);
+  const missing = requiredVars.filter(key => !process.env[key]);
 
   if (missing.length > 0) {
     envLogger.error({
@@ -115,7 +117,10 @@ export function validateCriticalEnvs() {
     }
 
     // MongoDB URI validation
-    if (!config.MONGO_URI.startsWith('mongodb://') && !config.MONGO_URI.startsWith('mongodb+srv://')) {
+    if (
+      !config.MONGO_URI.startsWith('mongodb://') &&
+      !config.MONGO_URI.startsWith('mongodb+srv://')
+    ) {
       envLogger.error({
         message: 'Invalid MongoDB URI format',
         providedUri: config.MONGO_URI.substring(0, 20) + '...',
@@ -125,7 +130,6 @@ export function validateCriticalEnvs() {
       console.error('🚨 FATAL ERROR: Invalid MongoDB URI format!');
       process.exit(1);
     }
-
   } catch (error) {
     envLogger.error({
       message: 'Critical environment validation failed',

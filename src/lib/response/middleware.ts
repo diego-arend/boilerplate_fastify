@@ -18,19 +18,12 @@ export function errorHandler(fastify: FastifyInstance) {
 
     // Specific handling for validation errors
     if (error.validation) {
-      return ApiResponseHandler.validationError(
-        reply,
-        'Invalid input data',
-        error.validation
-      );
+      return ApiResponseHandler.validationError(reply, 'Invalid input data', error.validation);
     }
 
     // Tratamento para erros de sintaxe JSON
     if (error instanceof SyntaxError && 'body' in error) {
-      return ApiResponseHandler.validationError(
-        reply,
-        'Malformed JSON in request'
-      );
+      return ApiResponseHandler.validationError(reply, 'Malformed JSON in request');
     }
 
     // Handling for authentication/authorization errors

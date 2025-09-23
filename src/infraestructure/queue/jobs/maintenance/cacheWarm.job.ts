@@ -17,12 +17,15 @@ export async function handleCacheWarm(
 ): Promise<JobResult> {
   const startTime = Date.now();
 
-  logger.info({
-    cacheKey: data.cacheKey,
-    dataSource: data.dataSource,
-    ttl: data.ttl || 3600,
-    hasMetadata: !!data.metadata && Object.keys(data.metadata).length > 0
-  }, 'Processing cache warm job');
+  logger.info(
+    {
+      cacheKey: data.cacheKey,
+      dataSource: data.dataSource,
+      ttl: data.ttl || 3600,
+      hasMetadata: !!data.metadata && Object.keys(data.metadata).length > 0
+    },
+    'Processing cache warm job'
+  );
 
   try {
     // Validate cache warming data
@@ -34,10 +37,13 @@ export async function handleCacheWarm(
     let warmingResult: CacheWarmingResult;
 
     if (existingCacheInfo.exists && existingCacheInfo.isFresh) {
-      logger.debug({
-        cacheKey: data.cacheKey,
-        remainingTTL: existingCacheInfo.remainingTTL
-      }, 'Cache is fresh, skipping warming');
+      logger.debug(
+        {
+          cacheKey: data.cacheKey,
+          remainingTTL: existingCacheInfo.remainingTTL
+        },
+        'Cache is fresh, skipping warming'
+      );
 
       warmingResult = {
         action: 'skipped',
@@ -52,12 +58,15 @@ export async function handleCacheWarm(
 
     const processingTime = Date.now() - startTime;
 
-    logger.info({
-      cacheKey: data.cacheKey,
-      action: warmingResult.action,
-      dataSize: warmingResult.dataSize,
-      processingTime
-    }, 'Cache warming completed');
+    logger.info(
+      {
+        cacheKey: data.cacheKey,
+        action: warmingResult.action,
+        dataSize: warmingResult.dataSize,
+        processingTime
+      },
+      'Cache warming completed'
+    );
 
     return {
       success: true,
@@ -78,17 +87,19 @@ export async function handleCacheWarm(
       processedAt: Date.now(),
       processingTime
     };
-
   } catch (error) {
     const processingTime = Date.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : 'Unknown cache warming error';
 
-    logger.error({
-      error,
-      processingTime,
-      cacheKey: data.cacheKey,
-      dataSource: data.dataSource
-    }, 'Failed to warm cache');
+    logger.error(
+      {
+        error,
+        processingTime,
+        cacheKey: data.cacheKey,
+        dataSource: data.dataSource
+      },
+      'Failed to warm cache'
+    );
 
     return {
       success: false,
@@ -103,22 +114,22 @@ export async function handleCacheWarm(
  * Interface for cache warming result
  */
 interface CacheWarmingResult {
-  action: 'warmed' | 'refreshed' | 'skipped'
-  reason?: string
-  dataSize: number
-  remainingTTL?: number
-  metadata?: Record<string, any>
+  action: 'warmed' | 'refreshed' | 'skipped';
+  reason?: string;
+  dataSize: number;
+  remainingTTL?: number;
+  metadata?: Record<string, any>;
 }
 
 /**
  * Interface for existing cache information
  */
 interface ExistingCacheInfo {
-  exists: boolean
-  isFresh: boolean
-  dataSize: number
-  remainingTTL: number
-  lastWarmed?: string
+  exists: boolean;
+  isFresh: boolean;
+  dataSize: number;
+  remainingTTL: number;
+  lastWarmed?: string;
 }
 
 /**
@@ -135,7 +146,9 @@ function validateCacheWarmData(data: CacheWarmJobData): void {
 
   // Validate cache key format (prevent injection attacks)
   if (!/^[a-zA-Z0-9:_-]+$/.test(data.cacheKey)) {
-    throw new Error('Cache key contains invalid characters. Use only alphanumeric, colon, underscore, and dash');
+    throw new Error(
+      'Cache key contains invalid characters. Use only alphanumeric, colon, underscore, and dash'
+    );
   }
 
   // Validate cache key length
@@ -149,7 +162,8 @@ function validateCacheWarmData(data: CacheWarmJobData): void {
       throw new Error('TTL must be a positive number');
     }
 
-    if (data.ttl > 86400 * 7) { // 7 days max
+    if (data.ttl > 86400 * 7) {
+      // 7 days max
       throw new Error('TTL cannot exceed 7 days (604800 seconds)');
     }
   }
@@ -159,7 +173,9 @@ function validateCacheWarmData(data: CacheWarmJobData): void {
   const dataSourceType = data.dataSource.split(':')[0] || 'unknown';
 
   if (!validDataSources.includes(dataSourceType)) {
-    throw new Error(`Invalid data source type: ${dataSourceType}. Valid types: ${validDataSources.join(', ')}`);
+    throw new Error(
+      `Invalid data source type: ${dataSourceType}. Valid types: ${validDataSources.join(', ')}`
+    );
   }
 
   // Security validation for data source
@@ -200,13 +216,16 @@ async function checkExistingCache(
     const dataSize = 1024 + Math.floor(Math.random() * 10240); // 1KB-11KB
     const lastWarmed = new Date(Date.now() - (3600 - remainingTTL) * 1000).toISOString();
 
-    logger.debug({
-      cacheKey,
-      exists: true,
-      isFresh,
-      remainingTTL,
-      dataSize
-    }, 'Existing cache information retrieved');
+    logger.debug(
+      {
+        cacheKey,
+        exists: true,
+        isFresh,
+        remainingTTL,
+        dataSize
+      },
+      'Existing cache information retrieved'
+    );
 
     return {
       exists: true,
@@ -215,12 +234,14 @@ async function checkExistingCache(
       remainingTTL,
       lastWarmed
     };
-
   } catch (error) {
-    logger.warn({
-      error,
-      cacheKey
-    }, 'Failed to check existing cache, treating as non-existent');
+    logger.warn(
+      {
+        error,
+        cacheKey
+      },
+      'Failed to check existing cache, treating as non-existent'
+    );
 
     return {
       exists: false,
@@ -240,10 +261,13 @@ async function warmCache(
 ): Promise<CacheWarmingResult> {
   const warmStart = Date.now();
 
-  logger.debug({
-    cacheKey: data.cacheKey,
-    dataSource: data.dataSource
-  }, 'Starting cache warming process');
+  logger.debug(
+    {
+      cacheKey: data.cacheKey,
+      dataSource: data.dataSource
+    },
+    'Starting cache warming process'
+  );
 
   try {
     // Fetch data based on data source type
@@ -257,11 +281,14 @@ async function warmCache(
 
     const warmingTime = Date.now() - warmStart;
 
-    logger.debug({
-      cacheKey: data.cacheKey,
-      dataSize: storeResult.dataSize,
-      warmingTime
-    }, 'Cache warming completed successfully');
+    logger.debug(
+      {
+        cacheKey: data.cacheKey,
+        dataSize: storeResult.dataSize,
+        warmingTime
+      },
+      'Cache warming completed successfully'
+    );
 
     return {
       action: storeResult.isUpdate ? 'refreshed' : 'warmed',
@@ -274,13 +301,15 @@ async function warmCache(
         recordCount: processedData.recordCount
       }
     };
-
   } catch (error) {
-    logger.error({
-      error,
-      cacheKey: data.cacheKey,
-      dataSource: data.dataSource
-    }, 'Failed to warm cache');
+    logger.error(
+      {
+        error,
+        cacheKey: data.cacheKey,
+        dataSource: data.dataSource
+      },
+      'Failed to warm cache'
+    );
     throw error;
   }
 }
@@ -292,9 +321,9 @@ async function fetchDataFromSource(
   dataSource: string,
   logger: FastifyBaseLogger
 ): Promise<{
-  data: any
-  fetchTime: number
-  sourceType: string
+  data: any;
+  fetchTime: number;
+  sourceType: string;
 }> {
   const fetchStart = Date.now();
   const [sourceType, sourcePath] = dataSource.split(':', 2);
@@ -307,11 +336,11 @@ async function fetchDataFromSource(
 
   // Simulate different fetch times based on source type
   const fetchTimes = {
-    database: () => 200 + Math.random() * 800,     // 200-1000ms
-    api: () => 500 + Math.random() * 2000,         // 500-2500ms
-    file: () => 100 + Math.random() * 300,         // 100-400ms
+    database: () => 200 + Math.random() * 800, // 200-1000ms
+    api: () => 500 + Math.random() * 2000, // 500-2500ms
+    file: () => 100 + Math.random() * 300, // 100-400ms
     computation: () => 1000 + Math.random() * 5000, // 1-6 seconds
-    external: () => 1000 + Math.random() * 3000    // 1-4 seconds
+    external: () => 1000 + Math.random() * 3000 // 1-4 seconds
   };
 
   const fetchTimeCalculator = fetchTimes[sourceType as keyof typeof fetchTimes] || (() => 500);
@@ -323,7 +352,8 @@ async function fetchDataFromSource(
   const mockData = generateMockDataForSource(sourceType, sourcePath || '');
 
   // Simulate occasional fetch failures
-  if (Math.random() < 0.02) { // 2% failure rate
+  if (Math.random() < 0.02) {
+    // 2% failure rate
     throw new Error(`Failed to fetch data from ${sourceType}: ${sourcePath || ''}`);
   }
 
@@ -348,71 +378,71 @@ function generateMockDataForSource(sourceType: string, sourcePath: string): any 
   };
 
   switch (sourceType) {
-  case 'database':
-    return {
-      ...baseData,
-      records: Array.from({ length: 10 + Math.floor(Math.random() * 100) }, (_, i) => ({
-        id: i + 1,
-        name: `Record ${i + 1}`,
-        value: Math.random() * 1000,
-        timestamp: new Date().toISOString()
-      }))
-    };
+    case 'database':
+      return {
+        ...baseData,
+        records: Array.from({ length: 10 + Math.floor(Math.random() * 100) }, (_, i) => ({
+          id: i + 1,
+          name: `Record ${i + 1}`,
+          value: Math.random() * 1000,
+          timestamp: new Date().toISOString()
+        }))
+      };
 
-  case 'api':
-    return {
-      ...baseData,
-      response: {
-        status: 'success',
-        data: {
-          items: Array.from({ length: 5 + Math.floor(Math.random() * 20) }, (_, i) => ({
-            id: `item_${i}`,
-            score: Math.random() * 100,
-            category: `category_${i % 5}`
-          }))
-        },
-        pagination: {
-          page: 1,
-          total: 25,
-          hasNext: false
+    case 'api':
+      return {
+        ...baseData,
+        response: {
+          status: 'success',
+          data: {
+            items: Array.from({ length: 5 + Math.floor(Math.random() * 20) }, (_, i) => ({
+              id: `item_${i}`,
+              score: Math.random() * 100,
+              category: `category_${i % 5}`
+            }))
+          },
+          pagination: {
+            page: 1,
+            total: 25,
+            hasNext: false
+          }
         }
-      }
-    };
+      };
 
-  case 'file':
-    return {
-      ...baseData,
-      content: `File content from ${sourcePath}`,
-      lines: 50 + Math.floor(Math.random() * 200),
-      encoding: 'utf-8'
-    };
+    case 'file':
+      return {
+        ...baseData,
+        content: `File content from ${sourcePath}`,
+        lines: 50 + Math.floor(Math.random() * 200),
+        encoding: 'utf-8'
+      };
 
-  case 'computation':
-    return {
-      ...baseData,
-      result: {
-        computed_value: Math.random() * 10000,
-        algorithm: 'simulation',
-        iterations: 1000,
-        convergence: true
-      }
-    };
+    case 'computation':
+      return {
+        ...baseData,
+        result: {
+          computed_value: Math.random() * 10000,
+          algorithm: 'simulation',
+          iterations: 1000,
+          convergence: true
+        }
+      };
 
-  case 'external':
-    return {
-      ...baseData,
-      external_data: {
-        weather: {
-          temperature: 15 + Math.random() * 20,
-          humidity: 40 + Math.random() * 40,
-          condition: 'sunny'
-        },
-        timestamp: Date.now()
-      }
-    };
+    case 'external':
+      return {
+        ...baseData,
+        external_data: {
+          weather: {
+            temperature: 15 + Math.random() * 20,
+            humidity: 40 + Math.random() * 40,
+            condition: 'sunny'
+          },
+          timestamp: Date.now()
+        }
+      };
 
-  default:
-    return { ...baseData, raw_data: 'generic data payload' };
+    default:
+      return { ...baseData, raw_data: 'generic data payload' };
   }
 }
 
@@ -424,9 +454,9 @@ async function processSourceData(
   jobData: CacheWarmJobData,
   logger: FastifyBaseLogger
 ): Promise<{
-  processedData: any
-  processTime: number
-  recordCount: number
+  processedData: any;
+  processTime: number;
+  recordCount: number;
 }> {
   const processStart = Date.now();
 
@@ -475,9 +505,9 @@ async function storeCacheData(
   ttl: number | undefined,
   logger: FastifyBaseLogger
 ): Promise<{
-  dataSize: number
-  storeTime: number
-  isUpdate: boolean
+  dataSize: number;
+  storeTime: number;
+  isUpdate: boolean;
 }> {
   const storeStart = Date.now();
 
@@ -494,18 +524,22 @@ async function storeCacheData(
   const isUpdate = Math.random() > 0.4; // 60% chance it's an update
 
   // Simulate occasional storage failures
-  if (Math.random() < 0.01) { // 1% failure rate
+  if (Math.random() < 0.01) {
+    // 1% failure rate
     throw new Error('Cache storage temporarily unavailable');
   }
 
   const actualStoreTime = Date.now() - storeStart;
 
-  logger.debug({
-    cacheKey,
-    dataSize,
-    isUpdate,
-    storeTime: actualStoreTime
-  }, 'Data stored in cache successfully');
+  logger.debug(
+    {
+      cacheKey,
+      dataSize,
+      isUpdate,
+      storeTime: actualStoreTime
+    },
+    'Data stored in cache successfully'
+  );
 
   return {
     dataSize,

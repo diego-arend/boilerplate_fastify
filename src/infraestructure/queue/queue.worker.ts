@@ -3,12 +3,7 @@ import dotenv from 'dotenv';
 import { Worker, Job } from 'bullmq';
 import { config } from '../../lib/validators/validateEnv.js';
 import { defaultLogger } from '../../lib/logger/index.js';
-import {
-  JobType,
-  type JobData,
-  type JobResult,
-  type WorkerConfig
-} from './queue.types.js';
+import { JobType, type JobData, type JobResult, type WorkerConfig } from './queue.types.js';
 
 // Import job handlers
 import { JOB_HANDLERS, getJobHandler } from './jobs/index.js';
@@ -45,11 +40,14 @@ class QueueWorker {
       }
     };
 
-    this.logger.info({
-      queueName,
-      concurrency: this.config.concurrency,
-      environment: process.env.NODE_ENV || 'development'
-    }, 'Initializing Queue Worker');
+    this.logger.info(
+      {
+        queueName,
+        concurrency: this.config.concurrency,
+        environment: process.env.NODE_ENV || 'development'
+      },
+      'Initializing Queue Worker'
+    );
 
     // Initialize job handlers
     this.handlers = new Map();
@@ -66,32 +64,31 @@ class QueueWorker {
     this.logger.info(redisInfo, 'Connecting to Redis for queue processing');
 
     // Create BullMQ worker
-    this.worker = new Worker(
-      queueName,
-      async (job: Job) => this.processJob(job),
-      {
-        connection: {
-          host: appConfig.REDIS_HOST,
-          port: appConfig.REDIS_PORT,
-          ...(appConfig.REDIS_PASSWORD && { password: appConfig.REDIS_PASSWORD }),
-          ...(appConfig.REDIS_DB !== undefined && { db: appConfig.REDIS_DB })
-        },
-        concurrency: 5,
-        limiter: {
-          max: 100,
-          duration: 60000
-        }
+    this.worker = new Worker(queueName, async (job: Job) => this.processJob(job), {
+      connection: {
+        host: appConfig.REDIS_HOST,
+        port: appConfig.REDIS_PORT,
+        ...(appConfig.REDIS_PASSWORD && { password: appConfig.REDIS_PASSWORD }),
+        ...(appConfig.REDIS_DB !== undefined && { db: appConfig.REDIS_DB })
+      },
+      concurrency: 5,
+      limiter: {
+        max: 100,
+        duration: 60000
       }
-    );
+    });
 
     this.setupEventListeners();
 
-    this.logger.info({
-      ...redisInfo,
-      concurrency: this.config.concurrency,
-      limiter: this.config.limiter,
-      handlersCount: this.handlers.size
-    }, 'Queue Worker started successfully');
+    this.logger.info(
+      {
+        ...redisInfo,
+        concurrency: this.config.concurrency,
+        limiter: this.config.limiter,
+        handlersCount: this.handlers.size
+      },
+      'Queue Worker started successfully'
+    );
   }
 
   /**
@@ -126,27 +123,32 @@ class QueueWorker {
 
       const processingTime = Date.now() - startTime;
 
-      jobLogger.info({
-        processingTime,
-        result: result.success
-      }, 'Job completed successfully');
+      jobLogger.info(
+        {
+          processingTime,
+          result: result.success
+        },
+        'Job completed successfully'
+      );
 
       return {
         ...result,
         processedAt: Date.now(),
         processingTime
       };
-
     } catch (error) {
       const processingTime = Date.now() - startTime;
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
-      jobLogger.error({
-        error: error instanceof Error ? error : new Error(String(error)),
-        processingTime,
-        attemptsMade: job.attemptsMade,
-        willRetry: job.attemptsMade < (job.opts.attempts || 1)
-      }, 'Job processing failed');
+      jobLogger.error(
+        {
+          error: error instanceof Error ? error : new Error(String(error)),
+          processingTime,
+          attemptsMade: job.attemptsMade,
+          willRetry: job.attemptsMade < (job.opts.attempts || 1)
+        },
+        'Job processing failed'
+      );
 
       return {
         success: false,
@@ -167,10 +169,13 @@ class QueueWorker {
       this.handlers.set(jobType, handler);
     }
 
-    this.logger.info({
-      handlersCount: this.handlers.size,
-      jobTypes: Array.from(this.handlers.keys())
-    }, 'Job handlers registered successfully from modular handlers');
+    this.logger.info(
+      {
+        handlersCount: this.handlers.size,
+        jobTypes: Array.from(this.handlers.keys())
+      },
+      'Job handlers registered successfully from modular handlers'
+    );
   }
 
   /**
@@ -182,38 +187,47 @@ class QueueWorker {
       this.logger.info('Worker is ready to process jobs');
     });
 
-    this.worker.on('error', (error) => {
+    this.worker.on('error', error => {
       this.logger.error({ error }, 'Worker error occurred');
     });
 
     this.worker.on('failed', (job, err) => {
-      this.logger.error({
-        jobId: job?.id,
-        jobType: job?.name,
-        error: err,
-        attemptsMade: job?.attemptsMade,
-        maxAttempts: job?.opts?.attempts
-      }, 'Job failed');
+      this.logger.error(
+        {
+          jobId: job?.id,
+          jobType: job?.name,
+          error: err,
+          attemptsMade: job?.attemptsMade,
+          maxAttempts: job?.opts?.attempts
+        },
+        'Job failed'
+      );
     });
 
-    this.worker.on('completed', (job) => {
-      this.logger.info({
-        jobId: job.id,
-        jobType: job.name,
-        processingTime: job.finishedOn ? job.finishedOn - job.processedOn! : 0
-      }, 'Job completed successfully');
+    this.worker.on('completed', job => {
+      this.logger.info(
+        {
+          jobId: job.id,
+          jobType: job.name,
+          processingTime: job.finishedOn ? job.finishedOn - job.processedOn! : 0
+        },
+        'Job completed successfully'
+      );
     });
 
-    this.worker.on('stalled', (jobId) => {
+    this.worker.on('stalled', jobId => {
       this.logger.warn({ jobId }, 'Job stalled');
     });
 
     this.worker.on('progress', (job, progress) => {
-      this.logger.debug({
-        jobId: job.id,
-        jobType: job.name,
-        progress
-      }, 'Job progress update');
+      this.logger.debug(
+        {
+          jobId: job.id,
+          jobType: job.name,
+          progress
+        },
+        'Job progress update'
+      );
     });
 
     // Graceful shutdown handlers
@@ -290,21 +304,26 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   });
 
   try {
-    logger.info({
-      queueName,
-      environment: process.env.NODE_ENV || 'development',
-      nodeVersion: process.version
-    }, 'Starting Queue Worker process');
+    logger.info(
+      {
+        queueName,
+        environment: process.env.NODE_ENV || 'development',
+        nodeVersion: process.version
+      },
+      'Starting Queue Worker process'
+    );
 
     const worker = new QueueWorker(queueName);
 
     logger.info('Queue Worker is running successfully. Press Ctrl+C to stop.');
-
   } catch (error) {
-    logger.fatal({
-      error: error instanceof Error ? error : new Error(String(error)),
-      queueName
-    }, 'Failed to start Queue Worker');
+    logger.fatal(
+      {
+        error: error instanceof Error ? error : new Error(String(error)),
+        queueName
+      },
+      'Failed to start Queue Worker'
+    );
     process.exit(1);
   }
 }

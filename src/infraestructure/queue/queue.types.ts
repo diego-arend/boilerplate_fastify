@@ -14,7 +14,7 @@ export const JobType = {
   CLEANUP: 'cleanup'
 } as const;
 
-export type JobType = typeof JobType[keyof typeof JobType];
+export type JobType = (typeof JobType)[keyof typeof JobType];
 
 /**
  * Job priority levels
@@ -23,7 +23,7 @@ export enum JobPriority {
   LOW = 1,
   NORMAL = 5,
   HIGH = 10,
-  CRITICAL = 15,
+  CRITICAL = 15
 }
 
 /**
@@ -35,7 +35,7 @@ export enum JobStatus {
   COMPLETED = 'completed',
   FAILED = 'failed',
   DELAYED = 'delayed',
-  PAUSED = 'paused',
+  PAUSED = 'paused'
 }
 
 /**
@@ -202,5 +202,10 @@ export type JobHandler<T extends BaseJobData = BaseJobData> = (
  * Job handlers map
  */
 export type JobHandlers = {
-  [K in JobType]: JobHandler<Extract<JobData, { [P in keyof JobData]: JobData[P] extends { type?: K } ? JobData : never }[keyof JobData]>>;
+  [K in JobType]: JobHandler<
+    Extract<
+      JobData,
+      { [P in keyof JobData]: JobData[P] extends { type?: K } ? JobData : never }[keyof JobData]
+    >
+  >;
 };

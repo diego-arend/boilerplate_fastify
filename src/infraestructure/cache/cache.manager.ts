@@ -319,10 +319,10 @@ export class CacheManager {
   private sanitizeKey(key: string): string {
     // Remove or replace invalid characters
     return key
-      .replace(/[\\/:*?"<>|]/g, '_')  // Replace invalid chars with underscore
-      .replace(/\s+/g, '_')           // Replace spaces with underscore
-      .toLowerCase()                  // Convert to lowercase for consistency
-      .slice(0, 250);                // Limit key length (Redis max is 512MB but keep reasonable)
+      .replace(/[\\/:*?"<>|]/g, '_') // Replace invalid chars with underscore
+      .replace(/\s+/g, '_') // Replace spaces with underscore
+      .toLowerCase() // Convert to lowercase for consistency
+      .slice(0, 250); // Limit key length (Redis max is 512MB but keep reasonable)
   }
 
   /**
@@ -378,7 +378,10 @@ let defaultCacheManager: CacheManager | null = null;
  * @param {string} defaultNamespace - Default namespace
  * @returns {CacheManager} The cache manager instance
  */
-export const getCacheManager = (defaultTTL: number = 3600, defaultNamespace: string = 'cache'): CacheManager => {
+export const getCacheManager = (
+  defaultTTL: number = 3600,
+  defaultNamespace: string = 'cache'
+): CacheManager => {
   if (!defaultCacheManager) {
     defaultCacheManager = new CacheManager(defaultTTL, defaultNamespace);
   }

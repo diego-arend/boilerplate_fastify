@@ -7,19 +7,25 @@ The entities layer represents the core domain models using **dependency injectio
 ### 🎯 **NEW Architecture Pattern (Post-Refactoring)**
 
 **Before (Problematic Inheritance):**
+
 ```typescript
-class UserRepository extends BaseRepository<IUser> {}        // ❌ Tight coupling
-class AuthRepository extends UserRepository {}               // ❌ Deep inheritance
+class UserRepository extends BaseRepository<IUser> {} // ❌ Tight coupling
+class AuthRepository extends UserRepository {} // ❌ Deep inheritance
 ```
 
 **Now (Dependency Injection):**
+
 ```typescript
-interface IUserRepository { /* contract */ }                // ✅ Interface-based
-class UserRepository implements IUserRepository {           // ✅ Composition
-  constructor(private baseRepository: IBaseRepository) {}   // ✅ Dependency injection
+interface IUserRepository {
+  /* contract */
+} // ✅ Interface-based
+class UserRepository implements IUserRepository {
+  // ✅ Composition
+  constructor(private baseRepository: IBaseRepository) {} // ✅ Dependency injection
 }
-class AuthRepository implements IAuthRepository {           // ✅ Interface-based
-  constructor(private userRepository: IUserRepository) {}   // ✅ Dependency injection
+class AuthRepository implements IAuthRepository {
+  // ✅ Interface-based
+  constructor(private userRepository: IUserRepository) {} // ✅ Dependency injection
 }
 ```
 
@@ -49,6 +55,7 @@ src/entities/
 This file contains the complete entity definition following a strict structure:
 
 #### 1.1 Interface for Repository Usage
+
 ```typescript
 import { Schema, model, Document } from 'mongoose';
 import { z } from 'zod';
@@ -63,17 +70,18 @@ export interface IEntityName extends Document {
   field1: string;
   field2: number;
   status: 'active' | 'inactive';
-  
+
   // System fields (automatically managed)
   createdAt: Date;
   updatedAt: Date;
-  
+
   // Instance methods
   customMethod(): boolean;
 }
 ```
 
 #### 1.2 Entity-Specific Validation Class
+
 ```typescript
 /**
  * Entity-specific validation schemas and business rules
@@ -82,29 +90,31 @@ export interface IEntityName extends Document {
 export class EntityNameValidations {
   // Entity-specific enums and constants
   static readonly ENTITY_STATUSES = ['active', 'inactive', 'suspended'] as const;
-  
+
   // Entity-specific validation schemas extending global ones
   static readonly StatusSchema = z.enum(EntityNameValidations.ENTITY_STATUSES, {
     message: 'Status must be: active, inactive or suspended'
   });
-  
+
   // Complete entity creation schema
   static readonly CreateEntitySchema = z.object({
-    field1: NameSchema,           // Using global validator
-    field2: EmailSchema,          // Using global validator
-    status: EntityNameValidations.StatusSchema.optional().default('active'),
+    field1: NameSchema, // Using global validator
+    field2: EmailSchema, // Using global validator
+    status: EntityNameValidations.StatusSchema.optional().default('active')
     // Add other fields with appropriate validations
   });
-  
+
   // Entity update schema
-  static readonly UpdateEntitySchema = z.object({
-    field1: NameSchema.optional(),
-    field2: EmailSchema.optional(),
-    status: EntityNameValidations.StatusSchema.optional(),
-  }).refine((data) => Object.keys(data).length > 0, {
-    message: "At least one field must be provided for update"
-  });
-  
+  static readonly UpdateEntitySchema = z
+    .object({
+      field1: NameSchema.optional(),
+      field2: EmailSchema.optional(),
+      status: EntityNameValidations.StatusSchema.optional()
+    })
+    .refine(data => Object.keys(data).length > 0, {
+      message: 'At least one field must be provided for update'
+    });
+
   /**
    * Validate entity creation data
    * @param data - Raw input data
@@ -113,7 +123,7 @@ export class EntityNameValidations {
   static validateCreate(data: unknown) {
     return this.CreateEntitySchema.parse(data);
   }
-  
+
   /**
    * Validate entity update data
    * @param data - Raw update data
@@ -122,7 +132,7 @@ export class EntityNameValidations {
   static validateUpdate(data: unknown) {
     return this.UpdateEntitySchema.parse(data);
   }
-  
+
   /**
    * Business rule validations
    * @param entity - Entity instance
@@ -136,88 +146,94 @@ export class EntityNameValidations {
 ```
 
 #### 1.3 Mongoose Schema Definition
+
 ```typescript
 /**
  * Mongoose schema for database operations
  * Must align with interface definition and include validation
  */
-const entitySchema = new Schema<IEntityName>({
-  field1: {
-    type: String,
-    required: [true, 'Field1 is required'],
-    trim: true,
-    minlength: [2, 'Field1 must have at least 2 characters'],
-    maxlength: [100, 'Field1 must have at most 100 characters'],
-    validate: {
-      validator: function(v: string) {
-        try {
-          NameSchema.parse(v);
-          return true;
-        } catch {
-          return false;
-        }
-      },
-      message: 'Invalid field1 format'
-    }
-  },
-  
-  field2: {
-    type: String,
-    required: [true, 'Field2 is required'],
-    unique: true,
-    lowercase: true,
-    validate: {
-      validator: function(v: string) {
-        try {
-          EmailSchema.parse(v);
-          return true;
-        } catch {
-          return false;
-        }
-      },
-      message: 'Invalid field2 format'
-    }
-  },
-  
-  status: {
-    type: String,
-    enum: {
-      values: EntityNameValidations.ENTITY_STATUSES,
-      message: 'Status must be: active, inactive or suspended'
+const entitySchema = new Schema<IEntityName>(
+  {
+    field1: {
+      type: String,
+      required: [true, 'Field1 is required'],
+      trim: true,
+      minlength: [2, 'Field1 must have at least 2 characters'],
+      maxlength: [100, 'Field1 must have at most 100 characters'],
+      validate: {
+        validator: function (v: string) {
+          try {
+            NameSchema.parse(v);
+            return true;
+          } catch {
+            return false;
+          }
+        },
+        message: 'Invalid field1 format'
+      }
     },
-    default: 'active'
+
+    field2: {
+      type: String,
+      required: [true, 'Field2 is required'],
+      unique: true,
+      lowercase: true,
+      validate: {
+        validator: function (v: string) {
+          try {
+            EmailSchema.parse(v);
+            return true;
+          } catch {
+            return false;
+          }
+        },
+        message: 'Invalid field2 format'
+      }
+    },
+
+    status: {
+      type: String,
+      enum: {
+        values: EntityNameValidations.ENTITY_STATUSES,
+        message: 'Status must be: active, inactive or suspended'
+      },
+      default: 'active'
+    }
+  },
+  {
+    timestamps: true, // Automatic createdAt/updatedAt
+    versionKey: false, // Remove __v field
+    strict: true, // Only allow schema-defined fields
+    minimize: false // Keep empty objects
   }
-}, {
-  timestamps: true,        // Automatic createdAt/updatedAt
-  versionKey: false,       // Remove __v field
-  strict: true,           // Only allow schema-defined fields
-  minimize: false         // Keep empty objects
-});
+);
 ```
 
 #### 1.4 Database Indexes
+
 ```typescript
 // Performance indexes for common queries
-entitySchema.index({ field2: 1 });                    // Unique index (automatically created)
-entitySchema.index({ status: 1, createdAt: -1 });     // Status queries with sorting
-entitySchema.index({ field1: 'text' });               // Text search capabilities
+entitySchema.index({ field2: 1 }); // Unique index (automatically created)
+entitySchema.index({ status: 1, createdAt: -1 }); // Status queries with sorting
+entitySchema.index({ field1: 'text' }); // Text search capabilities
 ```
 
 #### 1.5 Mongoose Middleware and Hooks
+
 ```typescript
 // Pre-save data sanitization and validation
-entitySchema.pre('save', function(next) {
+entitySchema.pre('save', function (next) {
   // Data sanitization
   if (this.field1) {
     this.field1 = this.field1.trim();
   }
-  
+
   // Additional validation or transformation logic
   next();
 });
 
 // Pre-update hooks for consistency
-entitySchema.pre(['findOneAndUpdate', 'updateOne', 'updateMany'], function(next) {
+entitySchema.pre(['findOneAndUpdate', 'updateOne', 'updateMany'], function (next) {
   const update = this.getUpdate() as any;
   if (update.$set?.field1) {
     update.$set.field1 = update.$set.field1.trim();
@@ -227,13 +243,14 @@ entitySchema.pre(['findOneAndUpdate', 'updateOne', 'updateMany'], function(next)
 ```
 
 #### 1.6 Instance Methods
+
 ```typescript
 // Custom instance methods for business logic
-entitySchema.methods.customMethod = function(): boolean {
+entitySchema.methods.customMethod = function (): boolean {
   return this.status === 'active';
 };
 
-entitySchema.methods.toJSON = function() {
+entitySchema.methods.toJSON = function () {
   const obj = this.toObject();
   // Remove sensitive fields from JSON representation
   delete obj.sensitiveField;
@@ -242,14 +259,16 @@ entitySchema.methods.toJSON = function() {
 ```
 
 #### 1.7 Static Methods
+
 ```typescript
 // Static methods for common queries
-entitySchema.statics.findActiveEntities = function() {
+entitySchema.statics.findActiveEntities = function () {
   return this.find({ status: 'active' }).sort({ createdAt: -1 });
 };
 ```
 
 #### 1.8 Model Export
+
 ```typescript
 /**
  * Mongoose model for database operations
@@ -309,9 +328,12 @@ export class EntityNameRepository implements IEntityNameRepository {
   ): Promise<IEntityName> {
     // Validate input using entity validations
     const validatedData = EntityNameValidations.validateCreate(entityData);
-    
+
     // Use injected BaseRepository for database operation
-    return this.baseRepository.create(validatedData as Partial<IEntityName>, this.getRepoOptions(session));
+    return this.baseRepository.create(
+      validatedData as Partial<IEntityName>,
+      this.getRepoOptions(session)
+    );
   }
 
   /**
@@ -328,9 +350,13 @@ export class EntityNameRepository implements IEntityNameRepository {
   ): Promise<IEntityName | null> {
     // Validate update data
     const validatedData = EntityNameValidations.validateUpdate(updateData);
-    
+
     // Use injected BaseRepository method
-    return this.baseRepository.updateById(id, { $set: validatedData }, this.getRepoOptions(session));
+    return this.baseRepository.updateById(
+      id,
+      { $set: validatedData },
+      this.getRepoOptions(session)
+    );
   }
 
   // ==========================================
@@ -441,11 +467,12 @@ export { EntityNameRepositoryFactory } from './entityRepository.factory.js';
 ### 🏗️ **NEW Mandatory Patterns (Post-Refactoring)**
 
 #### 1. Repository Composition (Not Inheritance)
+
 ```typescript
 // ✅ CORRECT - Dependency injection with interfaces
 export class UserRepository implements IUserRepository {
   constructor(private baseRepository: IBaseRepository<IUser>) {}
-  
+
   async createUser(userData: any): Promise<IUser> {
     return this.baseRepository.create(userData); // Delegates to injected dependency
   }
@@ -458,6 +485,7 @@ export class BadRepository extends BaseRepository<IUser> {
 ```
 
 #### 2. Interface-First Design
+
 ```typescript
 // ✅ CORRECT - Define interface contracts first
 export interface IUserRepository {
@@ -477,6 +505,7 @@ export class BadRepository {
 ```
 
 #### 3. Factory Pattern for DI
+
 ```typescript
 // ✅ CORRECT - Use factories for dependency injection
 export class UserRepositoryFactory {
@@ -484,7 +513,7 @@ export class UserRepositoryFactory {
     const baseRepository = new BaseRepository<IUser>(UserModel);
     return new UserRepository(baseRepository);
   }
-  
+
   static createUserRepositoryForTesting(mockBaseRepository: any): IUserRepository {
     return new UserRepository(mockBaseRepository);
   }
@@ -495,6 +524,7 @@ const repository = new UserRepository(new BaseRepository(...)); // Scattered dep
 ```
 
 #### 4. Session Support with DI
+
 ```typescript
 // ✅ CORRECT - Pass session through to injected repository
 async createUser(userData: any, session?: ClientSession): Promise<IUser> {
@@ -511,6 +541,7 @@ async createUser(userData: any, session?: ClientSession): Promise<IUser> {
 ### 📐 **NEW Architecture Patterns**
 
 #### Dependency Injection Chain
+
 ```
 BaseRepository<T> (implements IBaseRepository<T>)
     ↓ (injected into)
@@ -520,18 +551,22 @@ AuthRepository (implements IAuthRepository)
 ```
 
 **Benefits:**
+
 - ✅ **Zero inheritance** - no coupling between layers
-- ✅ **Easy testing** - mock any dependency independently  
+- ✅ **Easy testing** - mock any dependency independently
 - ✅ **Flexible** - swap implementations without changing dependents
 - ✅ **SOLID principles** - follows dependency inversion principle
 
 ### 🔄 **Migration from Old to New Pattern**
 
 #### Old Pattern (Removed):
+
 ```typescript
 // ❌ OLD: Inheritance chain with tight coupling
 class UserRepository extends BaseRepository<IUser> {
-  constructor() { super(UserModel); }
+  constructor() {
+    super(UserModel);
+  }
 }
 
 class AuthRepository extends UserRepository {
@@ -541,6 +576,7 @@ class AuthRepository extends UserRepository {
 ```
 
 #### New Pattern (Current):
+
 ```typescript
 // ✅ NEW: Composition with dependency injection
 interface IUserRepository {
@@ -550,7 +586,7 @@ interface IUserRepository {
 
 class UserRepository implements IUserRepository {
   constructor(private baseRepository: IBaseRepository<IUser>) {}
-  
+
   async createUser(data: any): Promise<IUser> {
     return this.baseRepository.create(data);
   }
@@ -563,7 +599,7 @@ interface IAuthRepository {
 
 class AuthRepository implements IAuthRepository {
   constructor(private userRepository: IUserRepository) {}
-  
+
   async findUserByEmail(email: string): Promise<IUser | null> {
     return this.userRepository.findUserByEmail(email);
   }
@@ -573,6 +609,7 @@ class AuthRepository implements IAuthRepository {
 ### ✅ **NEW Development Guidelines**
 
 **DO:**
+
 - Define interface contracts before implementation
 - Use dependency injection through constructor parameters
 - Create factory classes for clean instantiation
@@ -584,6 +621,7 @@ class AuthRepository implements IAuthRepository {
 - Test with mocked dependencies
 
 **DON'T:**
+
 - Use inheritance between repositories (extends BaseRepository)
 - Create direct instances without factories
 - Ignore interface contracts
@@ -596,30 +634,31 @@ class AuthRepository implements IAuthRepository {
 ### 🧪 **NEW Testing Patterns**
 
 #### Repository Testing with Mocks
+
 ```typescript
 describe('UserRepository', () => {
   let repository: IUserRepository;
   let mockBaseRepository: jest.Mocked<IBaseRepository<IUser>>;
-  
+
   beforeEach(() => {
     mockBaseRepository = {
       create: jest.fn(),
       findOne: jest.fn(),
-      findById: jest.fn(),
+      findById: jest.fn()
       // ... other methods
     } as jest.Mocked<IBaseRepository<IUser>>;
-    
+
     repository = new UserRepository(mockBaseRepository);
   });
-  
+
   it('should create user using injected base repository', async () => {
     const userData = { name: 'Test', email: 'test@example.com' };
     const expectedUser = { ...userData, _id: 'user-id' } as IUser;
-    
+
     mockBaseRepository.create.mockResolvedValue(expectedUser);
-    
+
     const result = await repository.createUser(userData);
-    
+
     expect(mockBaseRepository.create).toHaveBeenCalledWith(userData, {});
     expect(result).toEqual(expectedUser);
   });
@@ -627,19 +666,20 @@ describe('UserRepository', () => {
 ```
 
 #### Factory Testing
+
 ```typescript
 describe('UserRepositoryFactory', () => {
   it('should create repository with proper dependencies', () => {
     const repository = UserRepositoryFactory.createUserRepository();
-    
+
     expect(repository).toBeInstanceOf(UserRepository);
     // Repository should work without mocking
   });
-  
+
   it('should create repository for testing with mocks', () => {
     const mockBaseRepository = {} as IBaseRepository<IUser>;
     const repository = UserRepositoryFactory.createUserRepositoryForTesting(mockBaseRepository);
-    
+
     expect(repository).toBeInstanceOf(UserRepository);
   });
 });
@@ -648,6 +688,7 @@ describe('UserRepositoryFactory', () => {
 ## Testing Patterns
 
 ### Entity Validation Testing
+
 ```typescript
 describe('EntityNameValidations', () => {
   it('should validate creation data', () => {
@@ -655,36 +696,37 @@ describe('EntityNameValidations', () => {
       field1: 'Valid Name',
       field2: 'test@example.com'
     };
-    
+
     expect(() => EntityNameValidations.validateCreate(validData)).not.toThrow();
   });
-  
+
   it('should reject invalid data', () => {
     const invalidData = {
       field1: '', // Too short
       field2: 'invalid-email'
     };
-    
+
     expect(() => EntityNameValidations.validateCreate(invalidData)).toThrow();
   });
 });
 ```
 
 ### Repository Testing
+
 ```typescript
 describe('EntityNameRepository', () => {
   let repository: EntityNameRepository;
-  
+
   beforeEach(() => {
     repository = new EntityNameRepository();
   });
-  
+
   it('should create entity successfully', async () => {
     const entityData = {
       field1: 'Test Name',
       field2: 'test@example.com'
     };
-    
+
     const entity = await repository.createEntity(entityData);
     expect(entity.field1).toBe('Test Name');
     expect(entity.field2).toBe('test@example.com');
@@ -703,14 +745,14 @@ import type { IAuthRepository } from './auth.repository.js';
 
 export class AuthRepository implements IAuthRepository {
   constructor(private userRepository: IUserRepository) {}
-  
+
   // Delegates to injected UserRepository instead of inheriting
   async findByEmailForAuth(email: string): Promise<IUser | null> {
     return this.userRepository.findUserByEmail(email);
   }
 }
 
-// src/modules/auth/factory/auth.factory.ts  
+// src/modules/auth/factory/auth.factory.ts
 import { UserRepositoryFactory } from '../../../entities/user/index.js';
 
 export class AuthRepositoryFactory {
@@ -722,6 +764,7 @@ export class AuthRepositoryFactory {
 ```
 
 **Benefits of New Integration Pattern:**
+
 - ✅ **Loose coupling** - modules depend on interfaces, not implementations
 - ✅ **Easy testing** - inject mocks at module level
 - ✅ **Flexible** - swap entity implementations without changing modules
@@ -741,8 +784,9 @@ When evolving entities with the new architecture:
 8. **Version Control**: Document breaking changes in commit messages
 
 ### Example Migration Checklist:
+
 - [ ] Update entity interface (`IEntityName`)
-- [ ] Update repository interface (`IEntityNameRepository`)  
+- [ ] Update repository interface (`IEntityNameRepository`)
 - [ ] Update repository implementation
 - [ ] Update factory for dependency injection
 - [ ] Update entity exports (include new interface)
@@ -754,6 +798,7 @@ When evolving entities with the new architecture:
 ---
 
 **For more information:**
+
 - Dependency Injection Interfaces: `src/infraestructure/mongo/interfaces.ts`
 - Base Repository: `src/infraestructure/mongo/README.md`
 - Module Integration: `src/modules/README.md`

@@ -19,12 +19,15 @@ export async function handleCleanup(
 ): Promise<JobResult> {
   const startTime = Date.now();
 
-  logger.info({
-    target: data.target,
-    olderThan: data.olderThan,
-    pattern: data.pattern,
-    hasMetadata: !!data.metadata && Object.keys(data.metadata).length > 0
-  }, 'Processing cleanup job');
+  logger.info(
+    {
+      target: data.target,
+      olderThan: data.olderThan,
+      pattern: data.pattern,
+      hasMetadata: !!data.metadata && Object.keys(data.metadata).length > 0
+    },
+    'Processing cleanup job'
+  );
 
   try {
     // Validate cleanup data
@@ -35,13 +38,16 @@ export async function handleCleanup(
 
     const processingTime = Date.now() - startTime;
 
-    logger.info({
-      target: data.target,
-      itemsProcessed: cleanupResult.itemsProcessed,
-      itemsRemoved: cleanupResult.itemsRemoved,
-      spaceFreed: cleanupResult.spaceFreed,
-      processingTime
-    }, 'Cleanup completed successfully');
+    logger.info(
+      {
+        target: data.target,
+        itemsProcessed: cleanupResult.itemsProcessed,
+        itemsRemoved: cleanupResult.itemsRemoved,
+        spaceFreed: cleanupResult.spaceFreed,
+        processingTime
+      },
+      'Cleanup completed successfully'
+    );
 
     return {
       success: true,
@@ -70,16 +76,18 @@ export async function handleCleanup(
       processedAt: Date.now(),
       processingTime
     };
-
   } catch (error) {
     const processingTime = Date.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : 'Unknown cleanup error';
 
-    logger.error({
-      error,
-      processingTime,
-      target: data.target
-    }, 'Failed to process cleanup');
+    logger.error(
+      {
+        error,
+        processingTime,
+        target: data.target
+      },
+      'Failed to process cleanup'
+    );
 
     return {
       success: false,
@@ -94,33 +102,38 @@ export async function handleCleanup(
  * Interface for cleanup operation result
  */
 interface CleanupResult {
-  itemsProcessed: number
-  itemsRemoved: number
-  itemsSkipped: number
-  spaceFreed: number
-  errors: string[]
-  scanTime: number
-  deleteTime: number
-  details: CleanupDetail[]
+  itemsProcessed: number;
+  itemsRemoved: number;
+  itemsSkipped: number;
+  spaceFreed: number;
+  errors: string[];
+  scanTime: number;
+  deleteTime: number;
+  details: CleanupDetail[];
 }
 
 /**
  * Interface for individual cleanup operation detail
  */
 interface CleanupDetail {
-  path: string
-  size: number
-  action: 'deleted' | 'skipped' | 'error'
-  reason?: string
-  timestamp: string
+  path: string;
+  size: number;
+  action: 'deleted' | 'skipped' | 'error';
+  reason?: string;
+  timestamp: string;
 }
 
 /**
  * Validates cleanup job data
  */
 function validateCleanupData(data: CleanupJobData): void {
-  if (!data.target || !['temp_files', 'old_logs', 'expired_sessions', 'cache'].includes(data.target)) {
-    throw new Error('Invalid cleanup target. Must be: temp_files, old_logs, expired_sessions, or cache');
+  if (
+    !data.target ||
+    !['temp_files', 'old_logs', 'expired_sessions', 'cache'].includes(data.target)
+  ) {
+    throw new Error(
+      'Invalid cleanup target. Must be: temp_files, old_logs, expired_sessions, or cache'
+    );
   }
 
   // Validate olderThan if provided (days)
@@ -129,7 +142,8 @@ function validateCleanupData(data: CleanupJobData): void {
       throw new Error('olderThan must be a non-negative number (days)');
     }
 
-    if (data.olderThan > 365) { // Maximum 1 year
+    if (data.olderThan > 365) {
+      // Maximum 1 year
       throw new Error('olderThan cannot exceed 365 days');
     }
   }
@@ -164,37 +178,37 @@ function validateCleanupData(data: CleanupJobData): void {
  */
 function validateTargetSpecificData(data: CleanupJobData): void {
   switch (data.target) {
-  case 'temp_files':
-    // Default to 7 days if not specified
-    if (data.olderThan === undefined) {
-      data.olderThan = 7;
-    }
-    break;
+    case 'temp_files':
+      // Default to 7 days if not specified
+      if (data.olderThan === undefined) {
+        data.olderThan = 7;
+      }
+      break;
 
-  case 'old_logs':
-    // Default to 30 days if not specified
-    if (data.olderThan === undefined) {
-      data.olderThan = 30;
-    }
-    // Ensure we don't delete recent logs
-    if (data.olderThan < 1) {
-      throw new Error('Log files must be at least 1 day old to be cleaned up');
-    }
-    break;
+    case 'old_logs':
+      // Default to 30 days if not specified
+      if (data.olderThan === undefined) {
+        data.olderThan = 30;
+      }
+      // Ensure we don't delete recent logs
+      if (data.olderThan < 1) {
+        throw new Error('Log files must be at least 1 day old to be cleaned up');
+      }
+      break;
 
-  case 'expired_sessions':
-    // Default to 1 day if not specified
-    if (data.olderThan === undefined) {
-      data.olderThan = 1;
-    }
-    break;
+    case 'expired_sessions':
+      // Default to 1 day if not specified
+      if (data.olderThan === undefined) {
+        data.olderThan = 1;
+      }
+      break;
 
-  case 'cache':
-    // Default to 7 days if not specified
-    if (data.olderThan === undefined) {
-      data.olderThan = 7;
-    }
-    break;
+    case 'cache':
+      // Default to 7 days if not specified
+      if (data.olderThan === undefined) {
+        data.olderThan = 7;
+      }
+      break;
   }
 }
 
@@ -208,16 +222,16 @@ async function executeCleanup(
   logger.debug({ target: data.target }, `Starting ${data.target} cleanup`);
 
   switch (data.target) {
-  case 'temp_files':
-    return await cleanupTempFiles(data, logger);
-  case 'old_logs':
-    return await cleanupOldLogs(data, logger);
-  case 'expired_sessions':
-    return await cleanupExpiredSessions(data, logger);
-  case 'cache':
-    return await cleanupCache(data, logger);
-  default:
-    throw new Error(`Unsupported cleanup target: ${data.target}`);
+    case 'temp_files':
+      return await cleanupTempFiles(data, logger);
+    case 'old_logs':
+      return await cleanupOldLogs(data, logger);
+    case 'expired_sessions':
+      return await cleanupExpiredSessions(data, logger);
+    case 'cache':
+      return await cleanupCache(data, logger);
+    default:
+      throw new Error(`Unsupported cleanup target: ${data.target}`);
   }
 }
 
@@ -233,11 +247,14 @@ async function cleanupTempFiles(
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - (data.olderThan || 7));
 
-  logger.debug({
-    directories: tempDirectories,
-    cutoffDate: cutoffDate.toISOString(),
-    pattern: data.pattern
-  }, 'Scanning temporary directories');
+  logger.debug(
+    {
+      directories: tempDirectories,
+      cutoffDate: cutoffDate.toISOString(),
+      pattern: data.pattern
+    },
+    'Scanning temporary directories'
+  );
 
   // Simulate scanning temp directories
   const scanResult = await simulateDirectoryScan(tempDirectories, cutoffDate, data.pattern);
@@ -272,11 +289,14 @@ async function cleanupOldLogs(
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - (data.olderThan || 30));
 
-  logger.debug({
-    directories: logDirectories,
-    cutoffDate: cutoffDate.toISOString(),
-    pattern: data.pattern || '*.log'
-  }, 'Scanning log directories');
+  logger.debug(
+    {
+      directories: logDirectories,
+      cutoffDate: cutoffDate.toISOString(),
+      pattern: data.pattern || '*.log'
+    },
+    'Scanning log directories'
+  );
 
   // Use log-specific pattern if not provided
   const logPattern = data.pattern || '*.log';
@@ -315,10 +335,13 @@ async function cleanupExpiredSessions(
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - (data.olderThan || 1));
 
-  logger.debug({
-    directories: sessionDirectories,
-    cutoffDate: cutoffDate.toISOString()
-  }, 'Scanning session directories');
+  logger.debug(
+    {
+      directories: sessionDirectories,
+      cutoffDate: cutoffDate.toISOString()
+    },
+    'Scanning session directories'
+  );
 
   // Session files are typically small but numerous
   const sessionPattern = data.pattern || 'sess_*';
@@ -354,11 +377,14 @@ async function cleanupCache(
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - (data.olderThan || 7));
 
-  logger.debug({
-    directories: cacheDirectories,
-    cutoffDate: cutoffDate.toISOString(),
-    pattern: data.pattern
-  }, 'Scanning cache directories');
+  logger.debug(
+    {
+      directories: cacheDirectories,
+      cutoffDate: cutoffDate.toISOString(),
+      pattern: data.pattern
+    },
+    'Scanning cache directories'
+  );
 
   const scanResult = await simulateDirectoryScan(cacheDirectories, cutoffDate, data.pattern);
   const scanTime = Date.now() - scanStart;
@@ -387,8 +413,8 @@ async function simulateDirectoryScan(
   cutoffDate: Date,
   pattern?: string
 ): Promise<{
-  totalFiles: number
-  candidates: Array<{ path: string; size: number; lastModified: Date }>
+  totalFiles: number;
+  candidates: Array<{ path: string; size: number; lastModified: Date }>;
 }> {
   // Simulate scanning time
   await new Promise(resolve => setTimeout(resolve, 200 + Math.random() * 500));
@@ -425,11 +451,11 @@ async function simulateFileDeletion(
   fileType: string,
   logger: FastifyBaseLogger
 ): Promise<{
-  deleted: CleanupDetail[]
-  skipped: CleanupDetail[]
-  failed: CleanupDetail[]
-  spaceFreed: number
-  errors: string[]
+  deleted: CleanupDetail[];
+  skipped: CleanupDetail[];
+  failed: CleanupDetail[];
+  spaceFreed: number;
+  errors: string[];
 }> {
   const deleted: CleanupDetail[] = [];
   const skipped: CleanupDetail[] = [];
@@ -441,7 +467,8 @@ async function simulateFileDeletion(
   for (const candidate of candidates) {
     const random = Math.random();
 
-    if (random < 0.02) { // 2% deletion failures
+    if (random < 0.02) {
+      // 2% deletion failures
       const error = `Permission denied: ${candidate.path}`;
       errors.push(error);
       failed.push({
@@ -451,7 +478,8 @@ async function simulateFileDeletion(
         reason: 'Permission denied',
         timestamp: new Date().toISOString()
       });
-    } else if (random < 0.05) { // 3% skipped (in use, etc.)
+    } else if (random < 0.05) {
+      // 3% skipped (in use, etc.)
       skipped.push({
         path: candidate.path,
         size: candidate.size,
@@ -459,7 +487,8 @@ async function simulateFileDeletion(
         reason: 'File in use',
         timestamp: new Date().toISOString()
       });
-    } else { // 95% successful deletion
+    } else {
+      // 95% successful deletion
       deleted.push({
         path: candidate.path,
         size: candidate.size,
@@ -480,13 +509,16 @@ async function simulateFileDeletion(
   const batchTime = Math.min(candidates.length * 10, 2000);
   await new Promise(resolve => setTimeout(resolve, batchTime));
 
-  logger.debug({
-    fileType,
-    deleted: deleted.length,
-    skipped: skipped.length,
-    failed: failed.length,
-    spaceFreed
-  }, 'File deletion simulation completed');
+  logger.debug(
+    {
+      fileType,
+      deleted: deleted.length,
+      skipped: skipped.length,
+      failed: failed.length,
+      spaceFreed
+    },
+    'File deletion simulation completed'
+  );
 
   return {
     deleted,
@@ -502,7 +534,7 @@ async function simulateFileDeletion(
  */
 function generateCleanupSummary(result: CleanupResult): string {
   const { itemsProcessed, itemsRemoved, spaceFreed } = result;
-  const removalRate = itemsProcessed > 0 ? (itemsRemoved / itemsProcessed * 100).toFixed(1) : '0';
+  const removalRate = itemsProcessed > 0 ? ((itemsRemoved / itemsProcessed) * 100).toFixed(1) : '0';
   const spaceMB = (spaceFreed / (1024 * 1024)).toFixed(2);
 
   let summary = `Processed ${itemsProcessed} items, removed ${itemsRemoved} (${removalRate}%)`;

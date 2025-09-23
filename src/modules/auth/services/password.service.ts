@@ -23,7 +23,9 @@ export class PasswordService {
       const hashedPassword = await bcrypt.hash(plainPassword, this.SALT_ROUNDS);
       return hashedPassword;
     } catch (error) {
-      throw new Error(`Password hashing failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Password hashing failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -43,7 +45,9 @@ export class PasswordService {
       const isValid = await bcrypt.compare(plainPassword, hashedPassword);
       return isValid;
     } catch (error) {
-      throw new Error(`Password comparison failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Password comparison failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 

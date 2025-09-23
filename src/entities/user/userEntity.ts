@@ -1,6 +1,14 @@
 import { Schema, model, Document } from 'mongoose';
 import { z } from 'zod';
-import { EmailSchema, PasswordSchema, NameSchema, ChangePasswordSchema, BaseStatusSchema, BaseRoleSchema, sanitizeInput } from '../../lib/validators/index.js';
+import {
+  EmailSchema,
+  PasswordSchema,
+  NameSchema,
+  ChangePasswordSchema,
+  BaseStatusSchema,
+  BaseRoleSchema,
+  sanitizeInput
+} from '../../lib/validators/index.js';
 
 // ==========================================
 // 1. INTERFACE DA ENTIDADE PARA REPOSITORY
@@ -52,7 +60,8 @@ export class UserValidations {
   });
 
   // Login attempts validation (entity-specific business rule)
-  static readonly LoginAttemptsSchema = z.number()
+  static readonly LoginAttemptsSchema = z
+    .number()
     .int()
     .min(0, 'Login attempts cannot be negative')
     .max(10, 'Login attempts exceeded maximum');
@@ -68,21 +77,23 @@ export class UserValidations {
   });
 
   // User update schema
-  static readonly UpdateUserSchema = z.object({
-    name: NameSchema.optional(),
-    email: EmailSchema.optional(),
-    status: UserValidations.StatusSchema.optional(),
-    role: UserValidations.RoleSchema.optional(),
-    emailVerified: z.boolean().optional(),
-    lastLoginAt: z.date().optional(),
-    loginAttempts: UserValidations.LoginAttemptsSchema.optional(),
-    lockUntil: z.date().optional(),
-    emailVerificationToken: z.string().optional(),
-    passwordResetToken: z.string().optional(),
-    passwordResetExpires: z.date().optional()
-  }).refine((data) => Object.keys(data).length > 0, {
-    message: 'At least one field must be provided for update'
-  });
+  static readonly UpdateUserSchema = z
+    .object({
+      name: NameSchema.optional(),
+      email: EmailSchema.optional(),
+      status: UserValidations.StatusSchema.optional(),
+      role: UserValidations.RoleSchema.optional(),
+      emailVerified: z.boolean().optional(),
+      lastLoginAt: z.date().optional(),
+      loginAttempts: UserValidations.LoginAttemptsSchema.optional(),
+      lockUntil: z.date().optional(),
+      emailVerificationToken: z.string().optional(),
+      passwordResetToken: z.string().optional(),
+      passwordResetExpires: z.date().optional()
+    })
+    .refine(data => Object.keys(data).length > 0, {
+      message: 'At least one field must be provided for update'
+    });
 
   // Login schema
   static readonly LoginSchema = z.object({
@@ -156,127 +167,131 @@ export class UserValidations {
 // 3. SCHEMA MONGOOSE PARA O MONGO
 // ==========================================
 
-const userSchema = new Schema<IUser>({
-  name: {
-    type: String,
-    required: [true, 'Name is required'],
-    trim: true,
-    minlength: [2, 'Name must have at least 2 characters'],
-    maxlength: [100, 'Name must have at most 100 characters'],
-    validate: {
-      validator: function(v: string) {
-        try {
-          NameSchema.parse(v);
-          return true;
-        } catch {
-          return false;
-        }
-      },
-      message: 'Name contains invalid characters or format'
-    }
-  },
-
-  email: {
-    type: String,
-    required: [true, 'Email is required'],
-    unique: true,
-    lowercase: true,
-    trim: true,
-    validate: {
-      validator: function(v: string) {
-        try {
-          EmailSchema.parse(v);
-          return true;
-        } catch {
-          return false;
-        }
-      },
-      message: 'Invalid email format'
-    }
-  },
-
-  password: {
-    type: String,
-    required: [true, 'Password is required'],
-    minlength: [8, 'Password must have at least 8 characters'],
-    maxlength: [128, 'Password too long'],
-    select: false, // Never return password by default
-    validate: {
-      validator: function(v: string) {
-        try {
-          PasswordSchema.parse(v);
-          return true;
-        } catch {
-          return false;
-        }
-      },
-      message: 'Password must contain at least one lowercase, uppercase, number and special character'
-    }
-  },
-
-  status: {
-    type: String,
-    enum: {
-      values: UserValidations.USER_STATUSES,
-      message: 'Status must be: active, inactive or suspended'
+const userSchema = new Schema<IUser>(
+  {
+    name: {
+      type: String,
+      required: [true, 'Name is required'],
+      trim: true,
+      minlength: [2, 'Name must have at least 2 characters'],
+      maxlength: [100, 'Name must have at most 100 characters'],
+      validate: {
+        validator: function (v: string) {
+          try {
+            NameSchema.parse(v);
+            return true;
+          } catch {
+            return false;
+          }
+        },
+        message: 'Name contains invalid characters or format'
+      }
     },
-    default: 'active'
-  },
 
-  role: {
-    type: String,
-    enum: {
-      values: UserValidations.USER_ROLES,
-      message: 'Role must be: user or admin'
+    email: {
+      type: String,
+      required: [true, 'Email is required'],
+      unique: true,
+      lowercase: true,
+      trim: true,
+      validate: {
+        validator: function (v: string) {
+          try {
+            EmailSchema.parse(v);
+            return true;
+          } catch {
+            return false;
+          }
+        },
+        message: 'Invalid email format'
+      }
     },
-    default: 'user'
-  },
 
-  lastLoginAt: {
-    type: Date,
-    default: null
-  },
+    password: {
+      type: String,
+      required: [true, 'Password is required'],
+      minlength: [8, 'Password must have at least 8 characters'],
+      maxlength: [128, 'Password too long'],
+      select: false, // Never return password by default
+      validate: {
+        validator: function (v: string) {
+          try {
+            PasswordSchema.parse(v);
+            return true;
+          } catch {
+            return false;
+          }
+        },
+        message:
+          'Password must contain at least one lowercase, uppercase, number and special character'
+      }
+    },
 
-  loginAttempts: {
-    type: Number,
-    default: 0,
-    min: [0, 'Login attempts cannot be negative'],
-    max: [10, 'Login attempts exceeded maximum']
-  },
+    status: {
+      type: String,
+      enum: {
+        values: UserValidations.USER_STATUSES,
+        message: 'Status must be: active, inactive or suspended'
+      },
+      default: 'active'
+    },
 
-  lockUntil: {
-    type: Date,
-    default: null
-  },
+    role: {
+      type: String,
+      enum: {
+        values: UserValidations.USER_ROLES,
+        message: 'Role must be: user or admin'
+      },
+      default: 'user'
+    },
 
-  emailVerified: {
-    type: Boolean,
-    default: false
-  },
+    lastLoginAt: {
+      type: Date,
+      default: null
+    },
 
-  emailVerificationToken: {
-    type: String,
-    default: null,
-    select: false // Never return verification token by default
-  },
+    loginAttempts: {
+      type: Number,
+      default: 0,
+      min: [0, 'Login attempts cannot be negative'],
+      max: [10, 'Login attempts exceeded maximum']
+    },
 
-  passwordResetToken: {
-    type: String,
-    default: null,
-    select: false // Never return reset token by default
-  },
+    lockUntil: {
+      type: Date,
+      default: null
+    },
 
-  passwordResetExpires: {
-    type: Date,
-    default: null,
-    select: false // Never return reset expiration by default
+    emailVerified: {
+      type: Boolean,
+      default: false
+    },
+
+    emailVerificationToken: {
+      type: String,
+      default: null,
+      select: false // Never return verification token by default
+    },
+
+    passwordResetToken: {
+      type: String,
+      default: null,
+      select: false // Never return reset token by default
+    },
+
+    passwordResetExpires: {
+      type: Date,
+      default: null,
+      select: false // Never return reset expiration by default
+    }
+  },
+  {
+    timestamps: true, // Adds createdAt and updatedAt automatically
+    versionKey: false, // Removes the __v field
+    strict: true, // Prevents fields not defined in schema
+    minimize: false // Keeps empty objects
   }
-}, {
-  timestamps: true, // Adds createdAt and updatedAt automatically
-  versionKey: false, // Removes the __v field
-  strict: true, // Prevents fields not defined in schema
-  minimize: false // Keeps empty objects
-});
+);
 
 // ==========================================
 // 4. INDEXES PARA PERFORMANCE
@@ -296,7 +311,7 @@ userSchema.index({ passwordResetToken: 1 }, { sparse: true }); // Password reset
 // ==========================================
 
 // Pre-save hook for data sanitization
-userSchema.pre('save', function(next) {
+userSchema.pre('save', function (next) {
   // Sanitize name
   if (this.name && this.isModified('name')) {
     this.name = sanitizeInput(this.name);
@@ -311,7 +326,7 @@ userSchema.pre('save', function(next) {
 });
 
 // Pre-update hooks for validations
-userSchema.pre(['findOneAndUpdate', 'updateOne', 'updateMany'], function(next) {
+userSchema.pre(['findOneAndUpdate', 'updateOne', 'updateMany'], function (next) {
   const update = this.getUpdate() as any;
 
   // Sanitize fields being updated
@@ -332,18 +347,18 @@ userSchema.pre(['findOneAndUpdate', 'updateOne', 'updateMany'], function(next) {
 // ==========================================
 
 // Password comparison method (to be implemented with bcrypt in repository)
-userSchema.methods.comparePassword = function(candidatePassword: string): Promise<boolean> {
+userSchema.methods.comparePassword = function (candidatePassword: string): Promise<boolean> {
   // This will be implemented in the repository layer with bcrypt
   throw new Error('comparePassword must be implemented in the repository layer');
 };
 
 // Check if account is locked
-userSchema.methods.isLocked = function(): boolean {
+userSchema.methods.isLocked = function (): boolean {
   return !!(this.lockUntil && this.lockUntil > Date.now());
 };
 
 // Increment login attempts
-userSchema.methods.incrementLoginAttempts = async function(): Promise<void> {
+userSchema.methods.incrementLoginAttempts = async function (): Promise<void> {
   const maxAttempts = 5;
   const lockTime = 30 * 60 * 1000; // 30 minutes
 
@@ -366,7 +381,7 @@ userSchema.methods.incrementLoginAttempts = async function(): Promise<void> {
 };
 
 // Reset login attempts
-userSchema.methods.resetLoginAttempts = async function(): Promise<void> {
+userSchema.methods.resetLoginAttempts = async function (): Promise<void> {
   return this.updateOne({
     $unset: {
       loginAttempts: 1,
@@ -376,7 +391,7 @@ userSchema.methods.resetLoginAttempts = async function(): Promise<void> {
 };
 
 // Transform document to JSON (removes sensitive fields)
-userSchema.methods.toJSON = function() {
+userSchema.methods.toJSON = function () {
   const userObject = this.toObject();
 
   // Remove sensitive fields
@@ -394,7 +409,7 @@ userSchema.methods.toJSON = function() {
 // ==========================================
 
 // Find users by role with pagination
-userSchema.statics.findByRole = function(role: string, page = 1, limit = 20) {
+userSchema.statics.findByRole = function (role: string, page = 1, limit = 20) {
   return this.find({ role })
     .select('-password -emailVerificationToken -passwordResetToken')
     .sort({ createdAt: -1 })
@@ -403,13 +418,10 @@ userSchema.statics.findByRole = function(role: string, page = 1, limit = 20) {
 };
 
 // Find active users
-userSchema.statics.findActiveUsers = function() {
+userSchema.statics.findActiveUsers = function () {
   return this.find({
     status: 'active',
-    $or: [
-      { lockUntil: null },
-      { lockUntil: { $lt: new Date() } }
-    ]
+    $or: [{ lockUntil: null }, { lockUntil: { $lt: new Date() } }]
   }).select('-password');
 };
 

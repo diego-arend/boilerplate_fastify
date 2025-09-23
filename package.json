@@ -19,7 +19,12 @@
     "docker:build": "docker build -t boilerplate-fastify .",
     "lint": "eslint src/ --ext .ts,.js",
     "lint:fix": "eslint src/ --ext .ts,.js --fix",
-    "lint:check": "eslint src/ --ext .ts,.js --max-warnings 0"
+    "lint:check": "eslint src/ --ext .ts,.js --max-warnings 0",
+    "format": "prettier --write \"src/**/*.{ts,js,json,md}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,js,json,md}\"",
+    "format:all": "prettier --write \"**/*.{ts,js,json,md,yml,yaml}\" --ignore-path .prettierignore",
+    "code:check": "pnpm format:check && pnpm lint:check",
+    "code:fix": "pnpm format && pnpm lint:fix"
   },
   "dependencies": {
     "@fastify/cors": "^11.1.0",
@@ -47,11 +52,14 @@
     "@typescript-eslint/eslint-plugin": "^8.44.1",
     "@typescript-eslint/parser": "^8.44.1",
     "eslint": "^9.36.0",
+    "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-prettier": "^5.5.4",
     "eslint-plugin-promise": "^7.2.1",
     "eslint-plugin-security": "^3.0.1",
     "eslint-plugin-unicorn": "^61.0.2",
+    "prettier": "^3.6.2",
     "tsx": "^4.19.1",
     "typescript": "^5.9.2"
   }

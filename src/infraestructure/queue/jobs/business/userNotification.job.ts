@@ -17,13 +17,16 @@ export async function handleUserNotification(
 ): Promise<JobResult> {
   const startTime = Date.now();
 
-  logger.info({
-    userId: data.userId,
-    title: data.title,
-    type: data.type,
-    channels: data.channels || ['push'],
-    hasMetadata: !!data.metadata && Object.keys(data.metadata).length > 0
-  }, 'Processing user notification job');
+  logger.info(
+    {
+      userId: data.userId,
+      title: data.title,
+      type: data.type,
+      channels: data.channels || ['push'],
+      hasMetadata: !!data.metadata && Object.keys(data.metadata).length > 0
+    },
+    'Processing user notification job'
+  );
 
   try {
     // Validate notification data
@@ -58,24 +61,33 @@ export async function handleUserNotification(
     const hasPartialSuccess = successfulDeliveries.length > 0;
 
     if (allChannelsSuccess) {
-      logger.info({
-        userId: data.userId,
-        successfulChannels: successfulDeliveries.length,
-        processingTime
-      }, 'All notification channels delivered successfully');
+      logger.info(
+        {
+          userId: data.userId,
+          successfulChannels: successfulDeliveries.length,
+          processingTime
+        },
+        'All notification channels delivered successfully'
+      );
     } else if (hasPartialSuccess) {
-      logger.warn({
-        userId: data.userId,
-        successfulChannels: successfulDeliveries.length,
-        failedChannels: failedDeliveries.length,
-        processingTime
-      }, 'Partial notification delivery success');
+      logger.warn(
+        {
+          userId: data.userId,
+          successfulChannels: successfulDeliveries.length,
+          failedChannels: failedDeliveries.length,
+          processingTime
+        },
+        'Partial notification delivery success'
+      );
     } else {
-      logger.error({
-        userId: data.userId,
-        failedChannels: failedDeliveries.length,
-        processingTime
-      }, 'All notification channels failed');
+      logger.error(
+        {
+          userId: data.userId,
+          failedChannels: failedDeliveries.length,
+          processingTime
+        },
+        'All notification channels failed'
+      );
     }
 
     return {
@@ -93,17 +105,19 @@ export async function handleUserNotification(
       processedAt: Date.now(),
       processingTime
     };
-
   } catch (error) {
     const processingTime = Date.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : 'Unknown notification error';
 
-    logger.error({
-      error,
-      processingTime,
-      userId: data.userId,
-      title: data.title
-    }, 'Failed to process notification');
+    logger.error(
+      {
+        error,
+        processingTime,
+        userId: data.userId,
+        title: data.title
+      },
+      'Failed to process notification'
+    );
 
     return {
       success: false,
@@ -140,7 +154,9 @@ function validateNotificationData(data: UserNotificationJobData): void {
     const invalidChannels = data.channels.filter(channel => !validChannels.includes(channel));
 
     if (invalidChannels.length > 0) {
-      throw new Error(`Invalid notification channels: ${invalidChannels.join(', ')}. Valid channels: ${validChannels.join(', ')}`);
+      throw new Error(
+        `Invalid notification channels: ${invalidChannels.join(', ')}. Valid channels: ${validChannels.join(', ')}`
+      );
     }
   }
 
@@ -174,32 +190,35 @@ async function deliverNotification(
   channel: 'push' | 'email' | 'sms',
   logger: FastifyBaseLogger
 ): Promise<{
-  deliveryId: string
-  channel: string
-  deliveredAt: string
-  deliveryTime: number
+  deliveryId: string;
+  channel: string;
+  deliveredAt: string;
+  deliveryTime: number;
 }> {
   const deliveryStart = Date.now();
 
-  logger.debug({
-    userId: data.userId,
-    channel
-  }, `Delivering notification via ${channel}`);
+  logger.debug(
+    {
+      userId: data.userId,
+      channel
+    },
+    `Delivering notification via ${channel}`
+  );
 
   try {
     // Simulate channel-specific delivery
     switch (channel) {
-    case 'push':
-      await simulatePushNotification(data);
-      break;
-    case 'email':
-      await simulateEmailNotification(data);
-      break;
-    case 'sms':
-      await simulateSmsNotification(data);
-      break;
-    default:
-      throw new Error(`Unsupported notification channel: ${channel}`);
+      case 'push':
+        await simulatePushNotification(data);
+        break;
+      case 'email':
+        await simulateEmailNotification(data);
+        break;
+      case 'sms':
+        await simulateSmsNotification(data);
+        break;
+      default:
+        throw new Error(`Unsupported notification channel: ${channel}`);
     }
 
     const deliveryTime = Date.now() - deliveryStart;
@@ -210,13 +229,15 @@ async function deliverNotification(
       deliveredAt: new Date().toISOString(),
       deliveryTime
     };
-
   } catch (error) {
-    logger.error({
-      userId: data.userId,
-      channel,
-      error
-    }, `Failed to deliver notification via ${channel}`);
+    logger.error(
+      {
+        userId: data.userId,
+        channel,
+        error
+      },
+      `Failed to deliver notification via ${channel}`
+    );
     throw error;
   }
 }

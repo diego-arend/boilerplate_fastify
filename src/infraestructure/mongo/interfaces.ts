@@ -52,14 +52,29 @@ export interface IBaseRepository<T extends Document> {
 
   // Update operations
   updateById(id: string, update: UpdateQuery<T>, options?: RepositoryOptions): Promise<T | null>;
-  updateOne(filter: FilterQuery<T>, update: UpdateQuery<T>, options?: RepositoryOptions): Promise<T | null>;
-  updateMany(filter: FilterQuery<T>, update: UpdateQuery<T>, options?: RepositoryOptions): Promise<{ modifiedCount: number }>;
-  replaceOne(filter: FilterQuery<T>, replacement: Partial<T>, options?: RepositoryOptions): Promise<T | null>;
+  updateOne(
+    filter: FilterQuery<T>,
+    update: UpdateQuery<T>,
+    options?: RepositoryOptions
+  ): Promise<T | null>;
+  updateMany(
+    filter: FilterQuery<T>,
+    update: UpdateQuery<T>,
+    options?: RepositoryOptions
+  ): Promise<{ modifiedCount: number }>;
+  replaceOne(
+    filter: FilterQuery<T>,
+    replacement: Partial<T>,
+    options?: RepositoryOptions
+  ): Promise<T | null>;
 
   // Delete operations
   deleteById(id: string, options?: RepositoryOptions): Promise<boolean>;
   deleteOne(filter: FilterQuery<T>, options?: RepositoryOptions): Promise<boolean>;
-  deleteMany(filter: FilterQuery<T>, options?: RepositoryOptions): Promise<{ deletedCount: number }>;
+  deleteMany(
+    filter: FilterQuery<T>,
+    options?: RepositoryOptions
+  ): Promise<{ deletedCount: number }>;
 
   // Utility operations
   count(filter?: FilterQuery<T>, options?: RepositoryOptions): Promise<number>;

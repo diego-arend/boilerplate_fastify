@@ -17,14 +17,18 @@ The queue system is designed for **high availability, fault tolerance, and zero 
 ## 🎯 **Job Categories**
 
 ### 🚀 **Business Jobs** (`jobs/business/`) - **PRIMARY FOCUS**
+
 Critical asynchronous business operations that drive revenue and user experience:
+
 - **Email Sending**: Transactional emails, order confirmations, notifications
 - **User Notifications**: Multi-channel push, SMS, in-app alerts
 - **Data Exports**: Reports, analytics, CSV/PDF generation, GDPR exports
 - **File Processing**: Image/video processing, document conversion, thumbnails
 
 ### 🔧 **Maintenance Jobs** (`jobs/maintenance/`)
+
 System optimization and housekeeping operations:
+
 - **Cache Warming**: Performance optimization through data preloading
 - **Cleanup Operations**: Temporary files, log rotation, expired sessions
 
@@ -33,6 +37,7 @@ System optimization and housekeeping operations:
 ## 🛡️ **Enterprise Features**
 
 ### ✅ **High Availability & Resilience**
+
 - **99.9%+ Uptime**: System continues operating even when Redis fails
 - **Zero Downtime**: Automatic fallback with transparent operation switching
 - **Circuit Breaker**: Intelligent failure detection and recovery (5 failures → 30s recovery)
@@ -40,6 +45,7 @@ System optimization and housekeeping operations:
 - **Auto-Recovery**: Seamless return to normal operations when services restore
 
 ### ✅ **Dead Letter Queue (DLQ)**
+
 - **Automatic Capture**: Jobs that exhaust retries are moved to DLQ with full context
 - **Zero Data Loss**: Complete job history, error details, and retry attempts preserved
 - **Recovery Tools**: Manual and batch reprocessing with data correction capabilities
@@ -47,12 +53,14 @@ System optimization and housekeeping operations:
 - **Automated Alerts**: Critical jobs generate immediate notifications
 
 ### ✅ **Data Persistence & Durability**
+
 - **Redis Persistence**: All jobs stored with configurable retention policies
 - **Volume Persistence**: `redis_data:/data` ensures durability across restarts
 - **State Preservation**: Complete job lifecycle tracking (waiting → active → completed/failed → dlq)
 - **Audit Trail**: Comprehensive logging for compliance and debugging
 
 ### ✅ **Performance & Scalability**
+
 - **Smart Routing**: Jobs automatically route to the best available backend
 - **Concurrent Processing**: Configurable concurrency per job type
 - **Priority Queues**: CRITICAL → HIGH → NORMAL → LOW processing order
@@ -106,9 +114,9 @@ const resilientQueue = new ResilientQueueManager(
       db: parseInt(process.env.REDIS_DB || '0')
     },
     defaultJobOptions: {
-      attempts: 5,               // Increased for resilience
-      removeOnComplete: 50,      // Keep more completed jobs
-      removeOnFail: 100,         // Keep more failed jobs for analysis
+      attempts: 5, // Increased for resilience
+      removeOnComplete: 50, // Keep more completed jobs
+      removeOnFail: 100, // Keep more failed jobs for analysis
       backoff: {
         type: 'exponential',
         delay: 1000
@@ -124,7 +132,7 @@ const resilientQueue = new ResilientQueueManager(
 ```typescript
 // Business job - automatically handles Redis failures
 const emailResult = await resilientQueue.addJob(
-  'email:send', 
+  'email:send',
   {
     to: 'customer@company.com',
     subject: 'Order Confirmation #12345',
@@ -134,14 +142,14 @@ const emailResult = await resilientQueue.addJob(
     timestamp: Date.now()
   },
   {
-    priority: 15,              // CRITICAL priority
+    priority: 15, // CRITICAL priority
     attempts: 5
   }
 );
 
 console.log({
   jobId: emailResult.jobId,
-  fallbackUsed: emailResult.fallback    // true if Redis was unavailable
+  fallbackUsed: emailResult.fallback // true if Redis was unavailable
 });
 ```
 
@@ -152,14 +160,14 @@ console.log({
 const health = resilientQueue.getHealthStatus();
 
 console.log('🏥 System Health:', {
-  overall: health.overall,              // healthy | degraded | critical | down
+  overall: health.overall, // healthy | degraded | critical | down
   redis: {
-    status: health.redis.status,        // connected | disconnected | error
-    latency: health.redis.latency,      // Response time in ms
+    status: health.redis.status, // connected | disconnected | error
+    latency: health.redis.latency, // Response time in ms
     failures: health.redis.consecutiveFailures
   },
   fallback: {
-    active: health.fallback.active,     // Is fallback currently active?
+    active: health.fallback.active, // Is fallback currently active?
     queuedJobs: health.fallback.queuedJobs
   },
   metrics: {
@@ -181,17 +189,19 @@ console.log('🏥 System Health:', {
 ## 🔄 **Dead Letter Queue (DLQ) Operations**
 
 ### **Automatic DLQ Processing**
+
 Jobs that exhaust all retry attempts are automatically moved to DLQ with complete context preservation.
 
 ### **DLQ Monitoring**
+
 ```typescript
 // Get comprehensive DLQ statistics
 const dlqStats = await resilientQueue.getDLQStats();
 
 console.log('📊 DLQ Status:', {
-  total: dlqStats.total,                    // Total jobs in DLQ
-  byJobType: dlqStats.byJobType,           // Breakdown: { "email:send": 5, "user:notification": 2 }
-  byErrorType: dlqStats.byErrorType,       // Breakdown: { "timeout": 3, "connection": 2, "validation": 2 }
+  total: dlqStats.total, // Total jobs in DLQ
+  byJobType: dlqStats.byJobType, // Breakdown: { "email:send": 5, "user:notification": 2 }
+  byErrorType: dlqStats.byErrorType, // Breakdown: { "timeout": 3, "connection": 2, "validation": 2 }
   oldestJob: {
     id: dlqStats.oldestJob.id,
     daysSinceFailed: dlqStats.oldestJob.daysSinceFailed
@@ -200,12 +210,13 @@ console.log('📊 DLQ Status:', {
 ```
 
 ### **DLQ Recovery Operations**
+
 ```typescript
 // Recover specific job after fixing the underlying issue
 const recoveryResult = await resilientQueue.reprocessDLQJob('dlq-job-id', {
   maxRetries: 3,
   resetAttempts: true,
-  modifyData: (originalData) => ({
+  modifyData: originalData => ({
     ...originalData,
     // Apply corrections that resolve the original failure
     emailAddress: originalData.emailAddress.toLowerCase().trim(),
@@ -235,6 +246,7 @@ console.log(`Batch Recovery: ${batchResult.processed} recovered, ${batchResult.e
 ## 📊 **System Behavior Under Failures**
 
 ### **🔴 Redis Failure Scenario**
+
 ```typescript
 // What happens when Redis fails:
 
@@ -249,6 +261,7 @@ console.log(`Batch Recovery: ${batchResult.processed} recovered, ${batchResult.e
 ```
 
 ### **🟡 Degraded Mode Benefits**
+
 - **Continuous Operation**: All job types continue processing
 - **Data Preservation**: Jobs queued in fallback are never lost
 - **Performance**: Slightly reduced throughput, but functionality maintained
@@ -256,6 +269,7 @@ console.log(`Batch Recovery: ${batchResult.processed} recovered, ${batchResult.e
 - **Monitoring**: Clear visibility into degraded state and recovery progress
 
 ### **🟢 Automatic Recovery**
+
 - **Detection**: Health checks every 30 seconds automatically detect Redis recovery
 - **Migration**: Fallback jobs are automatically moved back to Redis
 - **Optimization**: System automatically returns to optimal performance mode
@@ -266,6 +280,7 @@ console.log(`Batch Recovery: ${batchResult.processed} recovered, ${batchResult.e
 ## 🔧 **Advanced Configuration**
 
 ### **Circuit Breaker Settings**
+
 ```typescript
 // Circuit breaker automatically configured with optimal defaults:
 - Failure Threshold: 5 consecutive failures trigger circuit opening
@@ -275,39 +290,44 @@ console.log(`Batch Recovery: ${batchResult.processed} recovered, ${batchResult.e
 ```
 
 ### **Job Retry Configuration**
+
 ```typescript
 // Optimized retry settings per job priority:
 const jobConfig = {
   CRITICAL: {
     attempts: 5,
-    backoff: { type: 'exponential', delay: 1000 },    // 1s, 2s, 4s, 8s, 16s
+    backoff: { type: 'exponential', delay: 1000 }, // 1s, 2s, 4s, 8s, 16s
     priority: 15
   },
   HIGH: {
     attempts: 4,
-    backoff: { type: 'exponential', delay: 2000 },    // 2s, 4s, 8s, 16s
+    backoff: { type: 'exponential', delay: 2000 }, // 2s, 4s, 8s, 16s
     priority: 10
   },
   NORMAL: {
     attempts: 3,
-    backoff: { type: 'exponential', delay: 5000 },    // 5s, 10s, 20s
+    backoff: { type: 'exponential', delay: 5000 }, // 5s, 10s, 20s
     priority: 5
   }
 };
 ```
 
 ### **DLQ Retention Policy**
+
 ```typescript
 // Automatic cleanup of old DLQ jobs
 const dlqManager = resilientQueue.getDLQManager();
 
 // Clean jobs older than 30 days (configurable)
-setInterval(async () => {
-  const cleaned = await dlqManager.cleanOldJobs(30);
-  if (cleaned > 0) {
-    console.log(`🧹 Cleaned ${cleaned} old DLQ jobs`);
-  }
-}, 24 * 60 * 60 * 1000); // Daily cleanup
+setInterval(
+  async () => {
+    const cleaned = await dlqManager.cleanOldJobs(30);
+    if (cleaned > 0) {
+      console.log(`🧹 Cleaned ${cleaned} old DLQ jobs`);
+    }
+  },
+  24 * 60 * 60 * 1000
+); // Daily cleanup
 ```
 
 ---
@@ -315,16 +335,20 @@ setInterval(async () => {
 ## 🚨 **Monitoring & Alerting**
 
 ### **Health Check Endpoint**
+
 ```typescript
 // Fastify health check route
 app.get('/health/queue', async (request, reply) => {
   const health = resilientQueue.getHealthStatus();
   const stats = await resilientQueue.getStats();
-  
-  const statusCode = 
-    health.overall === SystemHealth.HEALTHY ? 200 :
-    health.overall === SystemHealth.DEGRADED ? 206 : 503;
-  
+
+  const statusCode =
+    health.overall === SystemHealth.HEALTHY
+      ? 200
+      : health.overall === SystemHealth.DEGRADED
+        ? 206
+        : 503;
+
   return reply.status(statusCode).send({
     status: health.overall,
     redis: health.redis,
@@ -337,6 +361,7 @@ app.get('/health/queue', async (request, reply) => {
 ```
 
 ### **Automated Alerts**
+
 ```typescript
 // Critical job types generate automatic alerts when moved to DLQ
 const criticalJobTypes = ['email:send', 'user:notification'];
@@ -354,8 +379,9 @@ const criticalJobTypes = ['email:send', 'user:notification'];
 ```
 
 ### **Recommended Alert Thresholds**
+
 - **🚨 CRITICAL**: Redis connection failed → Immediate notification
-- **⚠️ WARNING**: DLQ size > 10 jobs → Investigation required  
+- **⚠️ WARNING**: DLQ size > 10 jobs → Investigation required
 - **⚠️ WARNING**: Jobs in DLQ > 24 hours → Data recovery needed
 - **ℹ️ INFO**: System degraded → Monitoring dashboard update
 - **✅ SUCCESS**: System recovered → Confirmation notification
@@ -365,6 +391,7 @@ const criticalJobTypes = ['email:send', 'user:notification'];
 ## 🎯 **Best Practices**
 
 ### **Job Design**
+
 - **Idempotency**: Design jobs to be safely retryable
 - **Data Validation**: Validate all inputs before processing
 - **Error Handling**: Provide clear, actionable error messages
@@ -372,12 +399,14 @@ const criticalJobTypes = ['email:send', 'user:notification'];
 - **Logging**: Include comprehensive context in all log messages
 
 ### **Performance Optimization**
+
 - **Batch Processing**: Group similar operations when possible
 - **Connection Pooling**: Reuse database and API connections
 - **Memory Management**: Clean up resources after job completion
 - **Priority Assignment**: Use appropriate priorities for business impact
 
 ### **Operational Excellence**
+
 - **Monitoring**: Set up dashboards for queue health and performance
 - **Alerting**: Configure alerts for critical failures and degradation
 - **Documentation**: Maintain runbooks for common operational scenarios
@@ -388,6 +417,7 @@ const criticalJobTypes = ['email:send', 'user:notification'];
 ## 📈 **Performance Metrics**
 
 ### **System Capabilities**
+
 - **Throughput**: 1000+ jobs/minute (Redis), 100+ jobs/minute (fallback)
 - **Latency**: < 10ms job submission (Redis), < 50ms (fallback)
 - **Availability**: 99.9%+ uptime with automatic failover
@@ -395,6 +425,7 @@ const criticalJobTypes = ['email:send', 'user:notification'];
 - **Data Loss**: Zero jobs lost even during complete Redis failures
 
 ### **Resource Usage**
+
 - **Memory**: ~50MB base + 1KB per queued job
 - **CPU**: < 5% during normal operations
 - **Network**: Minimal overhead with efficient Redis protocol
@@ -405,6 +436,7 @@ const criticalJobTypes = ['email:send', 'user:notification'];
 ## ✅ **Migration Guide**
 
 ### **From Basic QueueManager**
+
 ```typescript
 // Before (vulnerable to Redis failures)
 const queueManager = QueueManager.getInstance();
@@ -417,6 +449,7 @@ console.log(`Job queued: ${result.jobId}, Fallback used: ${result.fallback}`);
 ```
 
 ### **Benefits After Migration**
+
 - **Zero Downtime**: System continues operating during Redis outages
 - **Zero Data Loss**: All jobs are preserved through fallback mechanisms
 - **Zero Manual Intervention**: Automatic recovery handles all failure scenarios
@@ -428,12 +461,14 @@ console.log(`Job queued: ${result.jobId}, Fallback used: ${result.fallback}`);
 ## 🤝 **Support & Troubleshooting**
 
 ### **Common Issues**
+
 - **High DLQ Volume**: Check external service availability (SMTP, APIs, etc.)
 - **Fallback Active**: Verify Redis connectivity and performance
 - **Memory Usage**: Monitor fallback queue size during Redis outages
 - **Job Failures**: Review job data validation and external service limits
 
 ### **Debug Commands**
+
 ```typescript
 // Check system health
 const health = await resilientQueue.getHealthStatus();
@@ -449,6 +484,7 @@ console.log('Queue Statistics:', stats);
 ```
 
 **This enterprise-grade queue system provides the reliability, observability, and resilience required for mission-critical production environments.** 🚀
+
 - Remove jobs from queue
 - Get queue statistics
 - Clean old completed/failed jobs
@@ -459,15 +495,19 @@ const queueManager = getDefaultQueueManager();
 await queueManager.initialize(fastify.config);
 
 // Add a job
-const job = await queueManager.addJob(JobType.EMAIL_SEND, {
-  to: 'user@example.com',
-  subject: 'Welcome',
-  body: 'Welcome to our service!',
-  timestamp: Date.now()
-}, {
-  priority: JobPriority.HIGH,
-  attempts: 3
-});
+const job = await queueManager.addJob(
+  JobType.EMAIL_SEND,
+  {
+    to: 'user@example.com',
+    subject: 'Welcome',
+    body: 'Welcome to our service!',
+    timestamp: Date.now()
+  },
+  {
+    priority: JobPriority.HIGH,
+    attempts: 3
+  }
+);
 ```
 
 ### 4. Queue Worker (`queue.worker.ts`)
@@ -503,6 +543,7 @@ Fastify plugin that registers queue routes and initializes the system.
 ## Core Asynchronous Job Types and Handlers
 
 ### EMAIL_SEND (`jobs/emailSend.job.ts`)
+
 **Primary Use**: Transactional emails, newsletters, marketing campaigns
 
 ```typescript
@@ -516,6 +557,7 @@ interface EmailJobData extends BaseJobData {
 ```
 
 **Business Scenarios**:
+
 - Welcome emails after user registration
 - Password reset notifications
 - Order confirmations and receipts
@@ -523,12 +565,14 @@ interface EmailJobData extends BaseJobData {
 - System alerts to administrators
 
 **Features**:
+
 - Template rendering with variables
 - Email validation and security checks
 - Delivery failure simulation and retry
 - Support for HTML and plain text
 
 ### USER_NOTIFICATION (`jobs/userNotification.job.ts`)
+
 **Primary Use**: Real-time user notifications across multiple channels
 
 ```typescript
@@ -542,6 +586,7 @@ interface UserNotificationJobData extends BaseJobData {
 ```
 
 **Business Scenarios**:
+
 - Push notifications for mobile apps
 - SMS alerts for critical events
 - In-app notification badges
@@ -549,12 +594,14 @@ interface UserNotificationJobData extends BaseJobData {
 - User activity notifications
 
 **Features**:
+
 - Multi-channel delivery (push, email, SMS)
 - Fallback mechanism for failed channels
 - User preference handling
 - Message templating and localization
 
 ### DATA_EXPORT (`jobs/dataExport.job.ts`)
+
 **Primary Use**: Large dataset exports and report generation
 
 ```typescript
@@ -567,6 +614,7 @@ interface DataExportJobData extends BaseJobData {
 ```
 
 **Business Scenarios**:
+
 - Customer data exports for GDPR compliance
 - Financial reports for accounting
 - Analytics data for business intelligence
@@ -574,12 +622,14 @@ interface DataExportJobData extends BaseJobData {
 - API data transformation
 
 **Features**:
+
 - Multiple export formats (CSV, JSON, Excel)
 - Large dataset handling with pagination
 - Secure file storage and access
 - Progress tracking and notifications
 
 ### FILE_PROCESS (`jobs/fileProcess.job.ts`)
+
 **Primary Use**: File upload processing and transformation
 
 ```typescript
@@ -592,6 +642,7 @@ interface FileProcessJobData extends BaseJobData {
 ```
 
 **Business Scenarios**:
+
 - Image resizing for different device sizes
 - Video compression for streaming
 - Document format conversion
@@ -599,6 +650,7 @@ interface FileProcessJobData extends BaseJobData {
 - Thumbnail generation
 
 **Features**:
+
 - Multiple operations (compress, resize, convert, analyze)
 - Batch file processing
 - File validation and security checks
@@ -610,70 +662,90 @@ interface FileProcessJobData extends BaseJobData {
 
 ```typescript
 // High priority transactional email
-await queueManager.addJob(JobType.EMAIL_SEND, {
-  to: 'customer@example.com',
-  subject: 'Order Confirmation #12345',
-  body: 'Your order has been confirmed and will be shipped soon.',
-  template: 'order_confirmation',
-  variables: { orderNumber: '12345', customerName: 'John Doe' },
-  timestamp: Date.now()
-}, {
-  priority: JobPriority.CRITICAL,
-  attempts: 5
-});
+await queueManager.addJob(
+  JobType.EMAIL_SEND,
+  {
+    to: 'customer@example.com',
+    subject: 'Order Confirmation #12345',
+    body: 'Your order has been confirmed and will be shipped soon.',
+    template: 'order_confirmation',
+    variables: { orderNumber: '12345', customerName: 'John Doe' },
+    timestamp: Date.now()
+  },
+  {
+    priority: JobPriority.CRITICAL,
+    attempts: 5
+  }
+);
 
 // Multi-channel user notification
-await queueManager.addJob(JobType.USER_NOTIFICATION, {
-  userId: 'user_123',
-  title: 'Payment Received',
-  message: 'Your payment of $99.99 has been processed successfully.',
-  type: 'success',
-  channels: ['push', 'email'],
-  timestamp: Date.now()
-}, {
-  priority: JobPriority.HIGH,
-  attempts: 3
-});
+await queueManager.addJob(
+  JobType.USER_NOTIFICATION,
+  {
+    userId: 'user_123',
+    title: 'Payment Received',
+    message: 'Your payment of $99.99 has been processed successfully.',
+    type: 'success',
+    channels: ['push', 'email'],
+    timestamp: Date.now()
+  },
+  {
+    priority: JobPriority.HIGH,
+    attempts: 3
+  }
+);
 
 // Large data export for customer
-await queueManager.addJob(JobType.DATA_EXPORT, {
-  userId: 'customer_456',
-  format: 'csv',
-  filters: { 
-    dateRange: '2024-01-01,2024-12-31', 
-    includeTransactions: true 
+await queueManager.addJob(
+  JobType.DATA_EXPORT,
+  {
+    userId: 'customer_456',
+    format: 'csv',
+    filters: {
+      dateRange: '2024-01-01,2024-12-31',
+      includeTransactions: true
+    },
+    timestamp: Date.now()
   },
-  timestamp: Date.now()
-}, {
-  priority: JobPriority.NORMAL,
-  attempts: 2
-});
+  {
+    priority: JobPriority.NORMAL,
+    attempts: 2
+  }
+);
 
 // File processing after upload
-await queueManager.addJob(JobType.FILE_PROCESS, {
-  fileId: 'upload_789',
-  filePath: '/uploads/user_avatar.jpg',
-  operation: 'resize',
-  options: { width: 200, height: 200, quality: 85 },
-  timestamp: Date.now()
-}, {
-  priority: JobPriority.NORMAL,
-  attempts: 3
-});
+await queueManager.addJob(
+  JobType.FILE_PROCESS,
+  {
+    fileId: 'upload_789',
+    filePath: '/uploads/user_avatar.jpg',
+    operation: 'resize',
+    options: { width: 200, height: 200, quality: 85 },
+    timestamp: Date.now()
+  },
+  {
+    priority: JobPriority.NORMAL,
+    attempts: 3
+  }
+);
 ```
 
 ### System Maintenance (Secondary - Low Priority)
 
 ```typescript
 // For detailed maintenance examples, see jobs/maintenance/README.md
-await queueManager.addJob(JobType.CACHE_WARM, {
-  cacheKey: 'homepage:featured_products',
-  dataSource: 'database:featured_products',
-  ttl: 3600,
-  timestamp: Date.now()
-}, {
-  priority: JobPriority.LOW
-});
+await queueManager.addJob(
+  JobType.CACHE_WARM,
+  {
+    cacheKey: 'homepage:featured_products',
+    dataSource: 'database:featured_products',
+    ttl: 3600,
+    timestamp: Date.now()
+  },
+  {
+    priority: JobPriority.LOW
+  }
+);
 ```
 
 ### Monitoring Jobs
@@ -694,7 +766,7 @@ console.log(`Jobs: ${stats.waiting} waiting, ${stats.active} active`);
 // Pause processing
 await queueManager.pause();
 
-// Resume processing  
+// Resume processing
 await queueManager.resume();
 
 // Clean old jobs
@@ -723,10 +795,10 @@ QUEUE_REMOVE_ON_FAIL=50    # Keep last N failed jobs
 
 ```typescript
 interface JobOptions {
-  priority?: number;     // Job priority (1-20)
-  delay?: number;        // Delay before processing (ms)
-  attempts?: number;     // Max retry attempts
-  jobId?: string;        // Custom job ID
+  priority?: number; // Job priority (1-20)
+  delay?: number; // Delay before processing (ms)
+  attempts?: number; // Max retry attempts
+  jobId?: string; // Custom job ID
   removeOnComplete?: boolean | number;
   removeOnFail?: boolean | number;
 }
@@ -735,6 +807,7 @@ interface JobOptions {
 ## Running the Worker
 
 ### Local Development
+
 ```bash
 # Install dependencies
 pnpm install
@@ -744,6 +817,7 @@ pnpm run worker:queue
 ```
 
 ### Docker Container
+
 ```bash
 # Start all services including worker
 docker-compose up --build
@@ -782,13 +856,16 @@ curl -X POST http://localhost:3001/api/queue/jobs \
 ## Error Handling
 
 ### Worker Error Handling
+
 - Jobs that throw errors are automatically retried
 - Max attempts configurable per job
 - Failed jobs include detailed error information
 - Worker handles Redis connection issues gracefully
 
 ### Graceful Shutdown
+
 The worker process handles shutdown signals properly:
+
 ```bash
 # Graceful shutdown (finishes current jobs)
 docker-compose stop queue-worker
@@ -800,6 +877,7 @@ docker-compose kill queue-worker
 ## Monitoring and Debugging
 
 ### Logs
+
 ```bash
 # Worker logs
 docker-compose logs -f queue-worker
@@ -809,6 +887,7 @@ docker-compose logs -f app
 ```
 
 ### Redis Inspection
+
 ```bash
 # Connect to Redis
 docker-compose exec redis redis-cli
@@ -821,6 +900,7 @@ docker-compose exec redis redis-cli
 ```
 
 ### Queue Statistics
+
 ```bash
 # API endpoint
 curl http://localhost:3001/api/queue/stats
@@ -836,24 +916,28 @@ curl http://localhost:3001/api/queue/stats
 ## Best Practices
 
 ### Job Design
+
 - Keep job data minimal (use IDs, not full objects)
 - Make jobs idempotent (safe to retry)
 - Set appropriate retry limits
 - Use meaningful job IDs for tracking
 
 ### Performance
+
 - Scale workers based on job volume
 - Monitor Redis memory usage
 - Clean old jobs regularly
 - Use job priorities effectively
 
 ### Error Handling
+
 - Log detailed error information
 - Implement job-specific retry logic
 - Monitor failed job patterns
 - Set up alerts for high failure rates
 
 ### Security
+
 - Validate job data thoroughly
 - Use authentication for queue management endpoints
 - Sanitize file paths and user inputs
@@ -868,53 +952,53 @@ Create a new handler file in `src/infraestructure/queue/jobs/business/`:
 
 ```typescript
 // src/infraestructure/queue/jobs/business/myNewJob.job.ts
-import type { FastifyBaseLogger } from 'fastify'
-import type { MyNewJobData, JobResult } from '../../queue.types.js'
+import type { FastifyBaseLogger } from 'fastify';
+import type { MyNewJobData, JobResult } from '../../queue.types.js';
 
 export async function handleMyNewJob(
   data: MyNewJobData,
   jobId: string,
   logger: FastifyBaseLogger
 ): Promise<JobResult> {
-  const startTime = Date.now()
+  const startTime = Date.now();
 
-  logger.info({ jobData: data }, 'Processing my new business job')
+  logger.info({ jobData: data }, 'Processing my new business job');
 
   try {
-    validateJobData(data)
-    const result = await processJob(data, logger)
-    const processingTime = Date.now() - startTime
+    validateJobData(data);
+    const result = await processJob(data, logger);
+    const processingTime = Date.now() - startTime;
 
     return {
       success: true,
       data: result,
       processedAt: Date.now(),
       processingTime
-    }
+    };
   } catch (error) {
-    const processingTime = Date.now() - startTime
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    const processingTime = Date.now() - startTime;
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
-    logger.error({ error, processingTime }, 'Job processing failed')
+    logger.error({ error, processingTime }, 'Job processing failed');
 
     return {
       success: false,
       error: errorMessage,
       processedAt: Date.now(),
       processingTime
-    }
+    };
   }
 }
 
 function validateJobData(data: MyNewJobData): void {
   if (!data.requiredField) {
-    throw new Error('Required field is missing')
+    throw new Error('Required field is missing');
   }
 }
 
 async function processJob(data: MyNewJobData, logger: FastifyBaseLogger): Promise<any> {
   // Add processing logic
-  return { processed: true, timestamp: new Date().toISOString() }
+  return { processed: true, timestamp: new Date().toISOString() };
 }
 ```
 
@@ -925,7 +1009,7 @@ Add the new job type and data interface in `queue.types.ts`:
 ```typescript
 export const JobType = {
   // ... existing types
-  MY_NEW_JOB: 'my:new:job',
+  MY_NEW_JOB: 'my:new:job'
 } as const;
 
 export interface MyNewJobData extends BaseJobData {
@@ -934,7 +1018,7 @@ export interface MyNewJobData extends BaseJobData {
 }
 
 // Update the union type
-export type JobData = 
+export type JobData =
   | EmailJobData
   | UserNotificationJobData
   // ... other types
@@ -950,7 +1034,7 @@ import { handleMyNewJob } from './myNewJob.job.js';
 
 export const JOB_HANDLERS: Record<string, JobHandler> = {
   // ... existing handlers
-  [JobType.MY_NEW_JOB]: handleMyNewJob,
+  [JobType.MY_NEW_JOB]: handleMyNewJob
 } as const;
 
 export { handleMyNewJob } from './business/myNewJob.job.js';
@@ -980,21 +1064,25 @@ curl -X POST http://localhost:3001/api/queue/jobs \
 ### Common Issues
 
 **Jobs not processing:**
+
 - Check worker container status
 - Verify Redis connection
 - Check for worker errors in logs
 
 **High memory usage:**
+
 - Clean old completed/failed jobs
 - Reduce job data size
 - Monitor Redis memory usage
 
 **Jobs failing consistently:**
+
 - Review job handler logic
 - Check for missing dependencies
 - Validate job data structure
 
 **Queue backed up:**
+
 - Scale worker instances
 - Check for blocking operations in handlers
 - Monitor job processing times

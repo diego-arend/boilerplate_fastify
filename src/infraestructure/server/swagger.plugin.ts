@@ -6,10 +6,7 @@ import fastifySwaggerUi from '@fastify/swagger-ui';
  * Swagger documentation plugin
  * Available only in development environment
  */
-export default async function swaggerPlugin(
-  fastify: FastifyInstance,
-  opts: FastifyPluginOptions
-) {
+export default async function swaggerPlugin(fastify: FastifyInstance, opts: FastifyPluginOptions) {
   // Only register Swagger in development
   if (process.env.NODE_ENV !== 'development') {
     fastify.log.info('Swagger not registered - environment is not development');

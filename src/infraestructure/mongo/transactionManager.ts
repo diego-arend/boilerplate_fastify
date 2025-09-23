@@ -98,7 +98,9 @@ export class TransactionManager {
 
     // Check if MongoDB connection supports transactions
     if (!this.supportsTransactions()) {
-      this.logger.warn('MongoDB connection does not support transactions. Running without transaction.');
+      this.logger.warn(
+        'MongoDB connection does not support transactions. Running without transaction.'
+      );
 
       try {
         const result = await operation();
@@ -149,11 +151,14 @@ export class TransactionManager {
       transactionStats.endTime = new Date();
       transactionStats.duration = Date.now() - startTime;
 
-      this.logger.info({
-        transactionId,
-        duration: transactionStats.duration,
-        operations: transactionStats.operations
-      }, 'Transaction committed successfully');
+      this.logger.info(
+        {
+          transactionId,
+          duration: transactionStats.duration,
+          operations: transactionStats.operations
+        },
+        'Transaction committed successfully'
+      );
 
       return {
         success: true,
@@ -161,19 +166,21 @@ export class TransactionManager {
         transactionId,
         executionTime: transactionStats.duration
       };
-
     } catch (error) {
       transactionStats.status = 'aborted';
       transactionStats.error = error instanceof Error ? error : new Error(String(error));
       transactionStats.endTime = new Date();
       transactionStats.duration = Date.now() - startTime;
 
-      this.logger.error({
-        transactionId,
-        error: transactionStats.error,
-        duration: transactionStats.duration,
-        operations: transactionStats.operations
-      }, 'Transaction aborted due to error');
+      this.logger.error(
+        {
+          transactionId,
+          error: transactionStats.error,
+          duration: transactionStats.duration,
+          operations: transactionStats.operations
+        },
+        'Transaction aborted due to error'
+      );
 
       return {
         success: false,
@@ -181,7 +188,6 @@ export class TransactionManager {
         transactionId,
         executionTime: transactionStats.duration
       };
-
     } finally {
       await session.endSession();
 
@@ -199,7 +205,7 @@ export class TransactionManager {
     operations: TransactionalFunction<any>[],
     options: TransactionOptions = {}
   ): Promise<TransactionResult<T[]>> {
-    return this.withTransaction(async (session) => {
+    return this.withTransaction(async session => {
       const results: any[] = [];
 
       for (const operation of operations) {
@@ -234,7 +240,10 @@ export class TransactionManager {
       // The actual transaction will fail gracefully if not supported
       return true;
     } catch (error) {
-      this.logger.warn({ error }, 'Could not determine transaction support, assuming not supported');
+      this.logger.warn(
+        { error },
+        'Could not determine transaction support, assuming not supported'
+      );
       return false;
     }
   }

@@ -21,7 +21,13 @@ export interface ICacheService {
   isReady(): boolean;
 
   // Statistics (optional - can return null for implementations that don't support it)
-  getStats?(): { hits: number; misses: number; sets: number; deletes: number; errors: number } | null;
+  getStats?(): {
+    hits: number;
+    misses: number;
+    sets: number;
+    deletes: number;
+    errors: number;
+  } | null;
   getHitRatio?(): number;
   resetStats?(): void;
 }
@@ -37,7 +43,11 @@ export class RedisCacheService implements ICacheService {
     return this.cacheManager.get<T>(key, options);
   }
 
-  async set<T>(key: string, value: T, options?: { ttl?: number; namespace?: string }): Promise<void> {
+  async set<T>(
+    key: string,
+    value: T,
+    options?: { ttl?: number; namespace?: string }
+  ): Promise<void> {
     return this.cacheManager.set(key, value, options);
   }
 
@@ -115,12 +125,16 @@ export class MemoryCacheService implements ICacheService {
     return item.value as T;
   }
 
-  async set<T>(key: string, value: T, options?: { ttl?: number; namespace?: string }): Promise<void> {
+  async set<T>(
+    key: string,
+    value: T,
+    options?: { ttl?: number; namespace?: string }
+  ): Promise<void> {
     const fullKey = this.buildKey(key, options?.namespace);
     const item: { value: T; expires?: number } = { value };
 
     if (options?.ttl && options.ttl > 0) {
-      item.expires = Date.now() + (options.ttl * 1000);
+      item.expires = Date.now() + options.ttl * 1000;
     }
 
     this.cache.set(fullKey, item);
@@ -159,7 +173,7 @@ export class MemoryCacheService implements ICacheService {
 
     if (!item) return false;
 
-    item.expires = Date.now() + (ttl * 1000);
+    item.expires = Date.now() + ttl * 1000;
     this.cache.set(fullKey, item);
     return true;
   }

@@ -41,16 +41,22 @@ class MongoConnection {
       });
       this.isConnected = true;
 
-      this.logger.info({
-        ...connectionInfo,
-        readyState: mongoose.connection.readyState,
-        connectionId: mongoose.connection.id
-      }, 'Successfully connected to MongoDB');
+      this.logger.info(
+        {
+          ...connectionInfo,
+          readyState: mongoose.connection.readyState,
+          connectionId: mongoose.connection.id
+        },
+        'Successfully connected to MongoDB'
+      );
     } catch (error) {
-      this.logger.error({
-        ...connectionInfo,
-        error: error instanceof Error ? error : new Error(String(error))
-      }, 'Failed to connect to MongoDB');
+      this.logger.error(
+        {
+          ...connectionInfo,
+          error: error instanceof Error ? error : new Error(String(error))
+        },
+        'Failed to connect to MongoDB'
+      );
       throw error;
     }
   }
@@ -68,9 +74,12 @@ class MongoConnection {
       this.isConnected = false;
       this.logger.info('Successfully disconnected from MongoDB');
     } catch (error) {
-      this.logger.error({
-        error: error instanceof Error ? error : new Error(String(error))
-      }, 'Error disconnecting from MongoDB');
+      this.logger.error(
+        {
+          error: error instanceof Error ? error : new Error(String(error))
+        },
+        'Error disconnecting from MongoDB'
+      );
       throw error;
     }
   }

@@ -82,25 +82,32 @@ async function transactionPlugin(
 
         // Inicia nova transação
         const transactionManager = TransactionManager.getInstance();
-        const session = await transactionManager.startTransaction(transactionOptions as TransactionOptions);
+        const session = await transactionManager.startTransaction(
+          transactionOptions as TransactionOptions
+        );
 
         request.mongoSession = session;
         request.transactionId = session.id?.toString();
 
         if (enableLogging) {
-          fastify.log.info({
-            transactionId: request.transactionId,
-            method: request.method,
-            url: request.url
-          }, 'Transaction started for route');
+          fastify.log.info(
+            {
+              transactionId: request.transactionId,
+              method: request.method,
+              url: request.url
+            },
+            'Transaction started for route'
+          );
         }
-
       } catch (error) {
-        fastify.log.error({
-          method: request.method,
-          url: request.url,
-          error: error instanceof Error ? error.message : String(error)
-        }, 'Failed to start transaction');
+        fastify.log.error(
+          {
+            method: request.method,
+            url: request.url,
+            error: error instanceof Error ? error.message : String(error)
+          },
+          'Failed to start transaction'
+        );
 
         throw error;
       }
@@ -124,12 +131,15 @@ async function transactionPlugin(
           await transactionManager.rollbackTransaction(request.mongoSession);
 
           if (enableLogging) {
-            fastify.log.warn({
-              transactionId: request.transactionId,
-              statusCode: reply.statusCode,
-              method: request.method,
-              url: request.url
-            }, 'Transaction rolled back due to status code');
+            fastify.log.warn(
+              {
+                transactionId: request.transactionId,
+                statusCode: reply.statusCode,
+                method: request.method,
+                url: request.url
+              },
+              'Transaction rolled back due to status code'
+            );
           }
         } else {
           // Commit da transação
@@ -137,32 +147,41 @@ async function transactionPlugin(
           await transactionManager.commitTransaction(request.mongoSession);
 
           if (enableLogging) {
-            fastify.log.info({
-              transactionId: request.transactionId,
-              statusCode: reply.statusCode,
-              method: request.method,
-              url: request.url
-            }, 'Transaction committed successfully');
+            fastify.log.info(
+              {
+                transactionId: request.transactionId,
+                statusCode: reply.statusCode,
+                method: request.method,
+                url: request.url
+              },
+              'Transaction committed successfully'
+            );
           }
         }
-
       } catch (error) {
-        fastify.log.error({
-          transactionId: request.transactionId,
-          method: request.method,
-          url: request.url,
-          error: error instanceof Error ? error.message : String(error)
-        }, 'Error during transaction finalization');
+        fastify.log.error(
+          {
+            transactionId: request.transactionId,
+            method: request.method,
+            url: request.url,
+            error: error instanceof Error ? error.message : String(error)
+          },
+          'Error during transaction finalization'
+        );
 
         // Tenta fazer rollback em caso de erro
         try {
           const transactionManager = TransactionManager.getInstance();
           await transactionManager.rollbackTransaction(request.mongoSession);
         } catch (rollbackError) {
-          fastify.log.error({
-            transactionId: request.transactionId,
-            rollbackError: rollbackError instanceof Error ? rollbackError.message : String(rollbackError)
-          }, 'Failed to rollback transaction after error');
+          fastify.log.error(
+            {
+              transactionId: request.transactionId,
+              rollbackError:
+                rollbackError instanceof Error ? rollbackError.message : String(rollbackError)
+            },
+            'Failed to rollback transaction after error'
+          );
         }
       } finally {
         // Limpa a sessão do request
@@ -180,20 +199,26 @@ async function transactionPlugin(
         await transactionManager.rollbackTransaction(request.mongoSession);
 
         if (enableLogging) {
-          fastify.log.info({
-            transactionId: request.transactionId,
-            method: request.method,
-            url: request.url,
-            error: error.message
-          }, 'Transaction rolled back due to error');
+          fastify.log.info(
+            {
+              transactionId: request.transactionId,
+              method: request.method,
+              url: request.url,
+              error: error.message
+            },
+            'Transaction rolled back due to error'
+          );
         }
-
       } catch (rollbackError) {
-        fastify.log.error({
-          transactionId: request.transactionId,
-          rollbackError: rollbackError instanceof Error ? rollbackError.message : String(rollbackError),
-          originalError: error.message
-        }, 'Failed to rollback transaction after error');
+        fastify.log.error(
+          {
+            transactionId: request.transactionId,
+            rollbackError:
+              rollbackError instanceof Error ? rollbackError.message : String(rollbackError),
+            originalError: error.message
+          },
+          'Failed to rollback transaction after error'
+        );
       } finally {
         // Limpa a sessão do request
         request.mongoSession = undefined;

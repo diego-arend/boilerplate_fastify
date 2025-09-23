@@ -8,7 +8,13 @@ export class ApiResponseHandler {
   /**
    * Standard API response structure
    */
-  private static createResponse(success: boolean, code: number, message: string, data?: any, error?: string) {
+  private static createResponse(
+    success: boolean,
+    code: number,
+    message: string,
+    data?: any,
+    error?: string
+  ) {
     const response: any = {
       success,
       message,
@@ -29,7 +35,12 @@ export class ApiResponseHandler {
   /**
    * Success response (200-299)
    */
-  static success(reply: FastifyReply, message: string = 'Operation completed successfully', data?: any, code: number = 200) {
+  static success(
+    reply: FastifyReply,
+    message: string = 'Operation completed successfully',
+    data?: any,
+    code: number = 200
+  ) {
     const response = this.createResponse(true, code, message, data);
     return reply.code(code).send(response);
   }
@@ -37,7 +48,11 @@ export class ApiResponseHandler {
   /**
    * Successful creation response (201)
    */
-  static created(reply: FastifyReply, message: string = 'Resource created successfully', data?: any) {
+  static created(
+    reply: FastifyReply,
+    message: string = 'Resource created successfully',
+    data?: any
+  ) {
     return this.success(reply, message, data, 201);
   }
 
@@ -116,7 +131,10 @@ export class ApiResponseHandler {
   /**
    * Service unavailable (503)
    */
-  static serviceUnavailable(reply: FastifyReply, message: string = 'Service temporarily unavailable') {
+  static serviceUnavailable(
+    reply: FastifyReply,
+    message: string = 'Service temporarily unavailable'
+  ) {
     const response = this.createResponse(false, 503, message, undefined, 'SERVICE_UNAVAILABLE');
     return reply.code(503).send(response);
   }
@@ -124,7 +142,14 @@ export class ApiResponseHandler {
   /**
    * Custom response
    */
-  static custom(reply: FastifyReply, success: boolean, code: number, message: string, data?: any, error?: string) {
+  static custom(
+    reply: FastifyReply,
+    success: boolean,
+    code: number,
+    message: string,
+    data?: any,
+    error?: string
+  ) {
     const response = this.createResponse(success, code, message, data, error);
     return reply.code(code).send(response);
   }
@@ -132,7 +157,14 @@ export class ApiResponseHandler {
   /**
    * Paginated response
    */
-  static paginated(reply: FastifyReply, data: any[], total: number, page: number, limit: number, message: string = 'Data returned successfully') {
+  static paginated(
+    reply: FastifyReply,
+    data: any[],
+    total: number,
+    page: number,
+    limit: number,
+    message: string = 'Data returned successfully'
+  ) {
     const pagination = {
       total,
       page,

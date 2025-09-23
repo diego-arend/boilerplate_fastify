@@ -5,13 +5,15 @@ This module implements complete JWT authentication using **dependency injection 
 ## 🏗️ Architecture
 
 ### **New Dependency Injection Pattern**
+
 - **AuthRepository** receives `IUserRepository` via constructor injection
-- **UserRepository** receives `IBaseRepository` via constructor injection  
+- **UserRepository** receives `IBaseRepository` via constructor injection
 - **Zero inheritance** - uses composition instead
 - **Interface-based contracts** for type safety
 - **Factory pattern** for clean instantiation
 
 ### Main Features
+
 - User registration with password hashing
 - JWT login with secure password comparison
 - Protected routes with authentication middleware
@@ -21,6 +23,7 @@ This module implements complete JWT authentication using **dependency injection 
 - Protection against injection attacks
 
 ### File Structure
+
 ```
 auth/
 ├── auth.controller.ts        # Routes and business logic (uses AuthRepositoryFactory)
@@ -32,7 +35,7 @@ auth/
 │   └── index.ts
 ├── services/                # Business logic services
 │   ├── password.service.ts  # Password hashing and validation
-│   ├── strategy.ts         # JWT authentication strategy  
+│   ├── strategy.ts         # JWT authentication strategy
 │   ├── command.ts          # Authentication commands
 │   └── index.ts            # Services exports
 └── types/                   # TypeScript types
@@ -42,6 +45,7 @@ auth/
 ## 🔧 Dependency Injection Usage
 
 ### Factory Pattern (Recommended)
+
 ```typescript
 import { AuthRepositoryFactory } from './factory/auth.factory.js';
 
@@ -54,6 +58,7 @@ await authRepository.createUser(userData);
 ```
 
 ### Manual Injection (For custom scenarios)
+
 ```typescript
 import { BaseRepository, UserRepository, AuthRepository } from '../../../index.js';
 import { UserModel } from '../../../entities/user/userEntity.js';
@@ -65,13 +70,14 @@ const authRepository = new AuthRepository(userRepository);
 ```
 
 ### Testing with Mocks
+
 ```typescript
 import { AuthRepositoryFactory } from './factory/auth.factory.js';
 
 // Mock UserRepository for testing
 const mockUserRepository = {
   findUserByEmail: jest.fn(),
-  createUser: jest.fn(),
+  createUser: jest.fn()
   // ... other methods
 };
 
@@ -109,32 +115,38 @@ fastify.get('/protected', {
 ### 2. Multiple Protection Methods
 
 #### Method A: Single Route Protection
+
 ```typescript
 // Protect individual routes
-fastify.get('/profile', {
-  preHandler: fastify.authenticate,
-  schema: {
-    description: 'Get user profile',
-    tags: ['User'],
-    security: [{ bearerAuth: [] }]
+fastify.get(
+  '/profile',
+  {
+    preHandler: fastify.authenticate,
+    schema: {
+      description: 'Get user profile',
+      tags: ['User'],
+      security: [{ bearerAuth: [] }]
+    }
+  },
+  async (request, reply) => {
+    const user = request.authenticatedUser;
+    return { user };
   }
-}, async (request, reply) => {
-  const user = request.authenticatedUser;
-  return { user };
-});
+);
 ```
 
 #### Method B: Route Group Protection
+
 ```typescript
 // Protect multiple routes at once
 fastify.register(async function protectedRoutes(fastify) {
   // All routes in this context will be protected
   fastify.addHook('preHandler', fastify.authenticate);
-  
+
   fastify.get('/dashboard', async (request, reply) => {
     return { data: 'Protected dashboard data' };
   });
-  
+
   fastify.get('/settings', async (request, reply) => {
     return { settings: 'User settings' };
   });
@@ -142,12 +154,13 @@ fastify.register(async function protectedRoutes(fastify) {
 ```
 
 #### Method C: Plugin-Level Protection
+
 ```typescript
 // Create protected plugin
 async function protectedPlugin(fastify: FastifyInstance) {
   // Authenticate all routes in this plugin
   fastify.addHook('preHandler', fastify.authenticate);
-  
+
   await fastify.register(userRoutes, { prefix: '/user' });
   await fastify.register(adminRoutes, { prefix: '/admin' });
 }
@@ -161,6 +174,7 @@ fastify.register(protectedPlugin, { prefix: '/api/v1' });
 The auth plugin provides built-in RBAC decorators for different access levels:
 
 #### Available RBAC Decorators:
+
 - `fastify.requireAdmin` - Requires admin role
 - `fastify.requireRole(role)` - Requires specific role
 - `fastify.requireRoles(roles[])` - Requires any of the specified roles
@@ -169,32 +183,44 @@ The auth plugin provides built-in RBAC decorators for different access levels:
 
 ```typescript
 // Admin only route
-fastify.get('/admin/dashboard', {
-  preHandler: [fastify.authenticate, fastify.requireAdmin]
-}, async (request, reply) => {
-  // Only admin users can access this
-  const user = request.authenticatedUser!;
-  return { 
-    message: `Welcome admin ${user.name}!`,
-    adminData: await getAdminDashboard()
-  };
-});
+fastify.get(
+  '/admin/dashboard',
+  {
+    preHandler: [fastify.authenticate, fastify.requireAdmin]
+  },
+  async (request, reply) => {
+    // Only admin users can access this
+    const user = request.authenticatedUser!;
+    return {
+      message: `Welcome admin ${user.name}!`,
+      adminData: await getAdminDashboard()
+    };
+  }
+);
 
 // Specific role required
-fastify.get('/moderation/panel', {
-  preHandler: [fastify.authenticate, fastify.requireRole('moderator')]
-}, async (request, reply) => {
-  // Only moderators can access
-  return { moderationItems: await getModerationQueue() };
-});
+fastify.get(
+  '/moderation/panel',
+  {
+    preHandler: [fastify.authenticate, fastify.requireRole('moderator')]
+  },
+  async (request, reply) => {
+    // Only moderators can access
+    return { moderationItems: await getModerationQueue() };
+  }
+);
 
 // Multiple roles accepted
-fastify.get('/reports/financial', {
-  preHandler: [fastify.authenticate, fastify.requireRoles(['manager', 'admin'])]
-}, async (request, reply) => {
-  // Managers or admins can access
-  return { reports: await getFinancialReports() };
-});
+fastify.get(
+  '/reports/financial',
+  {
+    preHandler: [fastify.authenticate, fastify.requireRoles(['manager', 'admin'])]
+  },
+  async (request, reply) => {
+    // Managers or admins can access
+    return { reports: await getFinancialReports() };
+  }
+);
 ```
 
 #### RBAC Error Responses:
@@ -208,7 +234,7 @@ fastify.get('/reports/financial', {
 
 // 403 - Insufficient role
 {
-  "error": "Insufficient permissions", 
+  "error": "Insufficient permissions",
   "message": "Admin role required",
   "requiredRole": "admin",
   "userRole": "user"
@@ -217,7 +243,7 @@ fastify.get('/reports/financial', {
 // 403 - Role not in allowed list
 {
   "error": "Insufficient permissions",
-  "message": "Required roles: manager, admin", 
+  "message": "Required roles: manager, admin",
   "requiredRoles": ["manager", "admin"],
   "userRole": "user"
 }
@@ -229,49 +255,65 @@ fastify.get('/reports/financial', {
 // admin.controller.ts - Full RBAC implementation
 export default async function adminController(fastify: FastifyInstance) {
   // Admin dashboard - admin only
-  fastify.get('/admin/dashboard', {
-    preHandler: [fastify.authenticate, fastify.requireAdmin]
-  }, async (request, reply) => {
-    const user = request.authenticatedUser!;
-    return {
-      message: 'Admin dashboard access granted',
-      user: { id: user.id, name: user.name, role: user.role },
-      timestamp: new Date().toISOString()
-    };
-  });
+  fastify.get(
+    '/admin/dashboard',
+    {
+      preHandler: [fastify.authenticate, fastify.requireAdmin]
+    },
+    async (request, reply) => {
+      const user = request.authenticatedUser!;
+      return {
+        message: 'Admin dashboard access granted',
+        user: { id: user.id, name: user.name, role: user.role },
+        timestamp: new Date().toISOString()
+      };
+    }
+  );
 
-  // User management - admin only  
-  fastify.get('/admin/users', {
-    preHandler: [fastify.authenticate, fastify.requireAdmin]
-  }, async (request, reply) => {
-    return {
-      message: 'User management access granted',
-      users: await getAllUsers(), // Implementation depends on your repository
-      total: await getUserCount()
-    };
-  });
+  // User management - admin only
+  fastify.get(
+    '/admin/users',
+    {
+      preHandler: [fastify.authenticate, fastify.requireAdmin]
+    },
+    async (request, reply) => {
+      return {
+        message: 'User management access granted',
+        users: await getAllUsers(), // Implementation depends on your repository
+        total: await getUserCount()
+      };
+    }
+  );
 
   // Reports - multiple roles
-  fastify.get('/admin/reports', {
-    preHandler: [fastify.authenticate, fastify.requireRoles(['manager', 'admin'])]
-  }, async (request, reply) => {
-    const user = request.authenticatedUser!;
-    return {
-      message: 'Reports access granted',
-      userRole: user.role,
-      reports: await getReports(user.role)
-    };
-  });
+  fastify.get(
+    '/admin/reports',
+    {
+      preHandler: [fastify.authenticate, fastify.requireRoles(['manager', 'admin'])]
+    },
+    async (request, reply) => {
+      const user = request.authenticatedUser!;
+      return {
+        message: 'Reports access granted',
+        userRole: user.role,
+        reports: await getReports(user.role)
+      };
+    }
+  );
 
   // Moderation - specific role
-  fastify.get('/admin/moderation', {
-    preHandler: [fastify.authenticate, fastify.requireRole('moderator')]
-  }, async (request, reply) => {
-    return {
-      message: 'Moderation panel access granted',
-      pendingItems: await getModerationQueue()
-    };
-  });
+  fastify.get(
+    '/admin/moderation',
+    {
+      preHandler: [fastify.authenticate, fastify.requireRole('moderator')]
+    },
+    async (request, reply) => {
+      return {
+        message: 'Moderation panel access granted',
+        pendingItems: await getModerationQueue()
+      };
+    }
+  );
 }
 ```
 
@@ -282,7 +324,7 @@ export default async function adminController(fastify: FastifyInstance) {
 curl -H "Authorization: Bearer ADMIN_TOKEN" \
   http://localhost:3001/admin/dashboard
 
-# Test user access (should fail with 403)  
+# Test user access (should fail with 403)
 curl -H "Authorization: Bearer USER_TOKEN" \
   http://localhost:3001/admin/dashboard
 
@@ -293,46 +335,55 @@ curl -H "Authorization: Bearer USER_TOKEN" \
 #### RBAC Best Practices:
 
 1. **Always combine with authentication:**
+
 ```typescript
 // ✅ Correct - authenticate first, then check role
-preHandler: [fastify.authenticate, fastify.requireAdmin]
+preHandler: [fastify.authenticate, fastify.requireAdmin];
 
 // ❌ Wrong - role check without authentication
-preHandler: fastify.requireAdmin
+preHandler: fastify.requireAdmin;
 ```
 
 2. **Use appropriate RBAC decorator:**
+
 ```typescript
 // ✅ For single role requirement
-preHandler: [fastify.authenticate, fastify.requireRole('manager')]
+preHandler: [fastify.authenticate, fastify.requireRole('manager')];
 
 // ✅ For admin-only routes
-preHandler: [fastify.authenticate, fastify.requireAdmin]
+preHandler: [fastify.authenticate, fastify.requireAdmin];
 
 // ✅ For multiple acceptable roles
-preHandler: [fastify.authenticate, fastify.requireRoles(['admin', 'supervisor'])]
+preHandler: [fastify.authenticate, fastify.requireRoles(['admin', 'supervisor'])];
 ```
 
 3. **Document required roles in API schemas:**
+
 ```typescript
-fastify.get('/admin/users', {
-  preHandler: [fastify.authenticate, fastify.requireAdmin],
-  schema: {
-    description: 'List all users - Admin only',
-    tags: ['Admin'],
-    security: [{ bearerAuth: [] }],
-    response: {
-      200: { /* response schema */ },
-      403: {
-        type: 'object',
-        properties: {
-          error: { type: 'string' },
-          message: { type: 'string' }
+fastify.get(
+  '/admin/users',
+  {
+    preHandler: [fastify.authenticate, fastify.requireAdmin],
+    schema: {
+      description: 'List all users - Admin only',
+      tags: ['Admin'],
+      security: [{ bearerAuth: [] }],
+      response: {
+        200: {
+          /* response schema */
+        },
+        403: {
+          type: 'object',
+          properties: {
+            error: { type: 'string' },
+            message: { type: 'string' }
+          }
         }
       }
     }
-  }
-}, handler);
+  },
+  handler
+);
 ```
 
 ### 4. Custom Authentication Middleware
@@ -342,25 +393,29 @@ fastify.get('/admin/users', {
 const customAuthMiddleware = async (request: FastifyRequest, reply: FastifyReply) => {
   // First, authenticate the user
   await fastify.authenticate(request, reply);
-  
+
   const user = request.authenticatedUser;
-  
+
   // Additional custom validations
   if (user.status !== 'active') {
     return reply.code(403).send({ error: 'Account suspended' });
   }
-  
+
   if (!user.emailVerified) {
     return reply.code(403).send({ error: 'Email not verified' });
   }
 };
 
 // Use custom middleware
-fastify.get('/sensitive-data', {
-  preHandler: customAuthMiddleware
-}, async (request, reply) => {
-  return { sensitiveData: 'Only for active, verified users' };
-});
+fastify.get(
+  '/sensitive-data',
+  {
+    preHandler: customAuthMiddleware
+  },
+  async (request, reply) => {
+    return { sensitiveData: 'Only for active, verified users' };
+  }
+);
 ```
 
 ### 5. Authentication Headers
@@ -388,14 +443,14 @@ fastify.setErrorHandler((error, request, reply) => {
       message: 'Please provide a valid JWT token'
     });
   }
-  
+
   if (error.statusCode === 403) {
     return reply.code(403).send({
       error: 'Access denied',
       message: 'Insufficient permissions for this resource'
     });
   }
-  
+
   // Handle other errors...
   reply.send(error);
 });
@@ -423,6 +478,7 @@ declare module 'fastify' {
 ## 🔐 Authentication Flow
 
 ### 1. User Registration
+
 ```http
 POST /auth/register
 Content-Type: application/json
@@ -435,6 +491,7 @@ Content-Type: application/json
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -453,17 +510,19 @@ Content-Type: application/json
 ```
 
 ### 2. User Login
+
 ```http
 POST /auth/login
 Content-Type: application/json
 
 {
-  "email": "john@example.com", 
+  "email": "john@example.com",
   "password": "SecurePass123!"
 }
 ```
 
 ### 3. Access Protected Routes
+
 ```http
 GET /auth/me
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
@@ -478,7 +537,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 export default async function apiRoutes(fastify: FastifyInstance) {
   // Protect all API routes
   fastify.addHook('preHandler', fastify.authenticate);
-  
+
   fastify.get('/dashboard', async (request, reply) => {
     const user = request.authenticatedUser!;
     return {
@@ -487,7 +546,7 @@ export default async function apiRoutes(fastify: FastifyInstance) {
       lastLogin: new Date()
     };
   });
-  
+
   fastify.get('/profile', async (request, reply) => {
     const user = request.authenticatedUser!;
     return {
@@ -508,17 +567,21 @@ export default async function mixedRoutes(fastify: FastifyInstance) {
   fastify.get('/public-info', async (request, reply) => {
     return { message: 'This is public information' };
   });
-  
+
   // Protected route - authentication required
-  fastify.get('/private-info', {
-    preHandler: fastify.authenticate
-  }, async (request, reply) => {
-    const user = request.authenticatedUser!;
-    return { 
-      message: 'This is private information',
-      userId: user.id 
-    };
-  });
+  fastify.get(
+    '/private-info',
+    {
+      preHandler: fastify.authenticate
+    },
+    async (request, reply) => {
+      const user = request.authenticatedUser!;
+      return {
+        message: 'This is private information',
+        userId: user.id
+      };
+    }
+  );
 }
 ```
 
@@ -527,31 +590,43 @@ export default async function mixedRoutes(fastify: FastifyInstance) {
 ```typescript
 export default async function rbacRoutes(fastify: FastifyInstance) {
   // Admin-only route
-  fastify.get('/admin/settings', {
-    preHandler: [fastify.authenticate, fastify.requireAdmin]
-  }, async (request, reply) => {
-    return { settings: await getSystemSettings() };
-  });
-  
+  fastify.get(
+    '/admin/settings',
+    {
+      preHandler: [fastify.authenticate, fastify.requireAdmin]
+    },
+    async (request, reply) => {
+      return { settings: await getSystemSettings() };
+    }
+  );
+
   // Multi-role route
-  fastify.get('/reports/sales', {
-    preHandler: [fastify.authenticate, fastify.requireRoles(['manager', 'admin', 'analyst'])]
-  }, async (request, reply) => {
-    const user = request.authenticatedUser!;
-    return { 
-      reports: await getSalesReports(user.role),
-      accessLevel: user.role 
-    };
-  });
-  
-  // Role-specific route  
-  fastify.post('/content/moderate', {
-    preHandler: [fastify.authenticate, fastify.requireRole('moderator')]
-  }, async (request, reply) => {
-    const { contentId, action } = request.body as { contentId: string, action: string };
-    await moderateContent(contentId, action);
-    return { message: 'Content moderated successfully' };
-  });
+  fastify.get(
+    '/reports/sales',
+    {
+      preHandler: [fastify.authenticate, fastify.requireRoles(['manager', 'admin', 'analyst'])]
+    },
+    async (request, reply) => {
+      const user = request.authenticatedUser!;
+      return {
+        reports: await getSalesReports(user.role),
+        accessLevel: user.role
+      };
+    }
+  );
+
+  // Role-specific route
+  fastify.post(
+    '/content/moderate',
+    {
+      preHandler: [fastify.authenticate, fastify.requireRole('moderator')]
+    },
+    async (request, reply) => {
+      const { contentId, action } = request.body as { contentId: string; action: string };
+      await moderateContent(contentId, action);
+      return { message: 'Content moderated successfully' };
+    }
+  );
 }
 ```
 
@@ -561,35 +636,39 @@ export default async function rbacRoutes(fastify: FastifyInstance) {
 // Custom middleware with conditional role checking
 const conditionalRoleCheck = async (request: FastifyRequest, reply: FastifyReply) => {
   await fastify.authenticate(request, reply);
-  
+
   const user = request.authenticatedUser!;
   const { resourceId } = request.params as { resourceId: string };
-  
+
   // Admin can access everything
   if (user.role === 'admin') return;
-  
+
   // Users can only access their own resources
   if (user.role === 'user') {
     const resource = await getResource(resourceId);
     if (resource.ownerId !== user.id) {
-      return reply.code(403).send({ 
+      return reply.code(403).send({
         error: 'Access denied',
         message: 'You can only access your own resources'
       });
     }
     return;
   }
-  
+
   // Other roles denied
   return reply.code(403).send({ error: 'Insufficient permissions' });
 };
 
-fastify.get('/resources/:resourceId', {
-  preHandler: conditionalRoleCheck
-}, async (request, reply) => {
-  const { resourceId } = request.params as { resourceId: string };
-  return { resource: await getResource(resourceId) };
-});
+fastify.get(
+  '/resources/:resourceId',
+  {
+    preHandler: conditionalRoleCheck
+  },
+  async (request, reply) => {
+    const { resourceId } = request.params as { resourceId: string };
+    return { resource: await getResource(resourceId) };
+  }
+);
 ```
 
 ## 🛠️ Advanced Configuration
@@ -602,7 +681,7 @@ import { JwtStrategy } from './services/index.js';
 
 export default async function customAuthPlugin(fastify: FastifyInstance) {
   const customStrategy = new JwtStrategy(process.env.CUSTOM_JWT_SECRET!);
-  
+
   fastify.decorate('customAuthenticate', async (request, reply) => {
     const user = await customStrategy.authenticate(request, reply);
     if (!user) {
@@ -622,45 +701,57 @@ export default async function authWithRateLimit(fastify: FastifyInstance) {
   await fastify.register(import('@fastify/rate-limit'), {
     max: 5, // 5 attempts
     timeWindow: '1 minute',
-    keyGenerator: (request) => request.ip
+    keyGenerator: request => request.ip
   });
-  
-  fastify.post('/auth/login', {
-    preHandler: fastify.rateLimit()
-  }, async (request, reply) => {
-    // Login logic with rate limiting
-  });
+
+  fastify.post(
+    '/auth/login',
+    {
+      preHandler: fastify.rateLimit()
+    },
+    async (request, reply) => {
+      // Login logic with rate limiting
+    }
+  );
 }
 ```
 
 ### Main Components
 
 #### AuthController
+
 Manages authentication routes:
+
 - `POST /auth/register` - User registration with password hashing
 - `POST /auth/login` - User login with bcrypt verification
 - `GET /auth/me` - Authenticated user data (protected)
 
-#### AuthPlugin  
+#### AuthPlugin
+
 Fastify plugin that:
+
 - Registers JWT authentication middleware
 - Validates JWT tokens using JwtStrategy
 - Provides `fastify.authenticate` decorator
 - Manages user sessions and token verification
 
 #### AuthRepository
+
 Persistence layer responsible for:
+
 - User CRUD operations with password hashing
 - Search by email and ID with validation
 - Uniqueness validations using Zod schemas
 - Status and role control
 
 #### Services
+
 - **PasswordService**: Secure bcrypt password hashing and comparison
 - **JwtStrategy**: JWT token validation and user authentication
 - **AuthenticateCommand**: Command pattern for authentication operations
 
 ### Security Features
+
 - **Password Hashing**: bcrypt with 12 salt rounds
 - **Input Validation**: Zod schemas with sanitization
 - **Injection Protection**: XSS, NoSQL injection, path traversal prevention
@@ -669,11 +760,13 @@ Persistence layer responsible for:
 - **Role-Based Access**: User/admin role separation
 
 ## Integration
+
 The module is integrated into the system through the main `modules.ts` and uses global database configurations and environment validation.
 
 ## 🧪 Testing Protected Routes (Including RBAC)
 
 ### Using HTTP Client (VS Code REST Client)
+
 ```http
 ### 1. Register a new user (default role: user)
 POST http://localhost:3001/auth/register
@@ -681,7 +774,7 @@ Content-Type: application/json
 
 {
   "name": "Regular User",
-  "email": "user@example.com", 
+  "email": "user@example.com",
   "password": "SecurePass123!"
 }
 
@@ -691,7 +784,7 @@ Content-Type: application/json
 
 {
   "name": "Admin User",
-  "email": "admin@example.com", 
+  "email": "admin@example.com",
   "password": "AdminPass123!"
 }
 
@@ -700,7 +793,7 @@ POST http://localhost:3001/auth/login
 Content-Type: application/json
 
 {
-  "email": "user@example.com", 
+  "email": "user@example.com",
   "password": "SecurePass123!"
 }
 # Save response token as {{userToken}}
@@ -710,7 +803,7 @@ POST http://localhost:3001/auth/login
 Content-Type: application/json
 
 {
-  "email": "admin@example.com", 
+  "email": "admin@example.com",
   "password": "AdminPass123!"
 }
 # Save response token as {{adminToken}}
@@ -741,6 +834,7 @@ Authorization: Bearer {{adminToken}}
 ```
 
 ### Using cURL with RBAC Testing
+
 ```bash
 # Register and login user
 curl -X POST http://localhost:3001/auth/register \
@@ -752,7 +846,7 @@ USER_TOKEN=$(curl -s -X POST http://localhost:3001/auth/login \
   -d '{"email":"user@test.com","password":"SecurePass123!"}' | \
   jq -r '.data.token')
 
-# Register and login admin  
+# Register and login admin
 curl -X POST http://localhost:3001/auth/register \
   -H "Content-Type: application/json" \
   -d '{"name":"Admin User","email":"admin@test.com","password":"AdminPass123!"}'
@@ -781,19 +875,20 @@ echo "=== Testing role-specific route ==="
 curl -H "Authorization: Bearer $ADMIN_TOKEN" http://localhost:3001/admin/moderation
 
 # Test multi-role routes
-echo "=== Testing multi-role route ==="  
+echo "=== Testing multi-role route ==="
 curl -H "Authorization: Bearer $ADMIN_TOKEN" http://localhost:3001/admin/reports
 ```
 
 ### RBAC Test Results Expected:
 
 #### ✅ Successful RBAC Response (Admin accessing admin route):
+
 ```json
 {
   "message": "Admin dashboard access granted",
   "user": {
     "id": "64f8a1b2c3d4e5f6g7h8i9j0",
-    "name": "Admin User", 
+    "name": "Admin User",
     "role": "admin"
   },
   "timestamp": "2025-09-20T10:30:45.123Z"
@@ -801,6 +896,7 @@ curl -H "Authorization: Bearer $ADMIN_TOKEN" http://localhost:3001/admin/reports
 ```
 
 #### ❌ Failed RBAC Response (User trying to access admin route):
+
 ```json
 {
   "error": "Insufficient permissions",
@@ -811,9 +907,10 @@ curl -H "Authorization: Bearer $ADMIN_TOKEN" http://localhost:3001/admin/reports
 ```
 
 #### ❌ Failed Role-Specific Response (Wrong role):
+
 ```json
 {
-  "error": "Insufficient permissions", 
+  "error": "Insufficient permissions",
   "message": "Required role: moderator",
   "requiredRole": "moderator",
   "userRole": "user"
@@ -821,6 +918,7 @@ curl -H "Authorization: Bearer $ADMIN_TOKEN" http://localhost:3001/admin/reports
 ```
 
 #### ❌ Failed Multi-Role Response:
+
 ```json
 {
   "error": "Insufficient permissions",
@@ -833,9 +931,11 @@ curl -H "Authorization: Bearer $ADMIN_TOKEN" http://localhost:3001/admin/reports
 ## 🚨 Common Issues and Troubleshooting
 
 ### Issue 1: "Authentication required" Error
+
 **Problem:** `401 Unauthorized` when accessing protected routes
 
 **Solutions:**
+
 ```typescript
 // Check if token is being sent correctly
 const authHeader = request.headers['authorization'];
@@ -847,10 +947,12 @@ if (!authHeader?.startsWith('Bearer ')) {
 }
 ```
 
-### Issue 2: "Invalid token" Error  
+### Issue 2: "Invalid token" Error
+
 **Problem:** JWT token is malformed or expired
 
 **Solutions:**
+
 ```typescript
 // Check token expiration
 import jwt from 'jsonwebtoken';
@@ -863,9 +965,11 @@ try {
 ```
 
 ### Issue 3: User Object Not Available
+
 **Problem:** `request.authenticatedUser` is undefined
 
 **Solution:**
+
 ```typescript
 // Ensure proper TypeScript types
 declare module 'fastify' {
@@ -884,22 +988,28 @@ if (!user) {
 ```
 
 ### Issue 4: RBAC Permission Denied
+
 **Problem:** `403 Forbidden` when user should have access
 
 **Debugging Steps:**
+
 ```typescript
 // Debug user role in route handler
-fastify.get('/debug-role', {
-  preHandler: fastify.authenticate
-}, async (request, reply) => {
-  const user = request.authenticatedUser!;
-  return {
-    userId: user.id,
-    userName: user.name,
-    userRole: user.role, // Check if this matches expected role
-    timestamp: new Date()
-  };
-});
+fastify.get(
+  '/debug-role',
+  {
+    preHandler: fastify.authenticate
+  },
+  async (request, reply) => {
+    const user = request.authenticatedUser!;
+    return {
+      userId: user.id,
+      userName: user.name,
+      userRole: user.role, // Check if this matches expected role
+      timestamp: new Date()
+    };
+  }
+);
 
 // Debug RBAC decorator
 fastify.decorate('debugRequireAdmin', async (request: FastifyRequest, reply: FastifyReply) => {
@@ -907,7 +1017,7 @@ fastify.decorate('debugRequireAdmin', async (request: FastifyRequest, reply: Fas
   console.log('User:', request.authenticatedUser);
   console.log('Role:', request.authenticatedUser?.role);
   console.log('Is Admin:', request.authenticatedUser?.role === 'admin');
-  
+
   if (request.authenticatedUser?.role !== 'admin') {
     console.log('RBAC: Access denied - not admin');
     return reply.code(403).send({
@@ -916,24 +1026,26 @@ fastify.decorate('debugRequireAdmin', async (request: FastifyRequest, reply: Fas
       requiredRole: 'admin'
     });
   }
-  
+
   console.log('RBAC: Access granted');
 });
 ```
 
 ### Issue 5: Role Not Set in JWT Token
+
 **Problem:** User role is undefined or null
 
 **Solution:**
+
 ```typescript
 // Ensure role is included when creating JWT
 // In your auth service/login method:
 const token = jwt.sign(
-  { 
-    id: user.id, 
+  {
+    id: user.id,
     name: user.name,
     role: user.role || 'user' // Ensure role is always set
-  }, 
+  },
   process.env.JWT_SECRET,
   { expiresIn: '24h' }
 );
@@ -944,9 +1056,11 @@ console.log('Token payload:', decoded); // Should include role
 ```
 
 ### Issue 6: Multiple Roles Not Working
+
 **Problem:** `requireRoles(['admin', 'manager'])` not accepting valid roles
 
 **Solution:**
+
 ```typescript
 // Debug multi-role check
 fastify.decorate('debugRequireRoles', (allowedRoles: string[]) => {
@@ -955,7 +1069,7 @@ fastify.decorate('debugRequireRoles', (allowedRoles: string[]) => {
     console.log('User role:', userRole);
     console.log('Allowed roles:', allowedRoles);
     console.log('Role included:', allowedRoles.includes(userRole || ''));
-    
+
     if (!userRole || !allowedRoles.includes(userRole)) {
       return reply.code(403).send({
         error: 'Insufficient permissions',
@@ -971,19 +1085,25 @@ fastify.decorate('debugRequireRoles', (allowedRoles: string[]) => {
 ## 🎯 Best Practices
 
 1. **Always validate user existence in protected routes:**
+
 ```typescript
-fastify.get('/protected', {
-  preHandler: fastify.authenticate
-}, async (request, reply) => {
-  const user = request.authenticatedUser;
-  if (!user) {
-    return reply.code(401).send({ error: 'Authentication failed' });
+fastify.get(
+  '/protected',
+  {
+    preHandler: fastify.authenticate
+  },
+  async (request, reply) => {
+    const user = request.authenticatedUser;
+    if (!user) {
+      return reply.code(401).send({ error: 'Authentication failed' });
+    }
+    // Continue with authenticated user
   }
-  // Continue with authenticated user
-});
+);
 ```
 
 2. **Use specific error messages for different scenarios:**
+
 ```typescript
 // Instead of generic "Unauthorized"
 if (!token) return reply.code(401).send({ error: 'Missing authentication token' });
@@ -992,6 +1112,7 @@ if (invalidToken) return reply.code(401).send({ error: 'Invalid authentication t
 ```
 
 3. **Implement proper CORS for frontend integration:**
+
 ```typescript
 await fastify.register(import('@fastify/cors'), {
   origin: ['http://localhost:3000', 'https://yourdomain.com'],
@@ -1001,14 +1122,18 @@ await fastify.register(import('@fastify/cors'), {
 ```
 
 4. **Add request logging for debugging:**
+
 ```typescript
 fastify.addHook('preHandler', async (request, reply) => {
   if (request.url.startsWith('/auth/') || request.headers.authorization) {
-    fastify.log.info({
-      url: request.url,
-      method: request.method,
-      hasAuth: !!request.headers.authorization
-    }, 'Authentication request');
+    fastify.log.info(
+      {
+        url: request.url,
+        method: request.method,
+        hasAuth: !!request.headers.authorization
+      },
+      'Authentication request'
+    );
   }
 });
 ```
@@ -1023,6 +1148,7 @@ NODE_ENV=development
 ```
 
 Make sure `JWT_SECRET` is:
+
 - At least 32 characters long
 - Cryptographically random
 - Different for each environment (dev/staging/prod)
@@ -1034,40 +1160,45 @@ Check the existing protected route in `auth.controller.ts`:
 
 ```typescript
 // Protected route example from auth.controller.ts
-fastify.get('/me', {
-  preHandler: fastify.authenticate,  // ← This protects the route
-  schema: {
-    description: 'Return authenticated user data',
-    tags: ['Auth'],
-    summary: 'User Profile',
-    security: [{ bearerAuth: [] }]    // ← Swagger documentation
-  }
-}, async (request, reply) => {
-  try {
-    // User is guaranteed to be authenticated here
-    if (!request.authenticatedUser) {
-      return ApiResponseHandler.authError(reply, 'User not authenticated');
+fastify.get(
+  '/me',
+  {
+    preHandler: fastify.authenticate, // ← This protects the route
+    schema: {
+      description: 'Return authenticated user data',
+      tags: ['Auth'],
+      summary: 'User Profile',
+      security: [{ bearerAuth: [] }] // ← Swagger documentation
     }
-
-    // Access user data safely
-    const user = await authRepository.findById(request.authenticatedUser.id.toString());
-    
-    return ApiResponseHandler.success(reply, 'User data returned', {
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        status: user.status
+  },
+  async (request, reply) => {
+    try {
+      // User is guaranteed to be authenticated here
+      if (!request.authenticatedUser) {
+        return ApiResponseHandler.authError(reply, 'User not authenticated');
       }
-    });
-  } catch (error) {
-    return ApiResponseHandler.internalError(reply, error);
+
+      // Access user data safely
+      const user = await authRepository.findById(request.authenticatedUser.id.toString());
+
+      return ApiResponseHandler.success(reply, 'User data returned', {
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          status: user.status
+        }
+      });
+    } catch (error) {
+      return ApiResponseHandler.internalError(reply, error);
+    }
   }
-});
+);
 ```
 
 This demonstrates the complete pattern:
+
 1. **Route Protection**: `preHandler: fastify.authenticate`
 2. **Error Handling**: Check for authenticated user
 3. **Data Access**: Use `request.authenticatedUser` safely

@@ -18,7 +18,9 @@ The MongoDB infrastructure is designed for **high performance, type safety, and 
 ## 🎯 **Core Components**
 
 ### 📦 **MongoConnection** (`connection.ts`) - **CONNECTION MANAGEMENT**
+
 Singleton pattern for MongoDB connection lifecycle with comprehensive monitoring:
+
 - **Connection Pooling**: Optimized pool size (max 10 connections)
 - **Timeout Management**: Server selection (5s) and socket (45s) timeouts
 - **Health Monitoring**: Real-time connection status and logging
@@ -26,7 +28,9 @@ Singleton pattern for MongoDB connection lifecycle with comprehensive monitoring
 - **Graceful Shutdown**: Clean disconnection with proper cleanup
 
 ### 🗃️ **BaseRepository** (`baseRepository.ts`) - **DATA ACCESS LAYER**
+
 Generic repository providing type-safe CRUD operations:
+
 - **Full CRUD Operations**: Create, Read, Update, Delete with TypeScript safety
 - **Advanced Querying**: Complex filters, sorting, and pagination
 - **Batch Operations**: Efficient bulk processing capabilities
@@ -109,43 +113,48 @@ export interface IDocument extends Document {
 }
 
 // Mongoose schema with validation
-const documentSchema = new Schema<IDocument>({
-  title: {
-    type: String,
-    required: [true, 'Title is required'],
-    trim: true,
-    minlength: [2, 'Title must be at least 2 characters'],
-    maxlength: [100, 'Title cannot exceed 100 characters'],
-    index: true
-  },
-  content: {
-    type: String,
-    required: [true, 'Content is required'],
-    maxlength: [5000, 'Content cannot exceed 5000 characters']
-  },
-  status: {
-    type: String,
-    enum: {
-      values: ['draft', 'published', 'archived'],
-      message: 'Status must be: draft, published, or archived'
+const documentSchema = new Schema<IDocument>(
+  {
+    title: {
+      type: String,
+      required: [true, 'Title is required'],
+      trim: true,
+      minlength: [2, 'Title must be at least 2 characters'],
+      maxlength: [100, 'Title cannot exceed 100 characters'],
+      index: true
     },
-    default: 'draft',
-    index: true
+    content: {
+      type: String,
+      required: [true, 'Content is required'],
+      maxlength: [5000, 'Content cannot exceed 5000 characters']
+    },
+    status: {
+      type: String,
+      enum: {
+        values: ['draft', 'published', 'archived'],
+        message: 'Status must be: draft, published, or archived'
+      },
+      default: 'draft',
+      index: true
+    },
+    tags: [
+      {
+        type: String,
+        trim: true,
+        maxlength: [50, 'Tag cannot exceed 50 characters']
+      }
+    ],
+    metadata: {
+      type: Schema.Types.Mixed,
+      default: {}
+    }
   },
-  tags: [{
-    type: String,
-    trim: true,
-    maxlength: [50, 'Tag cannot exceed 50 characters']
-  }],
-  metadata: {
-    type: Schema.Types.Mixed,
-    default: {}
+  {
+    timestamps: true,
+    versionKey: false,
+    strict: true
   }
-}, {
-  timestamps: true,
-  versionKey: false,
-  strict: true
-});
+);
 
 // Indexes for performance
 documentSchema.index({ status: 1, createdAt: -1 });
@@ -188,12 +197,16 @@ export class DocumentRepository extends BaseRepository<IDocument> {
   /**
    * Find documents with pagination
    */
-  async findDocumentsPaginated(filters: {
-    status?: string;
-    tags?: string[];
-  }, page: number = 1, limit: number = 20) {
+  async findDocumentsPaginated(
+    filters: {
+      status?: string;
+      tags?: string[];
+    },
+    page: number = 1,
+    limit: number = 20
+  ) {
     const query: any = {};
-    
+
     if (filters.status) query.status = filters.status;
     if (filters.tags?.length) query.tags = { $in: filters.tags };
 
@@ -267,20 +280,20 @@ const publishedCount = await repository.count({
 // Generic pagination example
 const paginatedResult = await repository.findPaginated(
   { status: 'published' }, // Filter
-  2,    // Page number
-  10,   // Items per page
-  { createdAt: -1 }  // Sort: newest first
+  2, // Page number
+  10, // Items per page
+  { createdAt: -1 } // Sort: newest first
 );
 
 console.log({
   documents: paginatedResult.data,
   pagination: {
-    currentPage: paginatedResult.page,          // 2
-    totalPages: paginatedResult.totalPages,     // 15
-    totalItems: paginatedResult.total,          // 147
-    itemsPerPage: paginatedResult.limit,        // 10
-    hasNextPage: paginatedResult.hasNext,       // true
-    hasPreviousPage: paginatedResult.hasPrev    // true
+    currentPage: paginatedResult.page, // 2
+    totalPages: paginatedResult.totalPages, // 15
+    totalItems: paginatedResult.total, // 147
+    itemsPerPage: paginatedResult.limit, // 10
+    hasNextPage: paginatedResult.hasNext, // true
+    hasPreviousPage: paginatedResult.hasPrev // true
   }
 });
 
@@ -322,7 +335,7 @@ connection.on('connected', () => {
   console.log('🟢 MongoDB connected');
 });
 
-connection.on('error', (err) => {
+connection.on('error', err => {
   console.error('🔴 MongoDB error:', err);
 });
 
@@ -341,29 +354,29 @@ connection.on('reconnected', () => {
 // Advanced connection options
 await mongoose.connect(config.MONGO_URI, {
   // Connection pool settings
-  maxPoolSize: 10,              // Maximum connections
-  minPoolSize: 2,               // Minimum connections maintained
-  maxIdleTimeMS: 30000,         // Close idle connections after 30s
+  maxPoolSize: 10, // Maximum connections
+  minPoolSize: 2, // Minimum connections maintained
+  maxIdleTimeMS: 30000, // Close idle connections after 30s
   serverSelectionTimeoutMS: 5000, // Server selection timeout
-  socketTimeoutMS: 45000,       // Socket timeout
-  
+  socketTimeoutMS: 45000, // Socket timeout
+
   // Buffering settings
-  bufferCommands: false,        // Disable command buffering
-  bufferMaxEntries: 0,          // Disable buffer max entries
-  
+  bufferCommands: false, // Disable command buffering
+  bufferMaxEntries: 0, // Disable buffer max entries
+
   // Write concern
   writeConcern: {
-    w: 'majority',              // Wait for majority acknowledgment
-    j: true,                    // Wait for journal
-    wtimeout: 5000              // Timeout for write concern
+    w: 'majority', // Wait for majority acknowledgment
+    j: true, // Wait for journal
+    wtimeout: 5000 // Timeout for write concern
   },
-  
+
   // Read preference
-  readPreference: 'primary',    // Read from primary replica
-  
+  readPreference: 'primary', // Read from primary replica
+
   // Compression
-  compressors: ['zlib'],        // Enable compression
-  
+  compressors: ['zlib'], // Enable compression
+
   // SSL/TLS (for production)
   ssl: process.env.NODE_ENV === 'production',
   sslValidate: process.env.NODE_ENV === 'production'
@@ -383,23 +396,23 @@ mongodb:
   container_name: boilerplate_mongodb
   restart: unless-stopped
   ports:
-    - "27017:27017"
+    - '27017:27017'
   environment:
     MONGO_INITDB_ROOT_USERNAME: admin
     MONGO_INITDB_ROOT_PASSWORD: password
     MONGO_INITDB_DATABASE: boilerplate
   volumes:
-    - mongodb_data:/data/db              # Data persistence
-    - ./docker/mongo-init:/docker-entrypoint-initdb.d  # Initialization scripts
+    - mongodb_data:/data/db # Data persistence
+    - ./docker/mongo-init:/docker-entrypoint-initdb.d # Initialization scripts
   networks:
     - boilerplate_network
   healthcheck:
-    test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+    test: ['CMD', 'mongosh', '--eval', "db.adminCommand('ping')"]
     interval: 30s
     timeout: 10s
     retries: 3
     start_period: 30s
-  command: ["mongod", "--bind_ip_all", "--replSet", "rs0"]
+  command: ['mongod', '--bind_ip_all', '--replSet', 'rs0']
 
 volumes:
   mongodb_data:
@@ -421,7 +434,7 @@ mongodb:
     - mongodb_data:/data/db
     - mongodb_config:/data/configdb
     - ./docker/mongo/mongod.conf:/etc/mongod.conf
-  command: ["mongod", "--config", "/etc/mongod.conf"]
+  command: ['mongod', '--config', '/etc/mongod.conf']
   deploy:
     resources:
       limits:
@@ -431,10 +444,10 @@ mongodb:
         memory: 1G
         cpus: '0.5'
   logging:
-    driver: "json-file"
+    driver: 'json-file'
     options:
-      max-size: "100m"
-      max-file: "5"
+      max-size: '100m'
+      max-file: '5'
 ```
 
 ---
@@ -445,36 +458,42 @@ mongodb:
 
 ```typescript
 // Strategic index creation for any document type
-const documentSchema = new Schema<IDocument>({
-  title: { 
-    type: String, 
-    required: true,
-    index: true       // Single field index for queries
+const documentSchema = new Schema<IDocument>(
+  {
+    title: {
+      type: String,
+      required: true,
+      index: true // Single field index for queries
+    },
+    status: {
+      type: String,
+      index: true // Status filtering optimization
+    },
+    category: {
+      type: String,
+      index: true // Category-based queries
+    }
   },
-  status: { 
-    type: String, 
-    index: true       // Status filtering optimization
-  },
-  category: {
-    type: String,
-    index: true       // Category-based queries
+  {
+    timestamps: true // Automatic createdAt/updatedAt indexes
   }
-}, {
-  timestamps: true    // Automatic createdAt/updatedAt indexes
-});
+);
 
 // Compound indexes for complex queries
-documentSchema.index({ status: 1, createdAt: -1 });  // Status + time queries
-documentSchema.index({ category: 1, status: 1 });    // Category + status filters
-documentSchema.index({ title: 1, status: 1 });       // Title + status queries
+documentSchema.index({ status: 1, createdAt: -1 }); // Status + time queries
+documentSchema.index({ category: 1, status: 1 }); // Category + status filters
+documentSchema.index({ title: 1, status: 1 }); // Title + status queries
 
 // Text search indexes
-documentSchema.index({ 
-  title: 'text', 
-  content: 'text' 
-}, {
-  weights: { title: 10, content: 5 }  // Title is more important than content
-});
+documentSchema.index(
+  {
+    title: 'text',
+    content: 'text'
+  },
+  {
+    weights: { title: 10, content: 5 } // Title is more important than content
+  }
+);
 
 // Sparse indexes (only for documents with the field)
 documentSchema.index({ publishedAt: -1 }, { sparse: true });
@@ -485,15 +504,14 @@ documentSchema.index({ publishedAt: -1 }, { sparse: true });
 ```typescript
 // Efficient querying patterns
 class OptimizedRepository<T extends Document> extends BaseRepository<T> {
-  
   /**
    * Use lean() for read-only operations (50% faster)
    */
   async findActiveDocumentsLean(): Promise<any[]> {
     return await this.model
       .find({ status: 'active' })
-      .lean()  // Returns plain JavaScript objects (faster)
-      .select('title status createdAt')  // Only required fields
+      .lean() // Returns plain JavaScript objects (faster)
+      .select('title status createdAt') // Only required fields
       .exec();
   }
 
@@ -501,30 +519,31 @@ class OptimizedRepository<T extends Document> extends BaseRepository<T> {
    * Use aggregation for complex data processing
    */
   async getDocumentStatsByStatus(): Promise<any[]> {
-    return await this.model.aggregate([
-      { $match: { status: { $in: ['published', 'draft'] } } },
-      { 
-        $group: {
-          _id: '$status',
-          count: { $sum: 1 },
-          avgSize: { 
-            $avg: { $strLenCP: '$content' } // Average content length
+    return await this.model
+      .aggregate([
+        { $match: { status: { $in: ['published', 'draft'] } } },
+        {
+          $group: {
+            _id: '$status',
+            count: { $sum: 1 },
+            avgSize: {
+              $avg: { $strLenCP: '$content' } // Average content length
+            }
           }
-        }
-      },
-      { $sort: { count: -1 } }
-    ]).exec();
+        },
+        { $sort: { count: -1 } }
+      ])
+      .exec();
   }
 
   /**
    * Batch operations for efficiency
    */
   async updateMultipleDocuments(documentIds: string[], updateData: any): Promise<number> {
-    const result = await this.model.updateMany(
-      { _id: { $in: documentIds } },
-      { $set: { ...updateData, updatedAt: new Date() } }
-    ).exec();
-    
+    const result = await this.model
+      .updateMany({ _id: { $in: documentIds } }, { $set: { ...updateData, updatedAt: new Date() } })
+      .exec();
+
     return result.modifiedCount;
   }
 }
@@ -544,7 +563,7 @@ const documentSchema = new Schema<IDocument>({
     required: true,
     trim: true,
     validate: {
-      validator: function(v: string) {
+      validator: function (v: string) {
         // Prevent XSS attacks
         return !/<script|javascript:|on\w+=/i.test(v);
       },
@@ -556,7 +575,7 @@ const documentSchema = new Schema<IDocument>({
     required: true,
     trim: true,
     validate: {
-      validator: function(v: string) {
+      validator: function (v: string) {
         // Basic content sanitization
         return v.length > 0 && v.length <= 10000;
       },
@@ -566,7 +585,7 @@ const documentSchema = new Schema<IDocument>({
 });
 
 // Pre-save sanitization hooks
-documentSchema.pre('save', function(next) {
+documentSchema.pre('save', function (next) {
   // Sanitize input data
   if (this.title) {
     this.title = this.title.replace(/[<>'"&]/g, '');
@@ -579,7 +598,6 @@ documentSchema.pre('save', function(next) {
 
 ```typescript
 export class SecureRepository<T extends Document> extends BaseRepository<T> {
-  
   /**
    * Create document with validation and sanitization
    */
@@ -592,18 +610,18 @@ export class SecureRepository<T extends Document> extends BaseRepository<T> {
     if (!documentData.title?.trim()) {
       throw new Error('Title is required');
     }
-    
+
     if (!documentData.content?.trim()) {
       throw new Error('Content is required');
     }
-    
+
     // Basic sanitization
     const sanitizedData = {
       ...documentData,
       title: documentData.title.trim(),
       content: documentData.content.trim()
     };
-    
+
     return await this.create(sanitizedData as Partial<T>);
   }
 
@@ -612,12 +630,12 @@ export class SecureRepository<T extends Document> extends BaseRepository<T> {
    */
   async findSafeById(id: string, excludeFields: string[] = []): Promise<T | null> {
     const query = this.model.findById(id);
-    
+
     // Exclude sensitive fields
     if (excludeFields.length > 0) {
       query.select(excludeFields.map(field => `-${field}`).join(' '));
     }
-    
+
     return await query.exec();
   }
 
@@ -627,7 +645,7 @@ export class SecureRepository<T extends Document> extends BaseRepository<T> {
   async findWithSanitizedFilters(filters: Record<string, any>): Promise<T[]> {
     // Sanitize filter values
     const sanitizedFilters: Record<string, any> = {};
-    
+
     for (const [key, value] of Object.entries(filters)) {
       if (typeof value === 'string') {
         sanitizedFilters[key] = value.trim();
@@ -635,7 +653,7 @@ export class SecureRepository<T extends Document> extends BaseRepository<T> {
         sanitizedFilters[key] = value;
       }
     }
-    
+
     return await this.find(sanitizedFilters);
   }
 }
@@ -650,7 +668,6 @@ export class SecureRepository<T extends Document> extends BaseRepository<T> {
 ```typescript
 // Connection error handling
 class RobustMongoConnection extends MongoConnection {
-  
   async connectWithRetry(maxRetries: number = 5): Promise<void> {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
@@ -662,11 +679,11 @@ class RobustMongoConnection extends MongoConnection {
           { attempt, maxRetries, error },
           `❌ MongoDB connection failed (attempt ${attempt}/${maxRetries})`
         );
-        
+
         if (attempt === maxRetries) {
           throw new Error(`Failed to connect to MongoDB after ${maxRetries} attempts`);
         }
-        
+
         // Exponential backoff
         const delay = Math.pow(2, attempt) * 1000;
         await new Promise(resolve => setTimeout(resolve, delay));
@@ -677,26 +694,28 @@ class RobustMongoConnection extends MongoConnection {
 
 // Repository error handling
 class SafeRepository<T extends Document> extends BaseRepository<T> {
-  
   async safeCreate(data: Partial<T>): Promise<{ success: boolean; data?: T; error?: string }> {
     try {
       const result = await this.create(data);
       return { success: true, data: result };
     } catch (error) {
       this.logger.error({ data, error }, 'Failed to create document');
-      
+
       if (error.code === 11000) {
         return { success: false, error: 'Duplicate key error' };
       }
-      
+
       return { success: false, error: 'Database operation failed' };
     }
   }
 
-  async safeUpdate(id: string, data: UpdateQuery<T>): Promise<{ 
-    success: boolean; 
-    data?: T; 
-    error?: string 
+  async safeUpdate(
+    id: string,
+    data: UpdateQuery<T>
+  ): Promise<{
+    success: boolean;
+    data?: T;
+    error?: string;
   }> {
     try {
       const result = await this.updateById(id, data);
@@ -733,16 +752,16 @@ export class MongoHealthCheck {
     };
   }> {
     const startTime = Date.now();
-    
+
     try {
       const connection = this.mongoConnection.getConnection();
-      
+
       // Test connection with ping
       await connection.db.admin().ping();
-      
+
       const responseTime = Date.now() - startTime;
       const collections = await connection.db.listCollections().toArray();
-      
+
       // Count total indexes across collections
       let totalIndexes = 0;
       for (const collection of collections) {
@@ -777,9 +796,9 @@ export class MongoHealthCheck {
 app.get('/health/mongodb', async (request, reply) => {
   const healthCheck = new MongoHealthCheck();
   const health = await healthCheck.checkHealth();
-  
+
   const statusCode = health.status === 'healthy' ? 200 : 503;
-  
+
   return reply.status(statusCode).send({
     service: 'mongodb',
     status: health.status,
@@ -800,11 +819,13 @@ O sistema implementa **transações atômicas via plugin Fastify**, seguindo os 
 ### **Por que Plugin ao invés de Decorators?**
 
 **✅ Padrão Fastify Correto:**
+
 - Plugins são a forma nativa do Fastify para funcionalidades transversais
 - Integração natural com hooks e lifecycle do framework
 - Encapsulamento adequado seguindo arquitetura de plugins
 
 **✅ Funcionalidade Superior:**
+
 - Session MongoDB automaticamente disponível em `request.mongoSession`
 - Hooks automáticos (`onRequest`, `onResponse`, `onError`) gerenciam lifecycle
 - Rollback baseado em status codes, erros ou timeouts
@@ -821,20 +842,20 @@ import { transactionPlugin, TRANSACTION_ROUTE_CONFIG } from '../infraestructure/
 await app.register(transactionPlugin, {
   // Timeout padrão para transações (ms)
   defaultTimeout: 30000,
-  
+
   // Logging de transações
   enableLogging: true,
-  
+
   // Rollback em erros de validação
   abortOnValidationError: true,
-  
+
   // Rotas com transações automáticas
   autoTransactionRoutes: [
     '/api/users',
     '/api/orders',
-    /^\/api\/transactions/  // Regex também suportado
+    /^\/api\/transactions/ // Regex também suportado
   ],
-  
+
   // Opções padrão para transações
   defaultOptions: {
     maxTimeMS: 25000
@@ -846,90 +867,90 @@ await app.register(transactionPlugin, {
 
 ```typescript
 // Rota com transação explícita
-app.post('/api/transfer', {
-  schema: {
-    body: {
-      type: 'object',
-      required: ['fromAccount', 'toAccount', 'amount'],
-      properties: {
-        fromAccount: { type: 'string' },
-        toAccount: { type: 'string' },
-        amount: { type: 'number', minimum: 0 }
+app.post(
+  '/api/transfer',
+  {
+    schema: {
+      body: {
+        type: 'object',
+        required: ['fromAccount', 'toAccount', 'amount'],
+        properties: {
+          fromAccount: { type: 'string' },
+          toAccount: { type: 'string' },
+          amount: { type: 'number', minimum: 0 }
+        }
+      }
+    },
+    // Configuração de transação para esta rota
+    config: {
+      [TRANSACTION_ROUTE_CONFIG]: {
+        enabled: true,
+        rollbackOnError: true,
+        rollbackOnStatusCode: [400, 422, 500],
+        options: {
+          maxTimeMS: 15000
+        }
       }
     }
   },
-  // Configuração de transação para esta rota
-  config: {
-    [TRANSACTION_ROUTE_CONFIG]: {
-      enabled: true,
-      rollbackOnError: true,
-      rollbackOnStatusCode: [400, 422, 500],
-      options: {
-        maxTimeMS: 15000
-      }
-    }
-  }
-}, async (request, reply) => {
-  const { fromAccount, toAccount, amount } = request.body as any;
-  
-  // Session automaticamente disponível
-  const session = request.mongoSession;
-  
-  if (!session) {
-    return reply.status(500).send({ error: 'Transaction not available' });
-  }
+  async (request, reply) => {
+    const { fromAccount, toAccount, amount } = request.body as any;
 
-  // Usar session nas operações do banco
-  await repository.updateOne(
-    { id: fromAccount }, 
-    { $inc: { balance: -amount } }, 
-    { session }
-  );
-  
-  await repository.updateOne(
-    { id: toAccount }, 
-    { $inc: { balance: amount } }, 
-    { session }
-  );
-  
-  // Se tudo der certo → commit automático
-  // Se erro → rollback automático
-  return reply.send({ 
-    success: true, 
-    transactionId: request.transactionId 
-  });
-});
+    // Session automaticamente disponível
+    const session = request.mongoSession;
+
+    if (!session) {
+      return reply.status(500).send({ error: 'Transaction not available' });
+    }
+
+    // Usar session nas operações do banco
+    await repository.updateOne({ id: fromAccount }, { $inc: { balance: -amount } }, { session });
+
+    await repository.updateOne({ id: toAccount }, { $inc: { balance: amount } }, { session });
+
+    // Se tudo der certo → commit automático
+    // Se erro → rollback automático
+    return reply.send({
+      success: true,
+      transactionId: request.transactionId
+    });
+  }
+);
 ```
 
 #### **3. Transações Automáticas**
 
 ```typescript
 // Esta rota usa transação automaticamente (configurada em autoTransactionRoutes)
-app.post('/api/orders', {
-  schema: {
-    body: {
-      type: 'object',
-      required: ['items', 'customerId'],
-      properties: {
-        items: { type: 'array' },
-        customerId: { type: 'string' }
+app.post(
+  '/api/orders',
+  {
+    schema: {
+      body: {
+        type: 'object',
+        required: ['items', 'customerId'],
+        properties: {
+          items: { type: 'array' },
+          customerId: { type: 'string' }
+        }
       }
     }
+  },
+  async (request, reply) => {
+    // Session disponível automaticamente devido à configuração
+    const session = request.mongoSession;
+    const { items, customerId } = request.body as any;
+
+    // Usar session em todas as operações
+    const order = await repository.create({ items, customerId }, { session });
+    await secondaryRepo.updateStock(items, { session });
+
+    return reply.status(201).send({
+      orderId: order.id,
+      transactionId: request.transactionId
+    });
   }
-}, async (request, reply) => {
-  // Session disponível automaticamente devido à configuração
-  const session = request.mongoSession;
-  const { items, customerId } = request.body as any;
-  
-  // Usar session em todas as operações
-  const order = await repository.create({ items, customerId }, { session });
-  await secondaryRepo.updateStock(items, { session });
-  
-  return reply.status(201).send({ 
-    orderId: order.id,
-    transactionId: request.transactionId 
-  });
-});
+);
 ```
 
 ### **Configurações Avançadas**
@@ -940,10 +961,10 @@ app.post('/api/orders', {
 interface TransactionPluginOptions {
   // Timeout padrão (ms)
   defaultTimeout?: number; // default: 30000
-  
+
   // Logging estruturado
   enableLogging?: boolean; // default: true
-  
+
   // Configurações padrão de transação
   defaultOptions?: {
     maxTimeMS?: number;
@@ -951,10 +972,10 @@ interface TransactionPluginOptions {
     writeConcern?: WriteConcern;
     readPreference?: ReadPreference;
   };
-  
+
   // Rotas com transações automáticas
   autoTransactionRoutes?: string[] | RegExp[];
-  
+
   // Rollback em erros de validação
   abortOnValidationError?: boolean; // default: true
 }
@@ -980,41 +1001,45 @@ interface RouteTransactionConfig {
 #### **Rollback Automático**
 
 O plugin faz rollback automaticamente em:
+
 - ✅ **Exceções não tratadas** no handler
 - ✅ **Status codes de erro** (configuráveis por rota)
 - ✅ **Erros de validação** (se `abortOnValidationError: true`)
 - ✅ **Timeouts de transação**
 
 ```typescript
-app.post('/api/complex-operation', {
-  config: {
-    [TRANSACTION_ROUTE_CONFIG]: {
-      enabled: true,
-      rollbackOnStatusCode: [400, 422] // Rollback personalizado
+app.post(
+  '/api/complex-operation',
+  {
+    config: {
+      [TRANSACTION_ROUTE_CONFIG]: {
+        enabled: true,
+        rollbackOnStatusCode: [400, 422] // Rollback personalizado
+      }
+    }
+  },
+  async (request, reply) => {
+    const session = request.mongoSession;
+
+    try {
+      // Operações que podem falhar
+      const document = await repository.create(documentData, { session });
+      const metadata = await metadataRepo.create(metadataData, { session });
+
+      // Validação de negócio
+      if (!isValidDocument(document)) {
+        // Status 400 → transação será revertida automaticamente
+        return reply.status(400).send({ error: 'Invalid document data' });
+      }
+
+      return reply.send({ success: true, documentId: document.id });
+    } catch (error) {
+      // Erro será logado e transação revertida automaticamente
+      app.log.error({ error, transactionId: request.transactionId });
+      return reply.status(500).send({ error: 'Operation failed' });
     }
   }
-}, async (request, reply) => {
-  const session = request.mongoSession;
-  
-  try {
-    // Operações que podem falhar
-    const document = await repository.create(documentData, { session });
-    const metadata = await metadataRepo.create(metadataData, { session });
-    
-    // Validação de negócio
-    if (!isValidDocument(document)) {
-      // Status 400 → transação será revertida automaticamente
-      return reply.status(400).send({ error: 'Invalid document data' });
-    }
-    
-    return reply.send({ success: true, documentId: document.id });
-    
-  } catch (error) {
-    // Erro será logado e transação revertida automaticamente
-    app.log.error({ error, transactionId: request.transactionId });
-    return reply.status(500).send({ error: 'Operation failed' });
-  }
-});
+);
 ```
 
 ### **Monitoramento e Observabilidade**
@@ -1056,9 +1081,7 @@ const transaction = transactionManager.getTransaction(transactionId);
 // Endpoint de health check
 app.get('/health/transactions', async (request, reply) => {
   const active = transactionManager.getActiveTransactions();
-  const longRunning = active.filter(t => 
-    Date.now() - t.startTime.getTime() > 30000
-  );
+  const longRunning = active.filter(t => Date.now() - t.startTime.getTime() > 30000);
 
   return reply.send({
     status: longRunning.length > 5 ? 'warning' : 'healthy',
@@ -1088,7 +1111,7 @@ Para casos específicos onde você precisa de controle manual:
 import { withTransaction, TransactionManager } from '../infraestructure/mongo/index.js';
 
 // Método 1: Utility function
-const result = await withTransaction(async (session) => {
+const result = await withTransaction(async session => {
   await repository.create(documentData, { session });
   await anotherRepository.update(updateData, { session });
   return { documentId: document.id };
@@ -1120,27 +1143,31 @@ try {
 
 ```typescript
 // ✅ Boa prática - Transação focada
-app.post('/api/transfer', {
-  config: {
-    [TRANSACTION_ROUTE_CONFIG]: {
-      enabled: true,
-      options: { maxTimeMS: 15000 } // Timeout apropriado
+app.post(
+  '/api/transfer',
+  {
+    config: {
+      [TRANSACTION_ROUTE_CONFIG]: {
+        enabled: true,
+        options: { maxTimeMS: 15000 } // Timeout apropriado
+      }
     }
+  },
+  async (request, reply) => {
+    const session = request.mongoSession;
+
+    // Validação rápida
+    if (amount <= 0) {
+      return reply.status(400).send({ error: 'Invalid amount' });
+    }
+
+    // Operações atômicas focadas
+    await repository.debit(fromAccount, amount, { session });
+    await repository.credit(toAccount, amount, { session });
+
+    return reply.send({ success: true });
   }
-}, async (request, reply) => {
-  const session = request.mongoSession;
-  
-  // Validação rápida
-  if (amount <= 0) {
-    return reply.status(400).send({ error: 'Invalid amount' });
-  }
-  
-  // Operações atômicas focadas
-  await repository.debit(fromAccount, amount, { session });
-  await repository.credit(toAccount, amount, { session });
-  
-  return reply.send({ success: true });
-});
+);
 ```
 
 #### **❌ Evitar**
@@ -1151,11 +1178,15 @@ app.post('/api/transfer', {
 
 ```typescript
 // ❌ Ruim - Operação simples não precisa de transação
-app.get('/api/documents/:id', {
-  config: { [TRANSACTION_ROUTE_CONFIG]: { enabled: true } }
-}, async (request, reply) => {
-  return await repository.findById(request.params.id);
-});
+app.get(
+  '/api/documents/:id',
+  {
+    config: { [TRANSACTION_ROUTE_CONFIG]: { enabled: true } }
+  },
+  async (request, reply) => {
+    return await repository.findById(request.params.id);
+  }
+);
 
 // ✅ Bom - Operação simples sem transação
 app.get('/api/documents/:id', async (request, reply) => {
@@ -1166,6 +1197,7 @@ app.get('/api/documents/:id', async (request, reply) => {
 ### **Requisitos de Sistema**
 
 ⚠️ **Importante**: MongoDB transações requerem:
+
 - **Replica Set** ou **Sharded Cluster**
 - **MongoDB 4.0+** para replica sets
 - **MongoDB 4.2+** para sharded clusters
@@ -1175,6 +1207,7 @@ Para **desenvolvimento**, use a configuração Docker fornecida que automaticame
 **Com este sistema de transações via plugin, sua aplicação Fastify mantém integridade de dados seguindo os padrões nativos da arquitetura, com zero boilerplate e máxima confiabilidade.** 🔄✨
 
 ---
+
 ## ✅ **Best Practices**
 
 ### **Repository Design Patterns**
@@ -1238,9 +1271,11 @@ for (const documentId of documentIds) {
 }
 
 // DO: Use batch operations
-const documents = await repository.model.find({
-  _id: { $in: documentIds }
-}).lean();
+const documents = await repository.model
+  .find({
+    _id: { $in: documentIds }
+  })
+  .lean();
 ```
 
 ---
@@ -1253,33 +1288,30 @@ const documents = await repository.model.find({
 // migrations/001_add_user_preferences.ts
 export async function up() {
   const db = mongoose.connection.db;
-  
+
   // Add new field to existing documents
   await db.collection('documents').updateMany(
     { metadata: { $exists: false } },
-    { 
-      $set: { 
+    {
+      $set: {
         metadata: {
           version: 1,
           tags: [],
           priority: 'normal'
         }
-      } 
+      }
     }
   );
-  
+
   console.log('✅ Added metadata field to all documents');
 }
 
 export async function down() {
   const db = mongoose.connection.db;
-  
+
   // Remove field
-  await db.collection('documents').updateMany(
-    {},
-    { $unset: { metadata: 1 } }
-  );
-  
+  await db.collection('documents').updateMany({}, { $unset: { metadata: 1 } });
+
   console.log('✅ Removed metadata field from all documents');
 }
 ```
@@ -1289,14 +1321,13 @@ export async function down() {
 ```typescript
 // Database maintenance utilities
 export class MongoMaintenance {
-  
   /**
    * Optimize collections by rebuilding indexes
    */
   async optimizeCollections(): Promise<void> {
     const connection = mongoose.connection;
     const collections = await connection.db.listCollections().toArray();
-    
+
     for (const collection of collections) {
       await connection.db.collection(collection.name).reIndex();
       console.log(`✅ Optimized indexes for ${collection.name}`);
@@ -1306,14 +1337,18 @@ export class MongoMaintenance {
   /**
    * Clean up old documents based on TTL
    */
-  async cleanupOldDocuments(collectionName: string, field: string, daysOld: number): Promise<number> {
+  async cleanupOldDocuments(
+    collectionName: string,
+    field: string,
+    daysOld: number
+  ): Promise<number> {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - daysOld);
-    
+
     const result = await mongoose.connection.db.collection(collectionName).deleteMany({
       [field]: { $lt: cutoffDate }
     });
-    
+
     console.log(`🗑️ Cleaned up ${result.deletedCount} old documents from ${collectionName}`);
     return result.deletedCount;
   }
@@ -1324,7 +1359,7 @@ export class MongoMaintenance {
   async getDatabaseStats(): Promise<any> {
     const db = mongoose.connection.db;
     const stats = await db.stats();
-    
+
     return {
       database: db.databaseName,
       collections: stats.collections,
@@ -1351,13 +1386,13 @@ import { MongoConnection } from '../infraestructure/mongo/index.js';
 
 export default fp(async function (fastify, opts) {
   const mongoConnection = MongoConnection.getInstance();
-  
+
   // Connect on plugin registration
   await mongoConnection.connect();
-  
+
   // Decorate Fastify instance
   fastify.decorate('mongo', mongoConnection);
-  
+
   // Add hooks for graceful shutdown
   fastify.addHook('onClose', async () => {
     await mongoConnection.disconnect();
@@ -1368,11 +1403,11 @@ export default fp(async function (fastify, opts) {
 app.get('/documents/:id', async (request, reply) => {
   const documentRepository = new DocumentRepository();
   const document = await documentRepository.findById(request.params.id);
-  
+
   if (!document) {
     return reply.status(404).send({ error: 'Document not found' });
   }
-  
+
   return reply.send(document);
 });
 ```
@@ -1396,18 +1431,18 @@ export class DocumentService {
     try {
       // Business logic validation
       await this.validateDocumentData(documentData);
-      
+
       // Create document through repository
       const document = await this.documentRepository.createDocument(documentData);
-      
+
       // Post-creation business logic (index for search, etc.)
       await this.onDocumentCreated(document);
-      
+
       return { success: true, document };
     } catch (error) {
-      return { 
-        success: false, 
-        error: error.message || 'Failed to create document' 
+      return {
+        success: false,
+        error: error.message || 'Failed to create document'
       };
     }
   }

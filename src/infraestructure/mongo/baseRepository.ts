@@ -91,7 +91,11 @@ export class BaseRepository<T extends Document> implements IBaseRepository<T> {
    * @param update - Update query
    * @param options - Repository options including optional session
    */
-  async updateById(id: string, update: UpdateQuery<T>, options: RepositoryOptions = {}): Promise<T | null> {
+  async updateById(
+    id: string,
+    update: UpdateQuery<T>,
+    options: RepositoryOptions = {}
+  ): Promise<T | null> {
     const queryOptions: QueryOptions = { new: true };
 
     if (options.session) {
@@ -107,7 +111,11 @@ export class BaseRepository<T extends Document> implements IBaseRepository<T> {
    * @param update - Update query
    * @param options - Repository options including optional session
    */
-  async updateOne(filter: FilterQuery<T>, update: UpdateQuery<T>, options: RepositoryOptions = {}): Promise<T | null> {
+  async updateOne(
+    filter: FilterQuery<T>,
+    update: UpdateQuery<T>,
+    options: RepositoryOptions = {}
+  ): Promise<T | null> {
     const queryOptions: QueryOptions = { new: true };
 
     if (options.session) {
@@ -123,7 +131,11 @@ export class BaseRepository<T extends Document> implements IBaseRepository<T> {
    * @param update - Update query
    * @param options - Repository options including optional session
    */
-  async updateMany(filter: FilterQuery<T>, update: UpdateQuery<T>, options: RepositoryOptions = {}): Promise<{ modifiedCount: number }> {
+  async updateMany(
+    filter: FilterQuery<T>,
+    update: UpdateQuery<T>,
+    options: RepositoryOptions = {}
+  ): Promise<{ modifiedCount: number }> {
     const queryOptions: any = {};
 
     if (options.session) {
@@ -171,7 +183,10 @@ export class BaseRepository<T extends Document> implements IBaseRepository<T> {
    * @param filter - Filter query
    * @param options - Repository options including optional session
    */
-  async deleteMany(filter: FilterQuery<T>, options: RepositoryOptions = {}): Promise<{ deletedCount: number }> {
+  async deleteMany(
+    filter: FilterQuery<T>,
+    options: RepositoryOptions = {}
+  ): Promise<{ deletedCount: number }> {
     const queryOptions: any = {};
 
     if (options.session) {
@@ -224,11 +239,7 @@ export class BaseRepository<T extends Document> implements IBaseRepository<T> {
     const total = await this.count(filter, options);
     const totalPages = Math.ceil(total / limit);
 
-    const query = this.model
-      .find(filter)
-      .sort(sort)
-      .skip(skip)
-      .limit(limit);
+    const query = this.model.find(filter).sort(sort).skip(skip).limit(limit);
 
     if (options.session) {
       query.session(options.session);
@@ -269,7 +280,11 @@ export class BaseRepository<T extends Document> implements IBaseRepository<T> {
    * @param replacement - Replacement document
    * @param options - Repository options including optional session
    */
-  async replaceOne(filter: FilterQuery<T>, replacement: Partial<T>, options: RepositoryOptions = {}): Promise<T | null> {
+  async replaceOne(
+    filter: FilterQuery<T>,
+    replacement: Partial<T>,
+    options: RepositoryOptions = {}
+  ): Promise<T | null> {
     const queryOptions: QueryOptions = { new: true };
 
     if (options.session) {

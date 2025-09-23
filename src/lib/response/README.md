@@ -21,6 +21,7 @@ All responses follow the standard format:
 ### Success Responses
 
 #### `success(reply, message?, data?, code?)`
+
 Generic success response.
 
 ```typescript
@@ -37,6 +38,7 @@ return ApiResponseHandler.success(reply, 'OK', data, 200);
 ```
 
 #### `created(reply, message?, data?)`
+
 Response for resource creation (HTTP 201).
 
 ```typescript
@@ -44,6 +46,7 @@ return ApiResponseHandler.created(reply, 'User registered', userData);
 ```
 
 #### `noContent(reply, message?)`
+
 Response without content (HTTP 204).
 
 ```typescript
@@ -51,6 +54,7 @@ return ApiResponseHandler.noContent(reply, 'User deleted');
 ```
 
 #### `paginated(reply, data, total, page, limit, message?)`
+
 Response with pagination.
 
 ```typescript
@@ -60,6 +64,7 @@ return ApiResponseHandler.paginated(reply, users, 150, 1, 10, 'Users listed');
 ### Error Responses
 
 #### `validationError(reply, message?, details?)`
+
 Validation error (HTTP 400).
 
 ```typescript
@@ -67,6 +72,7 @@ return ApiResponseHandler.validationError(reply, 'Email is required');
 ```
 
 #### `authError(reply, message?, details?)`
+
 Authentication error (HTTP 401).
 
 ```typescript
@@ -74,6 +80,7 @@ return ApiResponseHandler.authError(reply, 'Invalid token');
 ```
 
 #### `forbidden(reply, message?, details?)`
+
 Authorization error (HTTP 403).
 
 ```typescript
@@ -81,6 +88,7 @@ return ApiResponseHandler.forbidden(reply, 'Access denied');
 ```
 
 #### `notFound(reply, message?, details?)`
+
 Resource not found (HTTP 404).
 
 ```typescript
@@ -88,6 +96,7 @@ return ApiResponseHandler.notFound(reply, 'User not found');
 ```
 
 #### `conflict(reply, message?, details?)`
+
 Data conflict (HTTP 409).
 
 ```typescript
@@ -95,6 +104,7 @@ return ApiResponseHandler.conflict(reply, 'Email already registered');
 ```
 
 #### `internalError(reply, error?, logError?)`
+
 Internal server error (HTTP 500).
 
 ```typescript
@@ -106,6 +116,7 @@ try {
 ```
 
 #### `serviceUnavailable(reply, message?)`
+
 Service unavailable (HTTP 503).
 
 ```typescript
@@ -113,6 +124,7 @@ return ApiResponseHandler.serviceUnavailable(reply, 'Database unavailable');
 ```
 
 #### `custom(reply, success, code, message, data?, error?)`
+
 Custom response.
 
 ```typescript
