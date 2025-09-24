@@ -38,6 +38,6 @@ export function getJobHandler(jobType: string): JobHandler | null {
 export { handleEmailSend } from './business/emailSend.job.js';
 
 // Re-export types and constants from email job
-export { EmailTemplateConstants, TEMPLATE_VARIABLES } from './business/emailSend.job.js';
+export { EmailTemplateConstants } from './business/emailSend.job.js';
 
 export type { EmailTemplateType, EmailJobData } from './business/emailSend.job.js';

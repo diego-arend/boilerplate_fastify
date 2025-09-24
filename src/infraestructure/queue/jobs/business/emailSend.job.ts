@@ -5,12 +5,18 @@
 
 import type { FastifyBaseLogger } from 'fastify';
 import type { JobResult } from '../../queue.types.js';
+import {
+  createTemplate,
+  AvailableTemplates,
+  type TemplateResult
+} from '../../../../lib/templates/index.js';
 
 /**
  * Email template types with their required variables
  */
 export const EmailTemplate = {
   WELCOME: 'welcome',
+  REGISTRATION_SUCCESS: 'registration_success',
   PASSWORD_RESET: 'password_reset',
   ORDER_CONFIRMATION: 'order_confirmation',
   INVOICE: 'invoice',
@@ -64,515 +70,46 @@ export interface EmailJobData {
 }
 
 /**
- * Template variable requirements for each template type
- */
-const TEMPLATE_VARIABLES: Record<EmailTemplateType, string[]> = {
-  [EmailTemplate.WELCOME]: ['userName', 'activationLink'],
-  [EmailTemplate.PASSWORD_RESET]: ['userName', 'resetLink', 'expiresIn'],
-  [EmailTemplate.ORDER_CONFIRMATION]: ['orderNumber', 'customerName', 'orderItems', 'totalAmount'],
-  [EmailTemplate.INVOICE]: ['invoiceNumber', 'customerName', 'amount', 'dueDate', 'downloadLink'],
-  [EmailTemplate.NEWSLETTER]: ['unsubscribeLink'],
-  [EmailTemplate.SYSTEM_ALERT]: ['alertType', 'message', 'timestamp'],
-  [EmailTemplate.CUSTOM]: [] // No required variables for custom templates
-};
-
-/**
- * Email template renderer
+ * Email template renderer using modular templates from lib/templates
  */
 class EmailTemplateRenderer {
   /**
-   * Render email template with variables
+   * Render email template with variables using the new template system
    */
   static async renderTemplate(
     template: EmailTemplateType,
     variables: Record<string, any> = {},
     logger: FastifyBaseLogger
-  ): Promise<{ html: string; text: string; subject: string }> {
+  ): Promise<TemplateResult> {
     logger.info({ template, variableKeys: Object.keys(variables) }, 'Rendering email template');
 
-    // Validate required variables
-    this.validateTemplateVariables(template, variables);
+    try {
+      // Create template instance using factory
+      const templateInstance = createTemplate(template);
 
-    switch (template) {
-      case EmailTemplate.WELCOME:
-        return this.renderWelcomeTemplate(variables);
-
-      case EmailTemplate.PASSWORD_RESET:
-        return this.renderPasswordResetTemplate(variables);
-
-      case EmailTemplate.ORDER_CONFIRMATION:
-        return this.renderOrderConfirmationTemplate(variables);
-
-      case EmailTemplate.INVOICE:
-        return this.renderInvoiceTemplate(variables);
-
-      case EmailTemplate.NEWSLETTER:
-        return this.renderNewsletterTemplate(variables);
-
-      case EmailTemplate.SYSTEM_ALERT:
-        return this.renderSystemAlertTemplate(variables);
-
-      case EmailTemplate.CUSTOM:
-        return this.renderCustomTemplate(variables);
-
-      default:
+      if (!templateInstance) {
         throw new Error(`Unsupported email template: ${template}`);
-    }
-  }
+      }
 
-  /**
-   * Validate that all required variables are provided
-   */
-  private static validateTemplateVariables(
-    template: EmailTemplateType,
-    variables: Record<string, any>
-  ): void {
-    const requiredVars = TEMPLATE_VARIABLES[template];
-    const missingVars = requiredVars.filter((varName: string) => !(varName in variables));
+      // Render template with variables
+      const result = templateInstance.render(variables);
 
-    if (missingVars.length > 0) {
-      throw new Error(
-        `Missing required variables for template ${template}: ${missingVars.join(', ')}`
+      logger.info(
+        {
+          template,
+          subjectLength: result.subject.length,
+          htmlLength: result.html.length,
+          textLength: result.text.length
+        },
+        'Template rendered successfully'
       );
+
+      return result;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Template rendering failed';
+      logger.error({ template, error: errorMessage }, 'Failed to render email template');
+      throw new Error(`Template rendering failed for ${template}: ${errorMessage}`);
     }
-  }
-
-  /**
-   * Welcome email template
-   */
-  private static renderWelcomeTemplate(vars: Record<string, any>) {
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <title>Welcome to Our Platform</title>
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: #007bff; color: white; padding: 20px; text-align: center; }
-          .content { padding: 20px; }
-          .button { display: inline-block; background: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>Welcome ${vars.userName}!</h1>
-          </div>
-          <div class="content">
-            <h2>Thank you for joining us!</h2>
-            <p>We're excited to have you on board. To get started, please activate your account by clicking the button below:</p>
-            <p style="text-align: center;">
-              <a href="${vars.activationLink}" class="button">Activate Account</a>
-            </p>
-            <p>If you have any questions, feel free to contact our support team.</p>
-            <p>Best regards,<br>The Team</p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
-
-    const text = `
-      Welcome ${vars.userName}!
-
-      Thank you for joining us! We're excited to have you on board.
-
-      To get started, please activate your account by visiting this link:
-      ${vars.activationLink}
-
-      If you have any questions, feel free to contact our support team.
-
-      Best regards,
-      The Team
-    `;
-
-    return {
-      html,
-      text: text.trim(),
-      subject: `Welcome ${vars.userName}! Please activate your account`
-    };
-  }
-
-  /**
-   * Password reset email template
-   */
-  private static renderPasswordResetTemplate(vars: Record<string, any>) {
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <title>Password Reset Request</title>
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: #dc3545; color: white; padding: 20px; text-align: center; }
-          .content { padding: 20px; }
-          .button { display: inline-block; background: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; }
-          .warning { background: #fff3cd; border: 1px solid #ffeaa7; padding: 10px; border-radius: 4px; margin: 20px 0; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>Password Reset</h1>
-          </div>
-          <div class="content">
-            <h2>Hello ${vars.userName},</h2>
-            <p>We received a request to reset your password. Click the button below to create a new password:</p>
-            <p style="text-align: center;">
-              <a href="${vars.resetLink}" class="button">Reset Password</a>
-            </p>
-            <div class="warning">
-              <strong>⚠️ Important:</strong> This link will expire in ${vars.expiresIn}. If you didn't request this reset, please ignore this email.
-            </div>
-            <p>For security reasons, if you don't reset your password within the time limit, you'll need to request a new reset.</p>
-            <p>Best regards,<br>Security Team</p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
-
-    const text = `
-      Password Reset Request
-
-      Hello ${vars.userName},
-
-      We received a request to reset your password. Visit this link to create a new password:
-      ${vars.resetLink}
-
-      ⚠️ Important: This link will expire in ${vars.expiresIn}. If you didn't request this reset, please ignore this email.
-
-      For security reasons, if you don't reset your password within the time limit, you'll need to request a new reset.
-
-      Best regards,
-      Security Team
-    `;
-
-    return {
-      html,
-      text: text.trim(),
-      subject: 'Password Reset Request - Action Required'
-    };
-  }
-
-  /**
-   * Order confirmation email template
-   */
-  private static renderOrderConfirmationTemplate(vars: Record<string, any>) {
-    const orderItemsHtml = vars.orderItems
-      .map(
-        (item: any) => `
-      <tr>
-        <td style="padding: 8px; border-bottom: 1px solid #eee;">${item.name}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">$${item.price}</td>
-      </tr>
-    `
-      )
-      .join('');
-
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <title>Order Confirmation</title>
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: #28a745; color: white; padding: 20px; text-align: center; }
-          .content { padding: 20px; }
-          table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-          th { background: #f8f9fa; padding: 12px; text-align: left; border-bottom: 2px solid #ddd; }
-          .total { font-weight: bold; font-size: 1.2em; color: #28a745; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>Order Confirmed!</h1>
-            <p>Order #${vars.orderNumber}</p>
-          </div>
-          <div class="content">
-            <h2>Hello ${vars.customerName},</h2>
-            <p>Thank you for your order! We've received your payment and are preparing your items for shipment.</p>
-            
-            <h3>Order Details:</h3>
-            <table>
-              <thead>
-                <tr>
-                  <th>Item</th>
-                  <th style="text-align: center;">Quantity</th>
-                  <th style="text-align: right;">Price</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${orderItemsHtml}
-                <tr>
-                  <td colspan="2" style="padding: 12px; text-align: right; font-weight: bold;">Total:</td>
-                  <td style="padding: 12px; text-align: right;" class="total">$${vars.totalAmount}</td>
-                </tr>
-              </tbody>
-            </table>
-            
-            <p>You'll receive a shipping notification with tracking information once your order is dispatched.</p>
-            <p>Thank you for your business!</p>
-            <p>Best regards,<br>Sales Team</p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
-
-    const orderItemsText = vars.orderItems
-      .map((item: any) => `${item.name} x${item.quantity} - $${item.price}`)
-      .join('\n');
-
-    const text = `
-      Order Confirmed!
-      Order #${vars.orderNumber}
-
-      Hello ${vars.customerName},
-
-      Thank you for your order! We've received your payment and are preparing your items for shipment.
-
-      Order Details:
-      ${orderItemsText}
-      
-      Total: $${vars.totalAmount}
-
-      You'll receive a shipping notification with tracking information once your order is dispatched.
-
-      Thank you for your business!
-
-      Best regards,
-      Sales Team
-    `;
-
-    return {
-      html,
-      text: text.trim(),
-      subject: `Order Confirmation #${vars.orderNumber} - Thank you for your purchase!`
-    };
-  }
-
-  /**
-   * Invoice email template
-   */
-  private static renderInvoiceTemplate(vars: Record<string, any>) {
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <title>Invoice</title>
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: #6f42c1; color: white; padding: 20px; text-align: center; }
-          .content { padding: 20px; }
-          .invoice-box { background: #f8f9fa; padding: 20px; border-radius: 4px; margin: 20px 0; }
-          .button { display: inline-block; background: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>Invoice</h1>
-            <p>Invoice #${vars.invoiceNumber}</p>
-          </div>
-          <div class="content">
-            <h2>Hello ${vars.customerName},</h2>
-            <p>Please find your invoice attached to this email.</p>
-            
-            <div class="invoice-box">
-              <h3>Invoice Summary</h3>
-              <p><strong>Invoice Number:</strong> ${vars.invoiceNumber}</p>
-              <p><strong>Amount:</strong> $${vars.amount}</p>
-              <p><strong>Due Date:</strong> ${new Date(vars.dueDate).toLocaleDateString()}</p>
-            </div>
-            
-            <p style="text-align: center;">
-              <a href="${vars.downloadLink}" class="button">Download Invoice</a>
-            </p>
-            
-            <p>Please ensure payment is made by the due date to avoid any late fees.</p>
-            <p>Thank you for your business!</p>
-            <p>Best regards,<br>Billing Department</p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
-
-    const text = `
-      Invoice #${vars.invoiceNumber}
-
-      Hello ${vars.customerName},
-
-      Please find your invoice information below:
-
-      Invoice Number: ${vars.invoiceNumber}
-      Amount: $${vars.amount}
-      Due Date: ${new Date(vars.dueDate).toLocaleDateString()}
-
-      Download your invoice: ${vars.downloadLink}
-
-      Please ensure payment is made by the due date to avoid any late fees.
-
-      Thank you for your business!
-
-      Best regards,
-      Billing Department
-    `;
-
-    return {
-      html,
-      text: text.trim(),
-      subject: `Invoice #${vars.invoiceNumber} - Payment Due ${new Date(vars.dueDate).toLocaleDateString()}`
-    };
-  }
-
-  /**
-   * Newsletter email template
-   */
-  private static renderNewsletterTemplate(vars: Record<string, any>) {
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <title>Newsletter</title>
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: #17a2b8; color: white; padding: 20px; text-align: center; }
-          .content { padding: 20px; }
-          .footer { background: #f8f9fa; padding: 20px; text-align: center; border-top: 1px solid #ddd; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>Newsletter</h1>
-            <p>${vars.title || 'Weekly Updates'}</p>
-          </div>
-          <div class="content">
-            ${vars.content || '<p>Thank you for subscribing to our newsletter!</p>'}
-          </div>
-          <div class="footer">
-            <p>You received this email because you subscribed to our newsletter.</p>
-            <p><a href="${vars.unsubscribeLink}">Unsubscribe</a> | <a href="${vars.preferencesLink || '#'}">Manage Preferences</a></p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
-
-    const text = `
-      Newsletter - ${vars.title || 'Weekly Updates'}
-
-      ${vars.textContent || 'Thank you for subscribing to our newsletter!'}
-
-      ---
-      You received this email because you subscribed to our newsletter.
-      Unsubscribe: ${vars.unsubscribeLink}
-    `;
-
-    return {
-      html,
-      text: text.trim(),
-      subject: vars.subject || `Newsletter - ${vars.title || 'Weekly Updates'}`
-    };
-  }
-
-  /**
-   * System alert email template
-   */
-  private static renderSystemAlertTemplate(vars: Record<string, any>) {
-    const alertColors = {
-      critical: '#dc3545',
-      warning: '#ffc107',
-      info: '#17a2b8',
-      success: '#28a745'
-    };
-
-    const alertColor = alertColors[vars.alertType as keyof typeof alertColors] || alertColors.info;
-
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <title>System Alert</title>
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: ${alertColor}; color: white; padding: 20px; text-align: center; }
-          .content { padding: 20px; }
-          .alert-box { background: #f8f9fa; border-left: 4px solid ${alertColor}; padding: 15px; margin: 20px 0; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>System Alert</h1>
-            <p>${vars.alertType.toUpperCase()}</p>
-          </div>
-          <div class="content">
-            <div class="alert-box">
-              <h3>Alert Details</h3>
-              <p><strong>Type:</strong> ${vars.alertType}</p>
-              <p><strong>Time:</strong> ${new Date(vars.timestamp).toLocaleString()}</p>
-              <p><strong>Message:</strong></p>
-              <p>${vars.message}</p>
-            </div>
-            
-            ${vars.actionRequired ? '<p><strong>Action Required:</strong> Please review and take necessary action.</p>' : ''}
-            ${vars.contactInfo ? `<p>If you need assistance, contact: ${vars.contactInfo}</p>` : ''}
-            
-            <p>Best regards,<br>System Monitoring</p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
-
-    const text = `
-      System Alert - ${vars.alertType.toUpperCase()}
-
-      Alert Details:
-      Type: ${vars.alertType}
-      Time: ${new Date(vars.timestamp).toLocaleString()}
-      Message: ${vars.message}
-
-      ${vars.actionRequired ? 'Action Required: Please review and take necessary action.' : ''}
-      ${vars.contactInfo ? `If you need assistance, contact: ${vars.contactInfo}` : ''}
-
-      Best regards,
-      System Monitoring
-    `;
-
-    return {
-      html,
-      text: text.trim(),
-      subject: `System Alert - ${vars.alertType.toUpperCase()}: ${vars.message.substring(0, 50)}...`
-    };
-  }
-
-  /**
-   * Custom email template
-   */
-  private static renderCustomTemplate(vars: Record<string, any>) {
-    return {
-      html: vars.customHtml || '<p>Custom email content</p>',
-      text: vars.customText || 'Custom email content',
-      subject: vars.subject || 'Custom Email'
-    };
   }
 }
 
@@ -858,4 +395,4 @@ function validateEmailJobData(data: EmailJobData): void {
 }
 
 // Export template constants for external usage
-export { TEMPLATE_VARIABLES, EmailTemplate as EmailTemplateConstants };
+export { EmailTemplate as EmailTemplateConstants };
