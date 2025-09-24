@@ -1,13 +1,27 @@
 import { Model, Document } from 'mongoose';
 import type { FilterQuery, UpdateQuery, ClientSession, SaveOptions, QueryOptions } from 'mongoose';
 import type { IBaseRepository, RepositoryOptions, PaginationResult } from './interfaces.js';
+import type { IMongoConnectionManager } from './connectionManager.interface.js';
 
 /**
- * Generic base repository with transaction support
+ * Generic base repository with connection dependency injection
  * Implements IBaseRepository interface for dependency injection
  */
 export class BaseRepository<T extends Document> implements IBaseRepository<T> {
-  constructor(protected model: Model<T>) {}
+  constructor(
+    protected model: Model<T>,
+    protected connectionManager?: IMongoConnectionManager
+  ) {}
+
+  /**
+   * Get the connection from the injected connection manager
+   */
+  protected getConnection() {
+    if (this.connectionManager && !this.connectionManager.isConnected()) {
+      throw new Error('MongoDB connection is not available');
+    }
+    return this.connectionManager?.getConnection();
+  }
 
   /**
    * Create a new document

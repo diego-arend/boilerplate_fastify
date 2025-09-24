@@ -1,25 +1,34 @@
 # MongoDB Infrastructure Documentation
 
-This infrastructure module provides a **robust, scalable, and production-ready MongoDB integration** for the Fastify application with comprehensive connection management and generic repository pattern implementation.
+This infrastructure module provides a **robust, scalable, and production-ready MongoDB integration** for the Fastify application with comprehensive connection management and generic repository pattern implementation using **dependency injection**.
 
-**Focus:** This documentation covers exclusively the MongoDB connection layer and BaseRepository pattern. For specific entity implementations, validation, and business logic patterns, refer to the Entity Architecture documentation.
+**Focus:** This documentation covers the MongoDB connection layer with dependency injection and BaseRepository pattern. For specific entity implementations, validation, and business logic patterns, refer to the Entity Architecture documentation.
 
 ## 🏗️ **System Architecture**
 
-The MongoDB infrastructure is designed for **high performance, type safety, and maintainability**:
+The MongoDB infrastructure is designed for **high performance, type safety, maintainability, and testability** using dependency injection:
 
-- **Singleton Connection Manager**: Efficient connection pooling and lifecycle management
-- **Generic Repository Pattern**: Type-safe CRUD operations with advanced querying
-- **Transaction Support**: Atomic operations with session management
+- **Dependency Injection Connection Manager**: Injectable connection management replacing singleton pattern
+- **Generic Repository Pattern**: Type-safe CRUD operations with injected dependencies
+- **Transaction Support**: Atomic operations with session management via DI
 - **Health Monitoring**: Built-in connection monitoring and logging
 - **Docker Integration**: Seamless container deployment with persistence
 - **Production Optimizations**: Connection pooling, timeouts, and error handling
 
 ## 🎯 **Core Components**
 
-### 📦 **MongoConnection** (`connection.ts`) - **CONNECTION MANAGEMENT**
+### 📦 **IMongoConnectionManager Interface** (`connectionManager.interface.ts`) - **CONNECTION CONTRACT**
 
-Singleton pattern for MongoDB connection lifecycle with comprehensive monitoring:
+Interface for MongoDB connection management with dependency injection support:
+
+- **Connection Management**: Connect, disconnect, and health monitoring methods
+- **Dependency Injection**: Injectable interface for testability and flexibility
+- **Type Safety**: Strong typing for connection operations
+- **Health Monitoring**: Built-in connection status and health information
+
+### 🔧 **MongoConnectionManager** (`connectionManager.ts`) - **CONNECTION IMPLEMENTATION**
+
+Injectable connection manager implementation:
 
 - **Connection Pooling**: Optimized pool size (max 10 connections)
 - **Timeout Management**: Server selection (5s) and socket (45s) timeouts
@@ -27,24 +36,61 @@ Singleton pattern for MongoDB connection lifecycle with comprehensive monitoring
 - **Environment Parsing**: Automatic host/database extraction from URI
 - **Graceful Shutdown**: Clean disconnection with proper cleanup
 
+### 🏭 **MongoConnectionManagerFactory** (`connectionManager.factory.ts`) - **FACTORY PATTERN**
+
+Factory for creating connection manager instances with dependency injection:
+
+- **Factory Pattern**: Clean instantiation of connection managers
+- **Configuration Injection**: Automatic configuration from environment
+- **Testing Support**: Easy mock injection for testing scenarios
+- **Logger Integration**: Automatic logger configuration
+
 ### 🗃️ **BaseRepository** (`baseRepository.ts`) - **DATA ACCESS LAYER**
 
-Generic repository providing type-safe CRUD operations:
+Updated repository with connection dependency injection:
 
 - **Full CRUD Operations**: Create, Read, Update, Delete with TypeScript safety
+- **Connection Injection**: Injectable connection manager for flexibility
 - **Advanced Querying**: Complex filters, sorting, and pagination
-- **Batch Operations**: Efficient bulk processing capabilities
-- **Count Operations**: Optimized document counting
-- **Pagination Support**: Built-in offset/limit with metadata
+- **Transaction Support**: Session-based operations for atomic transactions
+- **Health Validation**: Connection health checks before operations
+
+### 🔄 **ITransactionManager Interface** (`transactionManager.interface.ts`) - **TRANSACTION CONTRACT**
+
+Interface for transaction management with dependency injection:
+
+- **Transaction Lifecycle**: Start, commit, rollback operations
+- **Batch Operations**: Multiple operations in single transaction
+- **Monitoring**: Active transaction tracking and statistics
+- **Dependency Injection**: Injectable for testing and flexibility
+
+### ⚙️ **TransactionManager** (`transactionManager.ts`) - **TRANSACTION IMPLEMENTATION**
+
+Injectable transaction manager implementation:
+
+- **Session Management**: MongoDB session lifecycle with proper cleanup
+- **Error Handling**: Comprehensive error handling and rollback
+- **Monitoring**: Transaction statistics and active transaction tracking
+- **Timeout Management**: Configurable transaction timeouts
 
 ## 📁 **File Structure**
 
 ```
 src/infraestructure/mongo/
-├── README.md                    # This comprehensive guide
-├── index.ts                     # Module exports and public API
-├── connection.ts                # 🔌 MongoDB connection manager
-└── baseRepository.ts            # 🗃️ Generic repository pattern
+├── README.md                           # This comprehensive guide
+├── index.ts                           # Module exports and public API
+├── connectionManager.interface.ts     # 🔌 Connection manager interface (DI)
+├── connectionManager.ts               # 🔌 Injectable connection manager
+├── connectionManager.factory.ts       # 🏭 Connection manager factory
+├── baseRepository.ts                  # 🗃️ Generic repository with DI support
+├── transactionManager.interface.ts    # ⚙️ Transaction manager interface (DI)
+├── transactionManager.ts              # ⚙️ Injectable transaction manager
+├── transactionManager.factory.ts      # 🏭 Transaction manager factory
+├── transaction.utils.ts               # 🛠️ Transaction utility functions
+├── mongodb.plugin.ts                  # 🔌 Fastify plugin for MongoDB with DI
+├── transaction.plugin.ts              # 🔄 Fastify transaction plugin
+├── transaction.types.ts               # 📝 Transaction type definitions
+└── interfaces.ts                      # 📝 Repository interfaces
 ```
 
 ---
@@ -70,152 +116,112 @@ MONGO_URI=mongodb+srv://username:password@cluster.mongodb.net/boilerplate?retryW
 MONGO_URI=mongodb://user:pass@host1:27017,host2:27017,host3:27017/boilerplate?replicaSet=rs0
 ```
 
-### **2. Initialize Connection**
+### **2. Initialize Connection with Dependency Injection**
 
 ```typescript
-import { MongoConnection } from '../infraestructure/mongo/index.js';
-import { defaultLogger } from '../lib/logger/index.js';
+import { MongoConnectionManagerFactory } from '../infraestructure/mongo/connectionManager.factory.js';
+import { TransactionManagerFactory } from '../infraestructure/mongo/transactionManager.factory.js';
 
-// Initialize MongoDB connection
-const mongoConnection = MongoConnection.getInstance();
+// Create connection manager instance
+const connectionManager = MongoConnectionManagerFactory.create();
 
 // Connect during application startup
 try {
-  await mongoConnection.connect();
-  logger.info('✅ MongoDB connected successfully');
+  await connectionManager.connect();
+  console.log('✅ MongoDB connected successfully');
 } catch (error) {
-  logger.error('❌ MongoDB connection failed:', error);
+  console.error('❌ MongoDB connection failed:', error);
   process.exit(1);
 }
 
+// Create transaction manager with injected connection
+const transactionManager = TransactionManagerFactory.create(connectionManager);
+
 // Graceful shutdown
 process.on('SIGTERM', async () => {
-  await mongoConnection.disconnect();
-  logger.info('🔌 MongoDB disconnected gracefully');
+  await connectionManager.disconnect();
+  console.log('🔌 MongoDB disconnected gracefully');
   process.exit(0);
 });
 ```
 
-### **3. Create Document Model**
+### **3. Using Fastify Plugin (Recommended)**
 
 ```typescript
-import { Schema, model, Document } from 'mongoose';
+import mongoPlugin from '../infraestructure/mongo/mongodb.plugin.js';
 
-// TypeScript interface for a generic document
-export interface IDocument extends Document {
-  title: string;
-  content: string;
-  status: 'draft' | 'published' | 'archived';
-  tags: string[];
-  metadata: Record<string, any>;
-  createdAt: Date;
-  updatedAt: Date;
-}
+// Register MongoDB plugin with DI
+await fastify.register(mongoPlugin, {
+  // Optional custom connection string
+  connectionString: process.env.MONGO_URI,
 
-// Mongoose schema with validation
-const documentSchema = new Schema<IDocument>(
-  {
-    title: {
-      type: String,
-      required: [true, 'Title is required'],
-      trim: true,
-      minlength: [2, 'Title must be at least 2 characters'],
-      maxlength: [100, 'Title cannot exceed 100 characters'],
-      index: true
-    },
-    content: {
-      type: String,
-      required: [true, 'Content is required'],
-      maxlength: [5000, 'Content cannot exceed 5000 characters']
-    },
-    status: {
-      type: String,
-      enum: {
-        values: ['draft', 'published', 'archived'],
-        message: 'Status must be: draft, published, or archived'
-      },
-      default: 'draft',
-      index: true
-    },
-    tags: [
-      {
-        type: String,
-        trim: true,
-        maxlength: [50, 'Tag cannot exceed 50 characters']
-      }
-    ],
-    metadata: {
-      type: Schema.Types.Mixed,
-      default: {}
-    }
-  },
-  {
-    timestamps: true,
-    versionKey: false,
-    strict: true
-  }
-);
+  // Skip connection for testing
+  skipConnection: process.env.NODE_ENV === 'test'
+});
 
-// Indexes for performance
-documentSchema.index({ status: 1, createdAt: -1 });
-documentSchema.index({ title: 'text', content: 'text' }); // Text search
+// Access injected dependencies
+const connectionManager = fastify.mongoConnectionManager;
+const transactionManager = fastify.transactionManager;
 
-export const DocumentModel = model<IDocument>('Document', documentSchema);
+// Access connection information
+const connection = fastify.mongo.getConnection();
+const isConnected = fastify.mongo.isConnected();
 ```
 
-### **4. Implement Repository**
+### **4. Implement Repository with Dependency Injection**
 
 ```typescript
-import { Model } from 'mongoose';
 import { BaseRepository } from '../infraestructure/mongo/baseRepository.js';
+import { MongoConnectionManagerFactory } from '../infraestructure/mongo/connectionManager.factory.js';
 import { DocumentModel, type IDocument } from '../models/documentModel.js';
 
-export class DocumentRepository extends BaseRepository<IDocument> {
-  constructor() {
-    super(DocumentModel as Model<IDocument>);
+// Create repository with injected connection manager
+const connectionManager = MongoConnectionManagerFactory.create();
+const documentRepository = new BaseRepository<IDocument>(DocumentModel, connectionManager);
+
+// Or use factory pattern (recommended)
+class DocumentRepositoryFactory {
+  static create(connectionManager?: IMongoConnectionManager): DocumentRepository {
+    const connManager = connectionManager || MongoConnectionManagerFactory.create();
+    const baseRepository = new BaseRepository<IDocument>(DocumentModel, connManager);
+    return new DocumentRepository(baseRepository);
   }
+}
+
+export class DocumentRepository {
+  constructor(private baseRepository: BaseRepository<IDocument>) {}
 
   /**
-   * Find documents by status
+   * Find documents by status with injected connection
    */
   async findByStatus(status: string): Promise<IDocument[]> {
-    return await this.find({ status });
+    return await this.baseRepository.find({ status });
   }
 
   /**
-   * Search documents by text
+   * Create document with connection validation
    */
-  async searchDocuments(query: string): Promise<IDocument[]> {
-    return await this.model
-      .find({
-        $text: { $search: query }
-      })
-      .sort({ score: { $meta: 'textScore' } })
-      .exec();
+  async createDocument(documentData: Partial<IDocument>): Promise<IDocument> {
+    // Connection is validated internally by baseRepository
+    return await this.baseRepository.create(documentData);
   }
 
   /**
-   * Find documents with pagination
+   * Transaction example with injected transaction manager
    */
-  async findDocumentsPaginated(
-    filters: {
-      status?: string;
-      tags?: string[];
-    },
-    page: number = 1,
-    limit: number = 20
-  ) {
-    const query: any = {};
+  async createDocumentWithTransaction(
+    documentData: Partial<IDocument>,
+    transactionManager: ITransactionManager
+  ): Promise<IDocument> {
+    const result = await transactionManager.withTransaction(async session => {
+      return await this.baseRepository.create(documentData, { session });
+    });
 
-    if (filters.status) query.status = filters.status;
-    if (filters.tags?.length) query.tags = { $in: filters.tags };
+    if (!result.success) {
+      throw result.error || new Error('Transaction failed');
+    }
 
-    return await this.findPaginated(
-      query,
-      page,
-      limit,
-      { createdAt: -1 } // Sort by newest first
-    );
+    return result.data;
   }
 }
 ```
@@ -317,8 +323,8 @@ const paginationData = {
 
 ```typescript
 // Monitor connection status
-const mongoConnection = MongoConnection.getInstance();
-const connection = mongoConnection.getConnection();
+const connectionManager = MongoConnectionManagerFactory.create();
+const connection = connectionManager.getConnection();
 
 // Connection states
 console.log({
@@ -736,10 +742,10 @@ class SafeRepository<T extends Document> extends BaseRepository<T> {
 ```typescript
 // MongoDB health check for monitoring
 export class MongoHealthCheck {
-  private mongoConnection: MongoConnection;
+  private connectionManager: IMongoConnectionManager;
 
-  constructor() {
-    this.mongoConnection = MongoConnection.getInstance();
+  constructor(connectionManager?: IMongoConnectionManager) {
+    this.connectionManager = connectionManager || MongoConnectionManagerFactory.create();
   }
 
   async checkHealth(): Promise<{
@@ -1068,9 +1074,10 @@ app.post(
 #### **API de Estatísticas**
 
 ```typescript
-import { TransactionManager } from '../infraestructure/mongo/index.js';
+import { TransactionManagerFactory } from '../infraestructure/mongo/transactionManager.factory.js';
 
-const transactionManager = TransactionManager.getInstance();
+const connectionManager = MongoConnectionManagerFactory.create();
+const transactionManager = TransactionManagerFactory.create(connectionManager);
 
 // Transações ativas
 const activeTransactions = transactionManager.getActiveTransactions();
@@ -1118,7 +1125,8 @@ const result = await withTransaction(async session => {
 });
 
 // Método 2: TransactionManager direto
-const transactionManager = TransactionManager.getInstance();
+const connectionManager = MongoConnectionManagerFactory.create();
+const transactionManager = TransactionManagerFactory.create(connectionManager);
 const session = await transactionManager.startTransaction();
 
 try {
@@ -1382,20 +1390,20 @@ export class MongoMaintenance {
 ```typescript
 // plugins/mongodb.plugin.ts
 import fp from 'fastify-plugin';
-import { MongoConnection } from '../infraestructure/mongo/index.js';
+import { MongoConnectionManagerFactory } from '../infraestructure/mongo/connectionManager.factory.js';
 
 export default fp(async function (fastify, opts) {
-  const mongoConnection = MongoConnection.getInstance();
+  const connectionManager = MongoConnectionManagerFactory.create();
 
   // Connect on plugin registration
-  await mongoConnection.connect();
+  await connectionManager.connect();
 
   // Decorate Fastify instance
-  fastify.decorate('mongo', mongoConnection);
+  fastify.decorate('mongoConnectionManager', connectionManager);
 
   // Add hooks for graceful shutdown
   fastify.addHook('onClose', async () => {
-    await mongoConnection.disconnect();
+    await connectionManager.disconnect();
   });
 });
 

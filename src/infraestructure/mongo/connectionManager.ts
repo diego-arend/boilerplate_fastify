@@ -1,51 +1,52 @@
 import mongoose from 'mongoose';
-import { config } from '../../lib/validators/validateEnv.js';
-import { defaultLogger, type LogContext } from '../../lib/logger/index.js';
+import type { IMongoConnectionManager } from './connectionManager.interface.js';
+import type { LogContext } from '../../lib/logger/index.js';
 
-class MongoConnection {
-  private static instance: MongoConnection;
-  private isConnected: boolean = false;
-  private logger: ReturnType<typeof defaultLogger.child>;
+/**
+ * MongoDB Connection Manager with dependency injection support
+ * Replaces the singleton pattern with injectable connection management
+ */
+export class MongoConnectionManager implements IMongoConnectionManager {
+  private isConnectedFlag: boolean = false;
+  private connection: mongoose.Connection;
 
-  private constructor() {
-    this.logger = defaultLogger.child({ module: 'mongodb-connection' });
-  }
-
-  public static getInstance(): MongoConnection {
-    if (!MongoConnection.instance) {
-      MongoConnection.instance = new MongoConnection();
-    }
-    return MongoConnection.instance;
+  constructor(
+    private connectionString: string,
+    private logger: ReturnType<typeof import('../../lib/logger/index.js').defaultLogger.child>
+  ) {
+    this.connection = mongoose.connection;
   }
 
   public async connect(): Promise<void> {
-    if (this.isConnected) {
+    if (this.isConnectedFlag) {
       this.logger.info('MongoDB connection already established');
       return;
     }
 
     const connectionInfo = {
-      host: this.extractHostFromUri(config.MONGO_URI),
-      database: this.extractDatabaseFromUri(config.MONGO_URI),
+      host: this.extractHostFromUri(this.connectionString),
+      database: this.extractDatabaseFromUri(this.connectionString),
       environment: process.env.NODE_ENV || 'development'
     };
 
     this.logger.info(connectionInfo, 'Attempting to connect to MongoDB');
 
     try {
-      await mongoose.connect(config.MONGO_URI, {
-        serverSelectionTimeoutMS: 5000, // Server selection timeout
-        socketTimeoutMS: 45000, // Socket timeout
-        bufferCommands: false, // Disable command buffering
-        maxPoolSize: 10 // Maximum connection pool size
+      await mongoose.connect(this.connectionString, {
+        serverSelectionTimeoutMS: 5000,
+        socketTimeoutMS: 45000,
+        bufferCommands: false,
+        maxPoolSize: 10
       });
-      this.isConnected = true;
+
+      this.isConnectedFlag = true;
+      this.connection = mongoose.connection;
 
       this.logger.info(
         {
           ...connectionInfo,
-          readyState: mongoose.connection.readyState,
-          connectionId: mongoose.connection.id
+          readyState: this.connection.readyState,
+          connectionId: this.connection.id
         },
         'Successfully connected to MongoDB'
       );
@@ -62,7 +63,7 @@ class MongoConnection {
   }
 
   public async disconnect(): Promise<void> {
-    if (!this.isConnected) {
+    if (!this.isConnectedFlag) {
       this.logger.info('MongoDB already disconnected');
       return;
     }
@@ -71,7 +72,7 @@ class MongoConnection {
 
     try {
       await mongoose.disconnect();
-      this.isConnected = false;
+      this.isConnectedFlag = false;
       this.logger.info('Successfully disconnected from MongoDB');
     } catch (error) {
       this.logger.error(
@@ -85,7 +86,21 @@ class MongoConnection {
   }
 
   public getConnection(): mongoose.Connection {
-    return mongoose.connection;
+    return this.connection;
+  }
+
+  public isConnected(): boolean {
+    return this.isConnectedFlag && this.connection.readyState === 1;
+  }
+
+  public getHealthInfo() {
+    return {
+      isConnected: this.isConnected(),
+      readyState: this.connection.readyState,
+      host: this.connection.host,
+      port: this.connection.port,
+      name: this.connection.name
+    };
   }
 
   private extractHostFromUri(uri: string): string {
@@ -106,5 +121,3 @@ class MongoConnection {
     }
   }
 }
-
-export default MongoConnection;

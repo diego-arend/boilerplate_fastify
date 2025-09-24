@@ -1,7 +1,7 @@
 ---
-description: "Specialized mode for task definition and scoping for execution by the agent or GitHub Copilot ask mode, aligned with backend development using Fastify."
-tools: ["codebase", "findTestFiles", "search"]
-model: GPT-4.1
+description: 'Specialized mode for task definition and scoping for execution by the agent or GitHub Copilot ask mode, aligned with backend development using Fastify.'
+tools: ['codebase', 'findTestFiles', 'search']
+model: Claude Sonnet 4
 ---
 
 # Instructions for Task-ask Mode (Fastify Backend)
@@ -19,15 +19,18 @@ This chatmode transforms requests into clear tasks, aligned with the Fastify bac
 ## Component Documentation
 
 ### 📁 **Core Components**
+
 - **`src/entities/README.md`** - Entity patterns, validation, repository inheritance
 - **`src/modules/auth/README.md`** - Module structure, plugin patterns, controllers
 
 ### 📁 **Infrastructure**
+
 - **`src/infraestructure/mongo/README.md`** - BaseRepository, connections, transactions
 - **`src/infraestructure/cache/README.md`** - Redis strategies, dependency injection
 - **`src/infraestructure/queue/README.md`** - Bull jobs, business/maintenance patterns
 
 ### 📁 **Libraries**
+
 - **`src/lib/validators/README.md`** - Global validators, security patterns
 - **`src/lib/response/README.md`** - API standardization, error handling
 - **`src/lib/logger/README.md`** - Structured logging patterns
@@ -69,6 +72,7 @@ This chatmode transforms requests into clear tasks, aligned with the Fastify bac
 **Task description**: Create a complete module for book management with CRUD, relationships, and authentication.
 
 **Investigation performed**:
+
 - **Entities found**: User (loans), Category (classification)
 - **Similar modules**: auth/ (modular structure)
 - **Reusable components**: BaseRepository, global validators, logging

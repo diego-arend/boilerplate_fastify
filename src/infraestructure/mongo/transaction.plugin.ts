@@ -80,8 +80,14 @@ async function transactionPlugin(
           maxTimeMS: defaultTimeout
         };
 
-        // Inicia nova transação
-        const transactionManager = TransactionManager.getInstance();
+        // Inicia nova transação usando o transaction manager injetado no Fastify
+        const transactionManager = fastify.transactionManager;
+        if (!transactionManager) {
+          throw new Error(
+            'TransactionManager not available. Make sure MongoDB plugin is registered first.'
+          );
+        }
+
         const session = await transactionManager.startTransaction(
           transactionOptions as TransactionOptions
         );
@@ -127,7 +133,7 @@ async function transactionPlugin(
         );
 
         if (shouldRollback) {
-          const transactionManager = TransactionManager.getInstance();
+          const transactionManager = fastify.transactionManager;
           await transactionManager.rollbackTransaction(request.mongoSession);
 
           if (enableLogging) {
@@ -143,7 +149,7 @@ async function transactionPlugin(
           }
         } else {
           // Commit da transação
-          const transactionManager = TransactionManager.getInstance();
+          const transactionManager = fastify.transactionManager;
           await transactionManager.commitTransaction(request.mongoSession);
 
           if (enableLogging) {
@@ -171,8 +177,10 @@ async function transactionPlugin(
 
         // Tenta fazer rollback em caso de erro
         try {
-          const transactionManager = TransactionManager.getInstance();
-          await transactionManager.rollbackTransaction(request.mongoSession);
+          const transactionManager = fastify.transactionManager;
+          if (transactionManager) {
+            await transactionManager.rollbackTransaction(request.mongoSession);
+          }
         } catch (rollbackError) {
           fastify.log.error(
             {
@@ -195,8 +203,10 @@ async function transactionPlugin(
   fastify.addHook('onError', async (request: FastifyRequest, reply: FastifyReply, error: Error) => {
     if (request.mongoSession) {
       try {
-        const transactionManager = TransactionManager.getInstance();
-        await transactionManager.rollbackTransaction(request.mongoSession);
+        const transactionManager = fastify.transactionManager;
+        if (transactionManager) {
+          await transactionManager.rollbackTransaction(request.mongoSession);
+        }
 
         if (enableLogging) {
           fastify.log.info(

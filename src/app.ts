@@ -5,7 +5,10 @@ import cachePlugin from './infraestructure/cache/cache.plugin.js';
 import rateLimitPlugin from './infraestructure/server/rateLimit.plugin.js';
 import corsPlugin from './infraestructure/server/cors.plugin.js';
 import { registerModule } from './infraestructure/server/modules.js';
-import MongoConnection from './infraestructure/mongo/connection.js';
+import type { IMongoConnectionManager } from './infraestructure/mongo/connectionManager.interface.js';
+import type { ITransactionManager } from './infraestructure/mongo/transactionManager.interface.js';
+import { MongoConnectionManagerFactory } from './infraestructure/mongo/connectionManager.factory.js';
+import { TransactionManagerFactory } from './infraestructure/mongo/transactionManager.factory.js';
 import { errorHandler, notFoundHandler } from './lib/response/index.js';
 import fastifySwagger from '@fastify/swagger';
 import fastifySwaggerUi from '@fastify/swagger-ui';
@@ -71,11 +74,24 @@ export default async function app(fastify: FastifyInstance, opts: FastifyPluginO
   await registerModule(fastify, healthPlugin, '', 'health');
   await registerModule(fastify, authPlugin, '/auth', 'auth');
 
-  // MongoDB connection will be handled in server.ts
+  // MongoDB connection with dependency injection
   fastify.addHook('onReady', async () => {
-    const mongoConnection = MongoConnection.getInstance();
-    await mongoConnection.connect();
-    fastify.decorate('mongo', mongoConnection);
+    // Create connection manager instance
+    const connectionManager = MongoConnectionManagerFactory.create();
+    await connectionManager.connect();
+
+    // Decorate Fastify instance with connection manager
+    fastify.decorate('mongoConnectionManager', connectionManager);
+
+    // Create and decorate transaction manager
+    const transactionManager = TransactionManagerFactory.create(connectionManager);
+    fastify.decorate('transactionManager', transactionManager);
+
+    // Legacy support for existing code
+    fastify.decorate('mongo', {
+      getConnection: () => connectionManager.getConnection(),
+      isConnected: () => connectionManager.isConnected()
+    });
 
     // Register Swagger after all routes are defined
     if (process.env.NODE_ENV === 'development') {
@@ -86,8 +102,10 @@ export default async function app(fastify: FastifyInstance, opts: FastifyPluginO
 
   // Graceful shutdown for MongoDB
   fastify.addHook('onClose', async () => {
-    const mongoConnection = MongoConnection.getInstance();
-    await mongoConnection.disconnect();
+    const connectionManager = fastify.mongoConnectionManager as IMongoConnectionManager;
+    if (connectionManager) {
+      await connectionManager.disconnect();
+    }
   });
 }
 

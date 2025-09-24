@@ -1,5 +1,18 @@
-export { default as MongoConnection } from './connection.js';
+// MongoDB Infrastructure with Dependency Injection
+export { MongoConnectionManager } from './connectionManager.js';
+export { MongoConnectionManagerFactory } from './connectionManager.factory.js';
+export type { IMongoConnectionManager } from './connectionManager.interface.js';
+
+// Base repository with DI support
 export { BaseRepository } from './baseRepository.js';
+
+// Transaction management with DI
+export { TransactionManager } from './transactionManager.js';
+export { TransactionManagerFactory } from './transactionManager.factory.js';
+export type { ITransactionManager } from './transactionManager.interface.js';
+
+// MongoDB Fastify Plugin with DI
+export { default as mongoPlugin } from './mongodb.plugin.js';
 
 // Interfaces for dependency injection
 export type {
@@ -9,15 +22,7 @@ export type {
   PaginationOptions
 } from './interfaces.js';
 
-// Transaction management
-export {
-  TransactionManager,
-  getTransactionManager,
-  withTransaction,
-  withTransactionBatch
-} from './transactionManager.js';
-
-// Transaction plugin (recommended for Fastify applications)
+// Transaction plugin (updated to work with new DI approach)
 export {
   default as transactionPlugin,
   transactionPlugin as namedTransactionPlugin,
@@ -34,3 +39,6 @@ export type {
   TransactionResult,
   TransactionStats
 } from './transaction.types.js';
+
+// Utility functions for DI
+export { createWithTransaction, createWithTransactionBatch } from './transaction.utils.js';

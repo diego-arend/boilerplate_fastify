@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
-import { defaultLogger } from '../../lib/logger/index.js';
 import type { ClientSession } from 'mongoose';
+import type { IMongoConnectionManager } from './connectionManager.interface.js';
+import type { ITransactionManager } from './transactionManager.interface.js';
 import type {
   TransactionOptions,
   TransactionResult,
@@ -9,22 +10,16 @@ import type {
 } from './transaction.types.js';
 
 /**
- * Transaction Manager for MongoDB operations
- * Provides utilities for managing atomic transactions
+ * Transaction Manager with dependency injection support
+ * Replaces singleton pattern with injectable transaction management
  */
-export class TransactionManager {
-  private static instance: TransactionManager;
-  private logger = defaultLogger.child({ module: 'mongodb-transaction' });
+export class TransactionManager implements ITransactionManager {
   private activeTransactions = new Map<string, TransactionStats>();
 
-  private constructor() {}
-
-  public static getInstance(): TransactionManager {
-    if (!TransactionManager.instance) {
-      TransactionManager.instance = new TransactionManager();
-    }
-    return TransactionManager.instance;
-  }
+  constructor(
+    private connectionManager: IMongoConnectionManager,
+    private logger: ReturnType<typeof import('../../lib/logger/index.js').defaultLogger.child>
+  ) {}
 
   /**
    * Start a new transaction session
@@ -221,24 +216,17 @@ export class TransactionManager {
    * Check if the current MongoDB connection supports transactions
    */
   private supportsTransactions(): boolean {
-    const connection = mongoose.connection;
-
-    // Transactions require replica set or sharded cluster
-    if (!connection.db) {
+    if (!this.connectionManager.isConnected()) {
       return false;
     }
 
-    // For testing environments, assume transactions are supported
     if (process.env.NODE_ENV === 'test') {
       return true;
     }
 
     try {
-      // Try to access topology information
-      const admin = connection.db.admin();
-      // In production, we'll assume transactions are supported if we have a valid connection
-      // The actual transaction will fail gracefully if not supported
-      return true;
+      const connection = this.connectionManager.getConnection();
+      return connection && connection.readyState === 1;
     } catch (error) {
       this.logger.warn(
         { error },
@@ -283,32 +271,3 @@ export class TransactionManager {
     }
   }
 }
-
-/**
- * Get the singleton instance of TransactionManager
- */
-export const getTransactionManager = (): TransactionManager => {
-  return TransactionManager.getInstance();
-};
-
-/**
- * Utility function to execute a function within a transaction
- */
-export const withTransaction = async <T = any>(
-  operation: TransactionalFunction<T>,
-  options: TransactionOptions = {}
-): Promise<TransactionResult<T>> => {
-  const transactionManager = getTransactionManager();
-  return transactionManager.withTransaction(operation, options);
-};
-
-/**
- * Utility function to execute multiple operations in a transaction
- */
-export const withTransactionBatch = async <T = any>(
-  operations: TransactionalFunction<any>[],
-  options: TransactionOptions = {}
-): Promise<TransactionResult<T[]>> => {
-  const transactionManager = getTransactionManager();
-  return transactionManager.withTransactionBatch(operations, options);
-};
