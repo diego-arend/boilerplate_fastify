@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyPluginOptions } from 'fastify';
 import authPlugin from './modules/auth/auth.plugin.js';
 import healthPlugin from './modules/health/health.plugin.js';
 import cachePlugin from './infraestructure/cache/cache.plugin.js';
+import queuePlugin from './infraestructure/queue/queue.plugin.js';
 import rateLimitPlugin from './infraestructure/server/rateLimit.plugin.js';
 import corsPlugin from './infraestructure/server/cors.plugin.js';
 import { registerModule } from './infraestructure/server/modules.js';
@@ -23,6 +24,11 @@ export default async function app(fastify: FastifyInstance, opts: FastifyPluginO
     defaultTTL: 300, // 5 minutes
     enableAutoCache: true,
     skipRoutes: ['/health', '/auth/login', '/auth/register', '/docs']
+  });
+
+  // Register queue plugin AFTER cache for job processing
+  await fastify.register(queuePlugin, {
+    config: fastify.config
   });
 
   // Register CORS plugin BEFORE rate limiting for proper request handling

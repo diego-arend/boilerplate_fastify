@@ -3,6 +3,10 @@ import jwt from 'jsonwebtoken';
 import { AuthRepositoryFactory } from './factory/auth.factory.js';
 import { UserValidations } from '../../entities/user/index.js';
 import { ApiResponseHandler } from '../../lib/response/index.js';
+import {
+  EmailTemplate,
+  type EmailJobData
+} from '../../infraestructure/queue/jobs/business/emailSend.job.js';
 import { z } from 'zod';
 import { defaultLogger } from '../../lib/logger/index.js';
 
@@ -115,6 +119,51 @@ export default async function authController(fastify: FastifyInstance) {
             fastify.config.JWT_SECRET,
             { expiresIn: '24h' }
           );
+
+          // Create email job for registration success notification
+          try {
+            const emailJobData: EmailJobData = {
+              to: newUser.email,
+              subject: `🎉 Parabéns ${newUser.name}! Seu cadastro foi realizado com sucesso`,
+              template: EmailTemplate.REGISTRATION_SUCCESS,
+              variables: {
+                userName: newUser.name
+              },
+              priority: 'high',
+              trackOpens: true,
+              userId: String(newUser._id),
+              metadata: {
+                registrationDate: new Date().toISOString(),
+                userRole: newUser.role
+              }
+            };
+
+            // Add email job to queue
+            const jobId = await fastify.queueManager.addJob('emailSend', emailJobData, {
+              priority: 1, // High priority for registration emails
+              attempts: 3 // Retry up to 3 times
+            });
+
+            // Log email job creation (development only)
+            if (process.env.NODE_ENV === 'development') {
+              requestLogger.info({
+                message: 'Registration email job created',
+                jobId,
+                userId: newUser._id,
+                userEmail: newUser.email,
+                template: EmailTemplate.REGISTRATION_SUCCESS
+              });
+            }
+          } catch (emailError) {
+            // Log email job error but don't fail registration
+            requestLogger.warn({
+              message: 'Failed to create registration email job',
+              error: emailError instanceof Error ? emailError.message : String(emailError),
+              userId: newUser._id,
+              userEmail: newUser.email
+            });
+            // Continue with successful registration response
+          }
 
           // Log successful registration
           if (process.env.NODE_ENV === 'development') {
