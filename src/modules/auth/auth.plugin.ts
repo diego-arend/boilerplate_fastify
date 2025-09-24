@@ -23,15 +23,18 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
 
   const SECRET = fastify.config.JWT_SECRET;
 
-  // Create cache service for JWT strategy
+  // Create cache service for JWT strategy (Database 0 - Cache Client)
   let cacheService: ICacheService | undefined;
   try {
+    // Use Cache Client (Database 0) for JWT token caching and auth data
     cacheService = await CacheServiceFactory.createDefaultCacheService(config);
 
     if (process.env.NODE_ENV === 'development') {
       logger.info({
         message: 'Cache service initialized for JWT strategy',
-        cacheReady: cacheService.isReady()
+        cacheReady: cacheService.isReady(),
+        cacheType: 'Cache Client (Database 0)',
+        purpose: 'JWT tokens and authentication data'
       });
     }
   } catch (error) {

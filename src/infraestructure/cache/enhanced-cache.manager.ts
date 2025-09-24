@@ -1,6 +1,8 @@
-import type { RedisClientType } from './redis.connection.js';
-import { getRedisConnection } from './redis.connection.js';
+import type { RedisClientType } from 'redis';
+import { defaultLogger } from '../../lib/logger/index.js';
 import type { config } from '../../lib/validators/validateEnv.js';
+import { getMultiRedisConnectionManager } from './multi-redis.connection.js';
+import { RedisClientType as ClientType } from './redis.types.js';
 
 /**
  * Interface for cache options
@@ -24,24 +26,33 @@ export interface CacheStats {
 }
 
 /**
- * Cache Manager class for Redis operations
+ * Enhanced Cache Manager class for Redis operations with multi-client support
  * Provides a high-level interface for caching operations with type safety
+ * Supports different Redis clients for cache and queue operations
  */
-export class CacheManager {
+export class EnhancedCacheManager {
   private redis: RedisClientType | null = null;
   private defaultTTL: number;
   private defaultNamespace: string;
+  private clientType: ClientType;
   private stats: CacheStats;
   private isInitialized = false;
+  private logger: ReturnType<typeof defaultLogger.child>;
 
   /**
-   * Create a new CacheManager instance
-   * @param {number} defaultTTL - Default time to live in seconds (default: 3600 = 1 hour)
-   * @param {string} defaultNamespace - Default namespace prefix (default: 'cache')
+   * Create a new EnhancedCacheManager instance
+   * @param defaultTTL - Default time to live in seconds (default: 3600 = 1 hour)
+   * @param defaultNamespace - Default namespace prefix (default: 'cache')
+   * @param clientType - Type of Redis client to use (CACHE or QUEUE)
    */
-  constructor(defaultTTL: number = 3600, defaultNamespace: string = 'cache') {
+  constructor(
+    defaultTTL: number = 3600,
+    defaultNamespace: string = 'cache',
+    clientType: ClientType = ClientType.CACHE
+  ) {
     this.defaultTTL = defaultTTL;
     this.defaultNamespace = defaultNamespace;
+    this.clientType = clientType;
     this.stats = {
       hits: 0,
       misses: 0,
@@ -49,34 +60,59 @@ export class CacheManager {
       deletes: 0,
       errors: 0
     };
+    this.logger = defaultLogger.child({
+      module: 'enhanced-cache-manager',
+      clientType: this.clientType
+    });
   }
 
   /**
    * Initialize the cache manager with Redis connection
-   * @param {typeof config} appConfig - Application configuration
+   * @param appConfig - Application configuration
    * @throws {Error} If Redis connection fails
    */
   public async initialize(appConfig: typeof config): Promise<void> {
     if (this.isInitialized) {
+      this.logger.debug('Cache manager already initialized');
       return;
     }
 
     try {
-      const redisConnection = getRedisConnection();
-      this.redis = await redisConnection.connect(appConfig);
+      const connectionManager = getMultiRedisConnectionManager();
+
+      // Initialize all connections if not already done
+      await connectionManager.initializeAll(appConfig);
+
+      // Get the specific client for this manager
+      this.redis = connectionManager.getClient(this.clientType);
+
+      if (!this.redis) {
+        throw new Error(`Failed to get ${this.clientType} Redis client`);
+      }
+
       this.isInitialized = true;
-      console.log('CacheManager: Successfully initialized');
+      this.logger.info(
+        {
+          clientType: this.clientType,
+          defaultTTL: this.defaultTTL,
+          defaultNamespace: this.defaultNamespace
+        },
+        'Enhanced CacheManager successfully initialized'
+      );
     } catch (error) {
-      console.error('CacheManager: Initialization failed', error);
-      throw new Error('Failed to initialize cache manager');
+      this.logger.error(
+        { error, clientType: this.clientType },
+        'CacheManager initialization failed'
+      );
+      throw new Error(`Failed to initialize cache manager for ${this.clientType}`);
     }
   }
 
   /**
    * Set a value in cache
-   * @param {string} key - Cache key
-   * @param {T} value - Value to cache (will be JSON serialized)
-   * @param {CacheOptions} options - Cache options
+   * @param key - Cache key
+   * @param value - Value to cache (will be JSON serialized)
+   * @param options - Cache options
    * @returns {Promise<void>}
    * @throws {Error} If not initialized or operation fails
    */
@@ -95,18 +131,21 @@ export class CacheManager {
       }
 
       this.stats.sets++;
-      console.debug(`CacheManager: Set key '${fullKey}' with TTL ${ttl}s`);
+      this.logger.debug(
+        { key: fullKey, ttl, clientType: this.clientType },
+        'Cache set operation successful'
+      );
     } catch (error) {
       this.stats.errors++;
-      console.error('CacheManager: Set operation failed', error);
+      this.logger.error({ error, key, clientType: this.clientType }, 'Cache set operation failed');
       throw new Error(`Failed to set cache key: ${key}`);
     }
   }
 
   /**
    * Get a value from cache
-   * @param {string} key - Cache key
-   * @param {CacheOptions} options - Cache options
+   * @param key - Cache key
+   * @param options - Cache options
    * @returns {Promise<T | null>} The cached value or null if not found
    * @throws {Error} If not initialized or deserialization fails
    */
@@ -119,24 +158,24 @@ export class CacheManager {
 
       if (value === null) {
         this.stats.misses++;
-        console.debug(`CacheManager: Cache miss for key '${fullKey}'`);
+        this.logger.debug({ key: fullKey, clientType: this.clientType }, 'Cache miss');
         return null;
       }
 
       this.stats.hits++;
-      console.debug(`CacheManager: Cache hit for key '${fullKey}'`);
+      this.logger.debug({ key: fullKey, clientType: this.clientType }, 'Cache hit');
       return this.deserialize<T>(value);
     } catch (error) {
       this.stats.errors++;
-      console.error('CacheManager: Get operation failed', error);
+      this.logger.error({ error, key, clientType: this.clientType }, 'Cache get operation failed');
       throw new Error(`Failed to get cache key: ${key}`);
     }
   }
 
   /**
    * Delete a value from cache
-   * @param {string} key - Cache key
-   * @param {CacheOptions} options - Cache options
+   * @param key - Cache key
+   * @param options - Cache options
    * @returns {Promise<boolean>} True if key was deleted, false if key didn't exist
    * @throws {Error} If not initialized or operation fails
    */
@@ -148,19 +187,25 @@ export class CacheManager {
       const result = await this.redis!.del(fullKey);
 
       this.stats.deletes++;
-      console.debug(`CacheManager: Deleted key '${fullKey}' (existed: ${result > 0})`);
+      this.logger.debug(
+        { key: fullKey, existed: result > 0, clientType: this.clientType },
+        'Cache delete operation completed'
+      );
       return result > 0;
     } catch (error) {
       this.stats.errors++;
-      console.error('CacheManager: Delete operation failed', error);
+      this.logger.error(
+        { error, key, clientType: this.clientType },
+        'Cache delete operation failed'
+      );
       throw new Error(`Failed to delete cache key: ${key}`);
     }
   }
 
   /**
    * Check if a key exists in cache
-   * @param {string} key - Cache key
-   * @param {CacheOptions} options - Cache options
+   * @param key - Cache key
+   * @param options - Cache options
    * @returns {Promise<boolean>} True if key exists
    * @throws {Error} If not initialized or operation fails
    */
@@ -173,16 +218,19 @@ export class CacheManager {
       return result > 0;
     } catch (error) {
       this.stats.errors++;
-      console.error('CacheManager: Exists operation failed', error);
+      this.logger.error(
+        { error, key, clientType: this.clientType },
+        'Cache exists operation failed'
+      );
       throw new Error(`Failed to check cache key existence: ${key}`);
     }
   }
 
   /**
    * Set TTL for an existing key
-   * @param {string} key - Cache key
-   * @param {number} ttl - Time to live in seconds
-   * @param {CacheOptions} options - Cache options
+   * @param key - Cache key
+   * @param ttl - Time to live in seconds
+   * @param options - Cache options
    * @returns {Promise<boolean>} True if TTL was set, false if key doesn't exist
    * @throws {Error} If not initialized or operation fails
    */
@@ -195,15 +243,18 @@ export class CacheManager {
       return Boolean(result);
     } catch (error) {
       this.stats.errors++;
-      console.error('CacheManager: Expire operation failed', error);
+      this.logger.error(
+        { error, key, ttl, clientType: this.clientType },
+        'Cache expire operation failed'
+      );
       throw new Error(`Failed to set TTL for cache key: ${key}`);
     }
   }
 
   /**
    * Get TTL for a key
-   * @param {string} key - Cache key
-   * @param {CacheOptions} options - Cache options
+   * @param key - Cache key
+   * @param options - Cache options
    * @returns {Promise<number>} TTL in seconds (-1 if no TTL, -2 if key doesn't exist)
    * @throws {Error} If not initialized or operation fails
    */
@@ -215,14 +266,14 @@ export class CacheManager {
       return await this.redis!.ttl(fullKey);
     } catch (error) {
       this.stats.errors++;
-      console.error('CacheManager: TTL operation failed', error);
+      this.logger.error({ error, key, clientType: this.clientType }, 'Cache TTL operation failed');
       throw new Error(`Failed to get TTL for cache key: ${key}`);
     }
   }
 
   /**
    * Clear all cache entries with the specified namespace
-   * @param {string} namespace - Namespace to clear (default: default namespace)
+   * @param namespace - Namespace to clear (default: default namespace)
    * @returns {Promise<number>} Number of keys deleted
    * @throws {Error} If not initialized or operation fails
    */
@@ -234,17 +285,23 @@ export class CacheManager {
       const keys = await this.redis!.keys(pattern);
 
       if (keys.length === 0) {
-        console.debug(`CacheManager: No keys found for pattern '${pattern}'`);
+        this.logger.debug({ pattern, clientType: this.clientType }, 'No keys found for pattern');
         return 0;
       }
 
       const result = await this.redis!.del(keys);
       this.stats.deletes += result;
-      console.log(`CacheManager: Cleared ${result} keys with pattern '${pattern}'`);
+      this.logger.info(
+        { pattern, keysDeleted: result, clientType: this.clientType },
+        'Cache clear operation completed'
+      );
       return result;
     } catch (error) {
       this.stats.errors++;
-      console.error('CacheManager: Clear operation failed', error);
+      this.logger.error(
+        { error, namespace, clientType: this.clientType },
+        'Cache clear operation failed'
+      );
       throw new Error('Failed to clear cache');
     }
   }
@@ -268,7 +325,7 @@ export class CacheManager {
       deletes: 0,
       errors: 0
     };
-    console.log('CacheManager: Statistics reset');
+    this.logger.info({ clientType: this.clientType }, 'Cache statistics reset');
   }
 
   /**
@@ -295,13 +352,29 @@ export class CacheManager {
    */
   public async ping(): Promise<string> {
     this.ensureInitialized();
-    return await this.redis!.ping();
+
+    try {
+      const result = await this.redis!.ping();
+      this.logger.debug({ clientType: this.clientType }, 'Ping successful');
+      return result;
+    } catch (error) {
+      this.logger.error({ error, clientType: this.clientType }, 'Ping failed');
+      throw new Error(`Redis ${this.clientType} client: Ping failed`);
+    }
+  }
+
+  /**
+   * Get client type used by this cache manager
+   * @returns {ClientType} The Redis client type
+   */
+  public getClientType(): ClientType {
+    return this.clientType;
   }
 
   /**
    * Build full cache key with namespace
-   * @param {string} key - Original key
-   * @param {string} namespace - Optional namespace override
+   * @param key - Original key
+   * @param namespace - Optional namespace override
    * @returns {string} Full cache key
    * @private
    */
@@ -312,22 +385,21 @@ export class CacheManager {
 
   /**
    * Sanitize cache key to prevent injection and ensure valid Redis key
-   * @param {string} key - Original key
+   * @param key - Original key
    * @returns {string} Sanitized key
    * @private
    */
   private sanitizeKey(key: string): string {
-    // Remove or replace invalid characters
     return key
       .replace(/[\\/:*?"<>|]/g, '_') // Replace invalid chars with underscore
       .replace(/\s+/g, '_') // Replace spaces with underscore
       .toLowerCase() // Convert to lowercase for consistency
-      .slice(0, 250); // Limit key length (Redis max is 512MB but keep reasonable)
+      .slice(0, 250); // Limit key length
   }
 
   /**
    * Serialize value to JSON string
-   * @param {T} value - Value to serialize
+   * @param value - Value to serialize
    * @returns {string} JSON string
    * @private
    */
@@ -335,14 +407,14 @@ export class CacheManager {
     try {
       return JSON.stringify(value);
     } catch (error) {
-      console.error('CacheManager: Serialization failed', error);
+      this.logger.error({ error, clientType: this.clientType }, 'Serialization failed');
       throw new Error('Failed to serialize cache value');
     }
   }
 
   /**
    * Deserialize JSON string to typed value
-   * @param {string} value - JSON string
+   * @param value - JSON string
    * @returns {T} Deserialized value
    * @private
    */
@@ -350,7 +422,7 @@ export class CacheManager {
     try {
       return JSON.parse(value) as T;
     } catch (error) {
-      console.error('CacheManager: Deserialization failed', error);
+      this.logger.error({ error, clientType: this.clientType }, 'Deserialization failed');
       throw new Error('Failed to deserialize cache value');
     }
   }
@@ -362,28 +434,47 @@ export class CacheManager {
    */
   private ensureInitialized(): void {
     if (!this.isInitialized || !this.redis) {
-      throw new Error('CacheManager not initialized. Call initialize() first.');
+      throw new Error(
+        `Enhanced CacheManager for ${this.clientType} not initialized. Call initialize() first.`
+      );
     }
   }
 }
 
 /**
- * Default cache manager singleton instance
+ * Cache manager instances for different purposes
  */
-let defaultCacheManager: CacheManager | null = null;
+let cacheCacheManager: EnhancedCacheManager | null = null;
+let queueCacheManager: EnhancedCacheManager | null = null;
 
 /**
- * Get or create the default cache manager instance
- * @param {number} defaultTTL - Default TTL in seconds
- * @param {string} defaultNamespace - Default namespace
- * @returns {CacheManager} The cache manager instance
+ * Get or create the cache client manager instance (for API caching)
+ * @param defaultTTL - Default TTL in seconds
+ * @param defaultNamespace - Default namespace
+ * @returns {EnhancedCacheManager} The cache manager instance for cache operations
  */
-export const getCacheManager = (
+export const getCacheCacheManager = (
   defaultTTL: number = 3600,
   defaultNamespace: string = 'cache'
-): CacheManager => {
-  if (!defaultCacheManager) {
-    defaultCacheManager = new CacheManager(defaultTTL, defaultNamespace);
+): EnhancedCacheManager => {
+  if (!cacheCacheManager) {
+    cacheCacheManager = new EnhancedCacheManager(defaultTTL, defaultNamespace, ClientType.CACHE);
   }
-  return defaultCacheManager;
+  return cacheCacheManager;
+};
+
+/**
+ * Get or create the queue client manager instance (for queue caching)
+ * @param defaultTTL - Default TTL in seconds
+ * @param defaultNamespace - Default namespace
+ * @returns {EnhancedCacheManager} The cache manager instance for queue operations
+ */
+export const getQueueCacheManager = (
+  defaultTTL: number = 1800, // 30 minutes default for queue operations
+  defaultNamespace: string = 'queue'
+): EnhancedCacheManager => {
+  if (!queueCacheManager) {
+    queueCacheManager = new EnhancedCacheManager(defaultTTL, defaultNamespace, ClientType.QUEUE);
+  }
+  return queueCacheManager;
 };

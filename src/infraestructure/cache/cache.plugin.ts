@@ -1,19 +1,19 @@
 import type { FastifyInstance, FastifyPluginOptions, FastifyRequest, FastifyReply } from 'fastify';
-import { getDefaultCache } from './index.js';
+import { getCacheCacheManager } from './index.js';
 
 /**
- * Cache plugin for Fastify
- * Provides automatic caching capabilities for GET requests
+ * Enhanced Cache plugin for Fastify using Cache Client (Database 0)
+ * Provides automatic caching capabilities for GET requests using the new multi-client Redis architecture
  */
 export default async function cachePlugin(
   fastify: FastifyInstance,
   opts: FastifyPluginOptions
 ): Promise<void> {
-  // Initialize cache manager
-  const cache = getDefaultCache();
+  // Initialize cache manager using Cache Client (Database 0)
+  const cache = getCacheCacheManager();
   await cache.initialize(fastify.config);
 
-  // Add cache to Fastify instance
+  // Add cache manager to Fastify instance
   fastify.decorate('cache', cache);
 
   // Cache configuration options
@@ -163,7 +163,7 @@ export default async function cachePlugin(
 // Extend FastifyInstance type to include cache methods
 declare module 'fastify' {
   interface FastifyInstance {
-    cache: import('./cache.manager.js').CacheManager;
+    cache: import('./enhanced-cache.manager.js').EnhancedCacheManager;
     setCacheForRoute: (key: string, data: any, ttl?: number) => Promise<void>;
     getCacheForRoute: (key: string) => Promise<any>;
     invalidateCache: (pattern: string) => Promise<boolean>;

@@ -19,11 +19,17 @@ const envSchema = z.object({
   // MongoDB Database
   MONGO_URI: z.string().url('MONGO_URI must be a valid URL'),
 
-  // Redis Cache Configuration
+  // Redis Cache Configuration - Primary (API Cache)
   REDIS_HOST: z.string().min(1, 'REDIS_HOST cannot be empty').default('localhost'),
   REDIS_PORT: z.coerce.number().min(1).max(65535).default(6379),
   REDIS_PASSWORD: z.string().optional(),
   REDIS_DB: z.coerce.number().min(0).max(15).default(0).optional(),
+
+  // Redis Queue Configuration - Secondary (Queue Worker Cache)
+  QUEUE_REDIS_HOST: z.string().min(1, 'QUEUE_REDIS_HOST cannot be empty').optional(),
+  QUEUE_REDIS_PORT: z.coerce.number().min(1).max(65535).optional(),
+  QUEUE_REDIS_PASSWORD: z.string().optional(),
+  QUEUE_REDIS_DB: z.coerce.number().min(0).max(15).default(1).optional(),
 
   // Optional: Logging configuration
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
@@ -53,6 +59,10 @@ if (!parsed.success) {
       REDIS_PORT: process.env.REDIS_PORT,
       REDIS_PASSWORD: process.env.REDIS_PASSWORD ? '[REDACTED]' : 'NOT_SET',
       REDIS_DB: process.env.REDIS_DB,
+      QUEUE_REDIS_HOST: process.env.QUEUE_REDIS_HOST,
+      QUEUE_REDIS_PORT: process.env.QUEUE_REDIS_PORT,
+      QUEUE_REDIS_PASSWORD: process.env.QUEUE_REDIS_PASSWORD ? '[REDACTED]' : 'NOT_SET',
+      QUEUE_REDIS_DB: process.env.QUEUE_REDIS_DB,
       LOG_LEVEL: process.env.LOG_LEVEL,
       CORS_ORIGIN: process.env.CORS_ORIGIN,
       CORS_ALLOW_CREDENTIALS: process.env.CORS_ALLOW_CREDENTIALS,

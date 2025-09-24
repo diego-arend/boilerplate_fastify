@@ -75,7 +75,7 @@ export class JwtStrategy implements AuthStrategy {
         return null;
       }
 
-      // Try to get cached token validation first
+      // Try to get cached token validation first from Cache Client (Database 0)
       if (this.cacheService) {
         const tokenHash = this.generateTokenHash(token);
         const cachedUser = await this.cacheService.get<AuthenticatedUser>(`token:${tokenHash}`, {
@@ -120,13 +120,13 @@ export class JwtStrategy implements AuthStrategy {
         return null;
       }
 
-      // Cache the valid token if cache service is available
+      // Cache the valid token if Cache Client service is available (Database 0)
       if (this.cacheService) {
         const tokenHash = this.generateTokenHash(token);
         await this.cacheService.set(`token:${tokenHash}`, payload, {
           ttl: 3600,
           namespace: 'auth'
-        }); // 1 hour cache
+        }); // 1 hour cache in Database 0
       }
 
       // Log successful JWT validation (development only)

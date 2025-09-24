@@ -1,4 +1,5 @@
-import type { CacheManager } from './cache.manager.js';
+import type { EnhancedCacheManager, CacheOptions } from './enhanced-cache.manager.js';
+import type { EnhancedCacheManager as CacheManager } from './enhanced-cache.manager.js';
 
 /**
  * Interface defining cache operations contract for dependency injection
@@ -34,10 +35,10 @@ export interface ICacheService {
 
 /**
  * Redis-based cache service implementation
- * Adapts CacheManager to ICacheService interface
+ * Adapts CacheManager or EnhancedCacheManager to ICacheService interface
  */
 export class RedisCacheService implements ICacheService {
-  constructor(private cacheManager: CacheManager) {}
+  constructor(private cacheManager: CacheManager | EnhancedCacheManager) {}
 
   async get<T>(key: string, options?: { namespace?: string }): Promise<T | null> {
     return this.cacheManager.get<T>(key, options);

@@ -13,8 +13,26 @@ Modern backend API boilerplate using **Fastify v5.5.0** + **TypeScript** with mo
 - **Database**: MongoDB v8.18.1 + Mongoose
 - **Validation**: Zod v4.1.5
 - **Authentication**: JWT (jsonwebtoken v9.0.2)
-- **Package Manager**: pnpm v10.13.1
+- **Package Manager**: pnpm v10.13.1 *(REQUIRED - All commands must use pnpm)*
 - **Development**: tsx v4.19.1, Docker + Docker Compose
+
+## Package Management
+
+**⚠️ IMPORTANT**: This project uses **pnpm** as the official package manager. All dependency commands must be executed with `pnpm`:
+
+```bash
+# ✅ Correct commands
+pnpm install           # Install dependencies
+pnpm add <package>     # Add new dependency
+pnpm remove <package>  # Remove dependency
+pnpm run dev          # Run development server
+pnpm run build        # Build project
+pnpm run test         # Run tests
+
+# ❌ Do NOT use npm or yarn
+npm install   # Wrong!
+yarn add      # Wrong!
+```
 
 ## Architecture & Structure
 
@@ -43,7 +61,7 @@ For implementation patterns and guidelines, refer to component-specific READMEs:
 
 ### 📁 **Core Components**
 - **Entity Patterns**: `src/entities/README.md` - Entity architecture, validation patterns, repository inheritance
-- **Module Structure**: `src/modules/auth/README.md` - Module organization, plugin patterns, controllers  
+- **Module Structure**: `src/modules/auth/README.md` - Module organization, plugin patterns, controllers
 
 ### 📁 **Infrastructure**
 - **Database**: `src/infraestructure/mongo/README.md` - BaseRepository, connections, transactions
@@ -65,6 +83,11 @@ For implementation patterns and guidelines, refer to component-specific READMEs:
 - **Error Handling**: Follow `src/lib/response/README.md` patterns
 
 ## Development Standards
+
+### Package Manager Requirements
+- **ALWAYS use pnpm**: Never use npm or yarn commands
+- **Lock file**: pnpm-lock.yaml must be committed
+- **Scripts**: All package.json scripts should be run with `pnpm run <script>`
 
 ### Code Quality & Comments
 - **Language**: All comments in English with JSDoc format
@@ -88,3 +111,4 @@ For implementation patterns and guidelines, refer to component-specific READMEs:
 ---
 
 **Note**: For detailed implementation patterns, always consult the component-specific README files listed above.
+````

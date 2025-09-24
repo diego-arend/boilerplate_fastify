@@ -29,7 +29,14 @@ export interface IAuthRepository {
 }
 
 /**
- * AuthRepository - Authentication-specific repository using composition with cache support
+ * AuthRepository - Authentication-specific repository using composition with enhanced cache support
+ *
+ * Cache Strategy:
+ * - Uses Cache Client (Database 0) for all authentication data
+ * - Namespace: 'auth' for isolation
+ * - TTL: 30 minutes for user data, 1 hour for tokens, 5 minutes for rate limiting
+ * - Security: Password data is NEVER cached
+ *
  * This class uses UserRepository via dependency injection and includes caching for better performance
  */
 export class AuthRepository implements IAuthRepository {
@@ -39,7 +46,8 @@ export class AuthRepository implements IAuthRepository {
   ) {}
 
   /**
-   * Find user by email for authentication (with caching)
+   * Find user by email for authentication (with Cache Client caching)
+   * Uses Database 0 with 'auth' namespace and 30-minute TTL
    */
   async findByEmailForAuth(email: string, session?: ClientSession): Promise<IUser | null> {
     // Try cache first if available and no transaction session
@@ -78,7 +86,8 @@ export class AuthRepository implements IAuthRepository {
   }
 
   /**
-   * Create a new user for registration (with cache invalidation)
+   * Create a new user for registration (with Cache Client invalidation)
+   * Caches new user data in Database 0 with 'auth' namespace
    */
   async createUser(
     userData: {
@@ -121,7 +130,8 @@ export class AuthRepository implements IAuthRepository {
   }
 
   /**
-   * Validate user login credentials (with rate limiting)
+   * Validate user login credentials (with Cache Client rate limiting)
+   * Uses Database 0 for rate limiting counters with 5-minute TTL
    */
   async validateLogin(
     email: string,
@@ -179,7 +189,8 @@ export class AuthRepository implements IAuthRepository {
   }
 
   /**
-   * Update user last login timestamp (with cache invalidation)
+   * Update user last login timestamp (with Cache Client invalidation)
+   * Invalidates cached user data in Database 0 to maintain consistency
    */
   async updateLastLogin(userId: string, session?: ClientSession): Promise<IUser | null> {
     const updatedUser = await this.userRepository.updateUser(
@@ -202,7 +213,8 @@ export class AuthRepository implements IAuthRepository {
   }
 
   /**
-   * Find user by ID for authentication (with caching)
+   * Find user by ID for authentication (with Cache Client caching)
+   * Uses Database 0 with 'auth' namespace and 30-minute TTL
    */
   async findByIdForAuth(id: string, session?: ClientSession): Promise<IUser | null> {
     // Try cache first if available
