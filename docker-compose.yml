@@ -23,6 +23,14 @@ services:
       - redis
     networks:
       - boilerplate_network
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
       interval: 30s
@@ -50,6 +58,14 @@ services:
       - redis
     networks:
       - boilerplate_network
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
     healthcheck:
       test: ["CMD", "pgrep", "-f", "queue.worker.js"]
       interval: 30s

@@ -27,6 +27,14 @@ services:
       - .:/app
       - /app/node_modules
     command: pnpm run dev
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
       interval: 30s
@@ -58,6 +66,14 @@ services:
       - .:/app
       - /app/node_modules
     command: pnpm run worker:queue
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
     healthcheck:
       test: ["CMD", "pgrep", "-f", "queue.worker.ts"]
       interval: 30s
