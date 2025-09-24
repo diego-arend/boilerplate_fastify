@@ -1,331 +1,395 @@
-#!/usr/bin/env node
-import dotenv from 'dotenv';
-import { Worker, Job } from 'bullmq';
-import { config } from '../../lib/validators/validateEnv.js';
-import { defaultLogger } from '../../lib/logger/index.js';
-import { JobType, type JobData, type JobResult, type WorkerConfig } from './queue.types.js';
+/**
+ * Queue Worker - Worker with batch processing and concurrency control
+ */
 
-// Import job handlers
-import { JOB_HANDLERS, getJobHandler } from './jobs/index.js';
+import { randomUUID } from 'crypto';
+import type { FastifyBaseLogger } from 'fastify';
+import type { ClientSession } from 'mongoose';
 
-// Load environment variables
-dotenv.config();
+import type { IJob } from '../../entities/job/index.js';
+import type { QueueManager } from './queue.manager.js';
+import type { JobResult, JobHandler } from './queue.types.js';
+
+import { JOB_HANDLERS } from './jobs/index.js';
+import { QueueJobType } from './queue.types.js';
 
 /**
- * Queue Worker class for processing jobs
- * Runs as an independent process separate from the main application
+ * Queue Worker with features:
+ * - Batch processing from database
+ * - Concurrency control with Redis locks
+ * - Graceful shutdown handling
+ * - Performance metrics
  */
-class QueueWorker {
-  private worker: Worker;
-  private config: WorkerConfig;
-  private handlers: Map<string, Function>;
-  private logger: ReturnType<typeof defaultLogger.child>;
+export class QueueWorker {
+  private isRunning = false;
+  private isShuttingDown = false;
+  private workerId: string;
+  private currentJob: IJob | null = null;
+  private processedJobs = 0;
+  private failedJobs = 0;
+  private startTime: Date;
 
-  constructor(queueName: string = 'main') {
-    // Initialize logger with worker context
-    this.logger = defaultLogger.child({
-      module: 'queue-worker',
-      queueName
+  constructor(
+    private queueManager: QueueManager,
+    private logger: FastifyBaseLogger,
+    private concurrency = 1,
+    private batchSize = 50,
+    private pollInterval = 5000 // 5 seconds
+  ) {
+    this.workerId = `worker_${randomUUID()}`;
+    this.startTime = new Date();
+  }
+
+  /**
+   * Start the worker
+   */
+  async start(): Promise<void> {
+    if (this.isRunning) {
+      this.logger.warn({ workerId: this.workerId }, 'Worker is already running');
+      return;
+    }
+
+    this.isRunning = true;
+    this.logger.info(
+      {
+        workerId: this.workerId,
+        concurrency: this.concurrency,
+        batchSize: this.batchSize,
+        pollInterval: this.pollInterval
+      },
+      'Starting Queue Worker'
+    ); // Setup graceful shutdown handlers
+    this.setupGracefulShutdown();
+
+    // Start processing loop
+    this.processLoop().catch(error => {
+      this.logger.error({ error, workerId: this.workerId }, 'Worker process loop failed');
     });
+  }
 
-    // Load and validate environment
-    const appConfig = config;
+  /**
+   * Stop the worker gracefully
+   */
+  async stop(): Promise<void> {
+    if (!this.isRunning) {
+      return;
+    }
 
-    // Worker configuration
-    this.config = {
-      concurrency: 5, // Process up to 5 jobs concurrently
-      limiter: {
-        max: 100, // Max 100 jobs
-        duration: 60000 // per 60 seconds
-      }
-    };
+    this.logger.info({ workerId: this.workerId }, 'Stopping Queue Worker...');
+
+    this.isShuttingDown = true;
+
+    // Wait for current job to finish
+    let attempts = 0;
+    const maxAttempts = 30; // 30 seconds max wait
+
+    while (this.currentJob && attempts < maxAttempts) {
+      this.logger.info(
+        {
+          workerId: this.workerId,
+          currentJobId: this.currentJob.jobId
+        },
+        'Waiting for current job to finish...'
+      );
+      await this.sleep(1000);
+      attempts++;
+    }
+
+    this.isRunning = false;
 
     this.logger.info(
       {
-        queueName,
-        concurrency: this.config.concurrency,
-        environment: process.env.NODE_ENV || 'development'
+        workerId: this.workerId,
+        processedJobs: this.processedJobs,
+        failedJobs: this.failedJobs,
+        uptime: Date.now() - this.startTime.getTime()
       },
-      'Initializing Queue Worker'
-    );
-
-    // Initialize job handlers
-    this.handlers = new Map();
-    this.setupHandlers();
-
-    // Log Redis connection info
-    const redisInfo = {
-      host: appConfig.REDIS_HOST,
-      port: appConfig.REDIS_PORT,
-      db: appConfig.REDIS_DB,
-      hasPassword: !!appConfig.REDIS_PASSWORD
-    };
-
-    this.logger.info(redisInfo, 'Connecting to Redis for queue processing');
-
-    // Create BullMQ worker
-    this.worker = new Worker(queueName, async (job: Job) => this.processJob(job), {
-      connection: {
-        host: appConfig.REDIS_HOST,
-        port: appConfig.REDIS_PORT,
-        ...(appConfig.REDIS_PASSWORD && { password: appConfig.REDIS_PASSWORD }),
-        ...(appConfig.REDIS_DB !== undefined && { db: appConfig.REDIS_DB })
-      },
-      concurrency: 5,
-      limiter: {
-        max: 100,
-        duration: 60000
-      }
-    });
-
-    this.setupEventListeners();
-
-    this.logger.info(
-      {
-        ...redisInfo,
-        concurrency: this.config.concurrency,
-        limiter: this.config.limiter,
-        handlersCount: this.handlers.size
-      },
-      'Queue Worker started successfully'
+      'Queue Worker stopped'
     );
   }
 
   /**
-   * Process a job from the queue
+   * Main processing loop
    */
-  private async processJob(job: Job): Promise<JobResult> {
-    const startTime = Date.now();
-    const jobType = job.name;
-    const jobLogger = this.logger.child({
-      jobId: job.id,
-      jobType,
-      attemptsMade: job.attemptsMade,
-      maxAttempts: job.opts.attempts || 1
-    });
+  private async processLoop(): Promise<void> {
+    while (this.isRunning && !this.isShuttingDown) {
+      try {
+        // Load batch of jobs
+        const batch = await this.queueManager.loadNextBatch({
+          batchSize: this.batchSize,
+          priorities: [15, 10, 5, 1], // CRITICAL → HIGH → NORMAL → LOW
+          useCache: true
+        });
 
-    jobLogger.info('Starting job processing');
+        if (!batch || batch.jobs.length === 0) {
+          // No jobs available, wait before next poll
+          await this.sleep(this.pollInterval);
+          continue;
+        }
 
-    try {
-      // Get handler for job type
-      const handler = this.handlers.get(jobType);
-      if (!handler) {
-        throw new Error(`No handler found for job type: ${jobType}`);
+        this.logger.debug(
+          {
+            workerId: this.workerId,
+            batchId: batch.id,
+            jobCount: batch.jobs.length,
+            priority: batch.priority
+          },
+          'Processing job batch'
+        );
+
+        // Process jobs with concurrency control
+        await this.processBatch(batch.jobs);
+      } catch (error) {
+        this.logger.error({ error, workerId: this.workerId }, 'Error in worker processing loop');
+
+        // Wait before retrying to avoid tight error loops
+        await this.sleep(this.pollInterval);
+      }
+    }
+  }
+
+  /**
+   * Process a batch of jobs with concurrency control
+   */
+  private async processBatch(jobs: IJob[]): Promise<void> {
+    const promises: Promise<void>[] = [];
+
+    for (const job of jobs) {
+      if (this.isShuttingDown) {
+        break;
       }
 
-      // Validate job data
-      this.validateJobData(job.data);
+      // Respect concurrency limit
+      if (promises.length >= this.concurrency) {
+        await Promise.race(promises);
+        // Remove completed promises
+        for (let i = promises.length - 1; i >= 0; i--) {
+          if (promises[i] && (await this.isPromiseSettled(promises[i]!))) {
+            promises.splice(i, 1);
+          }
+        }
+      }
 
-      jobLogger.debug({ jobData: job.data }, 'Job data validated, executing handler');
+      // Start processing job
+      promises.push(this.processJob(job));
+    }
 
-      // Process job with handler
-      const result = await handler(job.data, job.id || 'unknown', jobLogger);
+    // Wait for all remaining jobs to complete
+    await Promise.allSettled(promises);
+  }
+
+  /**
+   * Process a single job with full lifecycle management
+   */
+  private async processJob(job: IJob): Promise<void> {
+    const startTime = Date.now();
+    let lockAcquired = false;
+
+    try {
+      // Try to acquire lock for this job
+      lockAcquired = await this.queueManager.acquireLock(
+        job.jobId,
+        this.workerId,
+        300 // 5 minutes timeout
+      );
+
+      if (!lockAcquired) {
+        this.logger.debug(
+          { jobId: job.jobId, workerId: this.workerId },
+          'Could not acquire lock for job, skipping'
+        );
+        return;
+      }
+
+      // Set current job for graceful shutdown tracking
+      this.currentJob = job;
+
+      // Get job handler
+      const handler = JOB_HANDLERS[job.type as keyof typeof JOB_HANDLERS];
+      if (!handler) {
+        throw new Error(`No handler found for job type: ${job.type}`);
+      }
+
+      this.logger.info(
+        {
+          jobId: job.jobId,
+          jobType: job.type,
+          workerId: this.workerId,
+          attempt: job.attempts + 1,
+          maxAttempts: job.maxAttempts
+        },
+        'Processing job'
+      );
+
+      // Update job status to processing
+      await this.queueManager.jobRepository.updateJobStatus(job.jobId, 'processing', {
+        processingBy: this.workerId,
+        processingAt: new Date(),
+        attempts: job.attempts + 1
+      });
+
+      // Execute the job handler
+      const result = await handler(job.data, job.jobId, this.logger);
 
       const processingTime = Date.now() - startTime;
 
-      jobLogger.info(
-        {
+      if (result.success) {
+        // Job completed successfully
+        await this.queueManager.jobRepository.updateJobStatus(job.jobId, 'completed', {
+          completedAt: new Date(),
           processingTime,
-          result: result.success
-        },
-        'Job completed successfully'
-      );
+          result: result.data,
+          processingBy: null,
+          processingAt: null
+        });
 
-      return {
-        ...result,
-        processedAt: Date.now(),
-        processingTime
-      };
+        this.processedJobs++;
+
+        this.logger.info(
+          {
+            jobId: job.jobId,
+            jobType: job.type,
+            workerId: this.workerId,
+            processingTime
+          },
+          'Job completed successfully'
+        );
+      } else {
+        // Job failed
+        await this.handleJobFailure(job, result.error || 'Unknown error', processingTime);
+      }
     } catch (error) {
       const processingTime = Date.now() - startTime;
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
-      jobLogger.error(
-        {
-          error: error instanceof Error ? error : new Error(String(error)),
-          processingTime,
-          attemptsMade: job.attemptsMade,
-          willRetry: job.attemptsMade < (job.opts.attempts || 1)
-        },
-        'Job processing failed'
-      );
+      await this.handleJobFailure(job, errorMessage, processingTime);
+    } finally {
+      // Always release lock and clear current job
+      if (lockAcquired) {
+        await this.queueManager.releaseLock(job.jobId, this.workerId);
+      }
 
-      return {
-        success: false,
-        error: errorMessage,
-        processedAt: Date.now(),
-        processingTime
-      };
-    }
-  }
-
-  /**
-   * Setup job handlers for different job types
-   * Uses modular handlers from the jobs directory
-   */
-  private setupHandlers(): void {
-    // Register all job handlers from the registry
-    for (const [jobType, handler] of Object.entries(JOB_HANDLERS)) {
-      this.handlers.set(jobType, handler);
-    }
-
-    this.logger.info(
-      {
-        handlersCount: this.handlers.size,
-        jobTypes: Array.from(this.handlers.keys())
-      },
-      'Job handlers registered successfully from modular handlers'
-    );
-  }
-
-  /**
-   * Setup event listeners for the worker
-   */
-  private setupEventListeners(): void {
-    // Worker events
-    this.worker.on('ready', () => {
-      this.logger.info('Worker is ready to process jobs');
-    });
-
-    this.worker.on('error', error => {
-      this.logger.error({ error }, 'Worker error occurred');
-    });
-
-    this.worker.on('failed', (job, err) => {
-      this.logger.error(
-        {
-          jobId: job?.id,
-          jobType: job?.name,
-          error: err,
-          attemptsMade: job?.attemptsMade,
-          maxAttempts: job?.opts?.attempts
-        },
-        'Job failed'
-      );
-    });
-
-    this.worker.on('completed', job => {
-      this.logger.info(
-        {
-          jobId: job.id,
-          jobType: job.name,
-          processingTime: job.finishedOn ? job.finishedOn - job.processedOn! : 0
-        },
-        'Job completed successfully'
-      );
-    });
-
-    this.worker.on('stalled', jobId => {
-      this.logger.warn({ jobId }, 'Job stalled');
-    });
-
-    this.worker.on('progress', (job, progress) => {
-      this.logger.debug(
-        {
-          jobId: job.id,
-          jobType: job.name,
-          progress
-        },
-        'Job progress update'
-      );
-    });
-
-    // Graceful shutdown handlers
-    process.on('SIGTERM', () => this.gracefulShutdown('SIGTERM'));
-    process.on('SIGINT', () => this.gracefulShutdown('SIGINT'));
-    process.on('SIGUSR2', () => this.gracefulShutdown('SIGUSR2'));
-  }
-
-  /**
-   * Validate job data before processing
-   */
-  private validateJobData(data: JobData): void {
-    if (!data) {
-      throw new Error('Job data is required');
-    }
-
-    if (typeof data !== 'object') {
-      throw new Error('Job data must be an object');
-    }
-
-    // Basic XSS protection
-    if (typeof data === 'object') {
-      for (const [key, value] of Object.entries(data)) {
-        if (typeof value === 'string') {
-          if (value.includes('<script>') || value.includes('javascript:')) {
-            throw new Error(`Potentially malicious content detected in field: ${key}`);
-          }
-        }
+      if (this.currentJob?.jobId === job.jobId) {
+        this.currentJob = null;
       }
     }
+  }
 
-    // Validate required timestamp
-    if (!data.timestamp || typeof data.timestamp !== 'number') {
-      throw new Error('Job data must include a valid timestamp');
+  /**
+   * Handle job failure with retry logic
+   */
+  private async handleJobFailure(job: IJob, error: string, processingTime: number): Promise<void> {
+    this.failedJobs++;
+
+    const newAttempts = job.attempts + 1;
+    const shouldRetry = newAttempts < job.maxAttempts;
+
+    if (shouldRetry) {
+      // Retry the job
+      await this.queueManager.jobRepository.updateJobStatus(job.jobId, 'pending', {
+        attempts: newAttempts,
+        lastError: error,
+        lastFailedAt: new Date(),
+        processingTime,
+        processingBy: null,
+        processingAt: null,
+        // Add exponential backoff delay
+        scheduledFor: new Date(Date.now() + Math.pow(2, newAttempts) * 1000)
+      });
+
+      this.logger.warn(
+        {
+          jobId: job.jobId,
+          jobType: job.type,
+          workerId: this.workerId,
+          attempt: newAttempts,
+          maxAttempts: job.maxAttempts,
+          error,
+          nextRetry: new Date(Date.now() + Math.pow(2, newAttempts) * 1000)
+        },
+        'Job failed, will retry'
+      );
+    } else {
+      // Move to DLQ after exhausting all retries
+      await this.queueManager.jobRepository.updateJobStatus(job.jobId, 'failed', {
+        attempts: newAttempts,
+        lastError: error,
+        failedAt: new Date(),
+        processingTime,
+        processingBy: null,
+        processingAt: null
+      });
+
+      // Move to DLQ for manual inspection
+      await this.queueManager.moveToDLQ(job, `Failed after ${job.maxAttempts} attempts: ${error}`);
+
+      this.logger.error(
+        {
+          jobId: job.jobId,
+          jobType: job.type,
+          workerId: this.workerId,
+          attempts: newAttempts,
+          maxAttempts: job.maxAttempts,
+          error
+        },
+        'Job failed permanently, moved to DLQ'
+      );
     }
   }
 
   /**
-   * Graceful shutdown
+   * Setup graceful shutdown handlers
    */
-  private async gracefulShutdown(signal: string): Promise<void> {
-    this.logger.info({ signal }, 'Received shutdown signal, starting graceful shutdown');
+  private setupGracefulShutdown(): void {
+    const signals = ['SIGTERM', 'SIGINT', 'SIGUSR2'];
 
-    try {
-      await this.worker.close();
-      this.logger.info('Worker closed gracefully');
-      process.exit(0);
-    } catch (error) {
-      this.logger.error({ error }, 'Error during worker shutdown');
-      process.exit(1);
+    for (const signal of signals) {
+      process.on(signal, async () => {
+        this.logger.info({ signal, workerId: this.workerId }, 'Received shutdown signal');
+
+        await this.stop();
+        process.exit(0);
+      });
     }
   }
 
   /**
    * Get worker statistics
    */
-  public getStats() {
+  getStats() {
     return {
-      isRunning: !this.worker.closing,
-      concurrency: this.config.concurrency,
-      handlersCount: this.handlers.size
+      workerId: this.workerId,
+      isRunning: this.isRunning,
+      isShuttingDown: this.isShuttingDown,
+      currentJob: this.currentJob
+        ? {
+            jobId: this.currentJob.jobId,
+            type: this.currentJob.type,
+            startedAt: new Date()
+          }
+        : null,
+      processedJobs: this.processedJobs,
+      failedJobs: this.failedJobs,
+      uptime: Date.now() - this.startTime.getTime(),
+      startTime: this.startTime
     };
   }
-}
 
-/**
- * Start the queue worker if this file is run directly
- */
-if (import.meta.url === `file://${process.argv[1]}`) {
-  const queueName = process.env.QUEUE_NAME || 'main';
-  const logger = defaultLogger.child({
-    module: 'queue-worker-main',
-    queueName
-  });
+  // Helper methods
 
-  try {
-    logger.info(
-      {
-        queueName,
-        environment: process.env.NODE_ENV || 'development',
-        nodeVersion: process.version
-      },
-      'Starting Queue Worker process'
-    );
+  private sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
 
-    const worker = new QueueWorker(queueName);
-
-    logger.info('Queue Worker is running successfully. Press Ctrl+C to stop.');
-  } catch (error) {
-    logger.fatal(
-      {
-        error: error instanceof Error ? error : new Error(String(error)),
-        queueName
-      },
-      'Failed to start Queue Worker'
-    );
-    process.exit(1);
+  private async isPromiseSettled(promise: Promise<any>): Promise<boolean> {
+    try {
+      await Promise.race([
+        promise,
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 0))
+      ]);
+      return true;
+    } catch {
+      return true; // Consider both resolved and rejected as settled
+    }
   }
 }
-
-export { QueueWorker };

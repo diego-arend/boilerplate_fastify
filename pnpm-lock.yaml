@@ -1223,8 +1223,8 @@ packages:
     resolution: {integrity: sha512-4gd7VpWNQNB4UKKCFFVcp1AVv+FMOgs9NKzjHKusc8jTMhd5eL1NqQqOpE0KzMds804/yHlglp3uxgluOqAPLw==}
     engines: {node: '>= 0.4'}
 
-  ioredis@5.7.0:
-    resolution: {integrity: sha512-NUcA93i1lukyXU+riqEyPtSEkyFq8tX90uL659J+qpCZ3rEdViB/APC58oAhIh3+bJln2hzdlZbBZsGNrlsR8g==}
+  ioredis@5.8.0:
+    resolution: {integrity: sha512-AUXbKn9gvo9hHKvk6LbZJQSKn/qIfkWXrnsyL9Yrf+oeXmla9Nmf6XEumOddyhM8neynpK5oAV6r9r99KBuwzA==}
     engines: {node: '>=12.22.0'}
 
   ipaddr.js@2.2.0:
@@ -2613,7 +2613,7 @@ snapshots:
   bullmq@5.58.7:
     dependencies:
       cron-parser: 4.9.0
-      ioredis: 5.7.0
+      ioredis: 5.8.0
       msgpackr: 1.11.5
       node-abort-controller: 3.1.1
       semver: 7.7.2
@@ -3293,7 +3293,7 @@ snapshots:
       hasown: 2.0.2
       side-channel: 1.1.0
 
-  ioredis@5.7.0:
+  ioredis@5.8.0:
     dependencies:
       '@ioredis/commands': 1.4.0
       cluster-key-slot: 1.1.2

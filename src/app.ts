@@ -77,7 +77,7 @@ export default async function app(fastify: FastifyInstance, opts: FastifyPluginO
   // MongoDB connection with dependency injection
   fastify.addHook('onReady', async () => {
     // Create connection manager instance
-    const connectionManager = MongoConnectionManagerFactory.create();
+    const connectionManager = await MongoConnectionManagerFactory.create();
     await connectionManager.connect();
 
     // Decorate Fastify instance with connection manager

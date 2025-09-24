@@ -1,409 +1,374 @@
-import { Queue, Job } from 'bullmq';
-import type { config } from '../../lib/validators/validateEnv.js';
-import type {
-  JobType,
-  JobData,
-  JobOptions,
-  QueueConfig,
-  QueueStats,
-  JobStatus,
-  JobResult
+/**
+ * Queue Manager
+ * Implements database persistence with Redis caching and concurrency control
+ */
+
+import type { RedisClientType } from 'redis';
+import type { FastifyBaseLogger } from 'fastify';
+import type { ClientSession } from 'mongoose';
+import { randomUUID } from 'crypto';
+
+import { JobModel, JobValidations, type IJob } from '../../entities/job/index.js';
+import { DLQModel, type IDLQ } from '../../entities/dlq/index.js';
+import { getQueueCacheManager, getQueueRedisClient } from '../cache/index.js';
+import type { EnhancedCacheManager } from '../cache/enhanced-cache.manager.js';
+
+import {
+  QueueHealth,
+  type QueueConfig,
+  type QueueHealthInfo,
+  type CleanupResult,
+  type JobBatch,
+  type BatchLoadOptions,
+  type ConcurrencyLock,
+  type QueueStats,
+  type DLQStats
 } from './queue.types.js';
-import { DeadLetterQueueManager, type DLQStats } from './dlq.manager.js';
-import { defaultLogger } from '../../lib/logger/index.js';
+
+import type { IJobRepository } from '../../entities/job/index.js';
+import type { IDLQRepository } from '../../entities/dlq/index.js';
 
 /**
- * Queue Manager class for handling BullMQ operations
- * Provides high-level interface for job queue management
+ * Modern Queue Manager with MongoDB persistence and Redis caching
+ * Provides enterprise-grade features:
+ * - Database persistence for reliability
+ * - Redis caching for performance
+ * - Batch processing by priority
+ * - Concurrency control with locks
+ * - Dead Letter Queue (DLQ) management
  */
 export class QueueManager {
-  private queue: Queue;
-  private config: QueueConfig;
-  private static instance: QueueManager | null = null;
-  private initialized: boolean = false;
-  private dlqManager: DeadLetterQueueManager | null = null;
+  private redisClient: RedisClientType | null = null;
+  private cacheManager: EnhancedCacheManager | null = null;
+  private currentBatch: JobBatch | null = null;
+  private lockPrefix: string;
+  private workerPrefix: string;
 
-  /**
-   * Create QueueManager instance
-   * @param queueName - Name of the queue
-   */
-  constructor(queueName: string = 'main') {
-    const redisPassword = process.env.REDIS_PASSWORD;
+  // Make repositories public for worker access
+  public jobRepository: IJobRepository;
+  public dlqRepository: IDLQRepository;
 
-    this.config = {
-      name: queueName,
-      redis: {
-        host: process.env.REDIS_HOST || 'localhost',
-        port: parseInt(process.env.REDIS_PORT || '6379'),
-        ...(redisPassword && { password: redisPassword }),
-        db: parseInt(process.env.REDIS_DB || '0')
-      },
-      defaultJobOptions: {
-        attempts: 3,
-        backoff: {
-          type: 'exponential',
-          delay: 2000
-        },
-        removeOnComplete: 10,
-        removeOnFail: 50
-      }
-    };
-
-    // Initialize queue
-    this.queue = new Queue(queueName, {
-      connection: this.getRedisConfig(),
-      ...(this.config.defaultJobOptions && { defaultJobOptions: this.config.defaultJobOptions })
-    });
-
-    // Initialize Dead Letter Queue Manager
-    this.dlqManager = new DeadLetterQueueManager(
-      this.queue,
-      defaultLogger.child({ module: 'queue-manager' }),
-      `${queueName}-dlq`
-    );
-
-    this.initialized = true;
+  constructor(
+    private config: QueueConfig,
+    jobRepository: IJobRepository,
+    dlqRepository: IDLQRepository,
+    private logger: FastifyBaseLogger
+  ) {
+    this.lockPrefix = `${config.name}:locks`;
+    this.workerPrefix = `${config.name}:workers`;
+    this.jobRepository = jobRepository;
+    this.dlqRepository = dlqRepository;
   }
 
   /**
-   * Get singleton instance of QueueManager
+   * Initialize the queue manager
    */
-  static getInstance(queueName = 'main'): QueueManager {
-    if (!QueueManager.instance) {
-      QueueManager.instance = new QueueManager(queueName);
-    }
-    return QueueManager.instance;
-  }
-
-  /**
-   * Add a job to the queue
-   * @param jobType - Type of job to add
-   * @param jobData - Job data payload
-   * @param options - Job options
-   * @returns Job instance
-   */
-  public async addJob<T extends JobData>(
-    jobType: JobType,
-    jobData: T,
-    options: JobOptions = {}
-  ): Promise<Job<T>> {
+  async initialize(): Promise<void> {
     try {
-      // Validate job data
-      this.validateJobData(jobData);
+      this.logger.info('Initializing Queue Manager...');
 
-      // Add timestamp if not present
-      if (!jobData.timestamp) {
-        jobData.timestamp = Date.now();
+      // Get the Queue Redis client from cache module
+      this.redisClient = getQueueRedisClient();
+      if (!this.redisClient) {
+        throw new Error(
+          'Queue Redis client is not available. Make sure cache module is initialized.'
+        );
       }
 
-      // Add job to queue
-      const job = await this.queue.add(jobType, jobData, {
-        ...this.config.defaultJobOptions,
-        ...options
+      // Initialize cache manager
+      this.cacheManager = getQueueCacheManager(1800, 'queue'); // 30 min TTL
+
+      this.logger.info('Queue Manager initialized successfully');
+    } catch (error) {
+      this.logger.error({ error }, 'Failed to initialize Queue Manager');
+      throw error;
+    }
+  }
+
+  /**
+   * Add a job to the queue with database persistence
+   */
+  async addJob<T = any>(
+    jobType: string,
+    jobData: T,
+    options: {
+      priority?: number;
+      attempts?: number;
+      delay?: number;
+      session?: ClientSession;
+    } = {}
+  ): Promise<string> {
+    try {
+      const job = await this.jobRepository.createJob(
+        {
+          jobId: this.generateJobId(jobType),
+          type: jobType,
+          data: jobData,
+          priority: options.priority || 5,
+          maxAttempts: options.attempts || 3,
+          scheduledFor: options.delay ? new Date(Date.now() + options.delay) : new Date()
+        },
+        options.session
+      );
+
+      this.logger.debug(
+        {
+          jobId: job.jobId,
+          type: jobType,
+          priority: job.priority
+        },
+        'Job added to database'
+      );
+
+      // Invalidate current batch cache if priority changed
+      if (this.currentBatch && job.priority > this.currentBatch.minPriority) {
+        await this.invalidateBatchCache();
+      }
+
+      return job.jobId;
+    } catch (error) {
+      this.logger.error({ error, jobType, jobData }, 'Failed to add job to queue');
+      throw error;
+    }
+  }
+
+  /**
+   * Load next batch of jobs by priority
+   */
+  async loadNextBatch(options: BatchLoadOptions = {}): Promise<JobBatch | null> {
+    const { batchSize = 50, priorities = [15, 10, 5, 1], useCache = true } = options;
+
+    try {
+      // Check cache first
+      if (useCache && this.cacheManager && this.currentBatch) {
+        if (!this.isBatchExpired(this.currentBatch)) {
+          return this.currentBatch;
+        }
+      }
+
+      // Load from database by priority
+      for (const priority of priorities) {
+        const jobs = await this.jobRepository.findPendingJobsByPriority(priority, batchSize);
+
+        if (jobs.length > 0) {
+          const batch: JobBatch = {
+            id: randomUUID(),
+            jobs,
+            priority,
+            minPriority: Math.min(...jobs.map(j => j.priority)),
+            maxPriority: Math.max(...jobs.map(j => j.priority)),
+            loadedAt: new Date(),
+            ttl: this.config.cache?.ttl || 1800,
+            size: jobs.length
+          };
+
+          this.currentBatch = batch;
+
+          // Cache the batch
+          if (this.cacheManager) {
+            await this.cacheManager.set(`batch:${batch.id}`, batch, {
+              ttl: this.config.cache?.ttl || 1800
+            });
+          }
+
+          this.logger.debug(
+            {
+              batchId: batch.id,
+              priority,
+              jobCount: jobs.length
+            },
+            'Loaded new job batch'
+          );
+
+          return batch;
+        }
+      }
+
+      return null; // No jobs available
+    } catch (error) {
+      this.logger.error({ error }, 'Failed to load job batch');
+      throw error;
+    }
+  }
+
+  /**
+   * Acquire lock for job processing
+   */
+  async acquireLock(jobId: string, workerId: string, timeout = 300): Promise<boolean> {
+    if (!this.redisClient) {
+      this.logger.warn('Redis not available, using database fallback for locking');
+      return this.acquireDatabaseLock(jobId, workerId, timeout);
+    }
+
+    try {
+      const lockKey = `${this.lockPrefix}:${jobId}`;
+      const lockValue = JSON.stringify({
+        workerId,
+        acquiredAt: Date.now(),
+        timeout: timeout * 1000
       });
 
-      console.log(`QueueManager: Added job ${job.id} of type ${jobType}`);
-      return job;
+      const result = await this.redisClient.set(lockKey, lockValue, {
+        EX: timeout,
+        NX: true
+      });
+      return result === 'OK';
     } catch (error) {
-      console.error(`QueueManager: Failed to add job ${jobType}`, error);
-      throw new Error(`Failed to add job: ${error}`);
+      this.logger.error({ error, jobId, workerId }, 'Failed to acquire lock');
+      return false;
     }
   }
 
   /**
-   * Get job by ID
-   * @param jobId - Job ID
-   * @returns Job instance or null if not found
+   * Release lock for job processing
    */
-  public async getJob(jobId: string): Promise<Job | null> {
+  async releaseLock(jobId: string, workerId: string): Promise<boolean> {
+    if (!this.redisClient) {
+      return this.releaseDatabaseLock(jobId, workerId);
+    }
+
     try {
-      const job = await this.queue.getJob(jobId);
-      return job || null;
+      const lockKey = `${this.lockPrefix}:${jobId}`;
+      const lockData = await this.redisClient.get(lockKey);
+
+      if (lockData) {
+        const lock = JSON.parse(lockData);
+        if (lock.workerId === workerId) {
+          await this.redisClient.del(lockKey);
+          return true;
+        }
+      }
+
+      return false;
     } catch (error) {
-      console.error(`QueueManager: Failed to get job ${jobId}`, error);
-      return null;
-    }
-  }
-
-  /**
-   * Get job status
-   * @param jobId - Job ID
-   * @returns Job status or null if not found
-   */
-  public async getJobStatus(jobId: string): Promise<JobStatus | null> {
-    const job = await this.getJob(jobId);
-    if (!job) return null;
-
-    const state = await job.getState();
-    return state as JobStatus;
-  }
-
-  /**
-   * Get job result
-   * @param jobId - Job ID
-   * @returns Job result or null
-   */
-  public async getJobResult(jobId: string): Promise<JobResult | null> {
-    const job = await this.getJob(jobId);
-    if (!job) return null;
-
-    const state = await job.getState();
-
-    if (state === 'completed') {
-      return {
-        success: true,
-        data: job.returnvalue,
-        processedAt: job.processedOn || 0,
-        processingTime: (job.finishedOn || 0) - (job.processedOn || 0)
-      };
-    } else if (state === 'failed') {
-      return {
-        success: false,
-        error: job.failedReason,
-        processedAt: job.processedOn || 0,
-        processingTime: (job.finishedOn || 0) - (job.processedOn || 0)
-      };
-    }
-
-    return null;
-  }
-
-  /**
-   * Remove job from queue
-   * @param jobId - Job ID
-   * @returns True if removed successfully
-   */
-  public async removeJob(jobId: string): Promise<boolean> {
-    try {
-      const job = await this.getJob(jobId);
-      if (!job) return false;
-
-      await job.remove();
-      console.log(`QueueManager: Removed job ${jobId}`);
-      return true;
-    } catch (error) {
-      console.error(`QueueManager: Failed to remove job ${jobId}`, error);
+      this.logger.error({ error, jobId, workerId }, 'Failed to release lock');
       return false;
     }
   }
 
   /**
    * Get queue statistics
-   * @returns Queue statistics
    */
-  public async getStats(): Promise<QueueStats> {
+  async getStats(): Promise<QueueStats> {
     try {
-      const waiting = await this.queue.getWaiting();
-      const active = await this.queue.getActive();
-      const completed = await this.queue.getCompleted();
-      const failed = await this.queue.getFailed();
-      const delayed = await this.queue.getDelayed();
+      const stats = await this.jobRepository.getJobStatsByStatus();
+      const batchInfo = this.currentBatch
+        ? {
+            currentBatchSize: this.currentBatch.size,
+            currentBatchPriority: this.currentBatch.priority,
+            batchLoadedAt: this.currentBatch.loadedAt
+          }
+        : null;
 
       return {
-        waiting: waiting.length,
-        active: active.length,
-        completed: completed.length,
-        failed: failed.length,
-        delayed: delayed.length,
-        paused: (await this.queue.isPaused()) ? 1 : 0
+        ...stats,
+        batchInfo,
+        redisConnected: !!this.redisClient,
+        cacheConnected: !!this.cacheManager
       };
     } catch (error) {
-      console.error('QueueManager: Failed to get stats', error);
-      return {
-        waiting: 0,
-        active: 0,
-        completed: 0,
-        failed: 0,
-        delayed: 0,
-        paused: 0
-      };
+      this.logger.error({ error }, 'Failed to get queue stats');
+      throw error;
     }
   }
 
   /**
-   * Pause the queue
+   * Move job to DLQ
    */
-  public async pause(): Promise<void> {
-    await this.queue.pause();
-    console.log(`QueueManager: Queue '${this.config.name}' paused`);
-  }
-
-  /**
-   * Resume the queue
-   */
-  public async resume(): Promise<void> {
-    await this.queue.resume();
-    console.log(`QueueManager: Queue '${this.config.name}' resumed`);
-  }
-
-  /**
-   * Clean completed jobs
-   * @param grace - Grace period in milliseconds
-   * @param limit - Maximum number of jobs to clean
-   */
-  public async cleanCompleted(
-    grace: number = 24 * 60 * 60 * 1000,
-    limit: number = 100
-  ): Promise<number> {
+  async moveToDLQ(job: IJob, reason: string): Promise<void> {
     try {
-      const jobs = await this.queue.clean(grace, limit, 'completed');
-      console.log(`QueueManager: Cleaned ${jobs.length} completed jobs`);
-      return jobs.length;
+      await this.dlqRepository.createDLQEntry({
+        originalJobId: job.jobId,
+        jobType: job.type,
+        jobData: job.data,
+        priority: job.priority,
+        attempts: job.attempts,
+        maxAttempts: job.maxAttempts,
+        failureReason: reason,
+        originalCreatedAt: job.createdAt
+      });
+
+      this.logger.warn(
+        {
+          jobId: job.jobId,
+          jobType: job.type,
+          reason
+        },
+        'Job moved to DLQ'
+      );
     } catch (error) {
-      console.error('QueueManager: Failed to clean completed jobs', error);
-      return 0;
+      this.logger.error({ error, jobId: job.jobId, reason }, 'Failed to move job to DLQ');
+      throw error;
     }
   }
 
   /**
-   * Clean failed jobs
-   * @param grace - Grace period in milliseconds
-   * @param limit - Maximum number of jobs to clean
+   * Health check
    */
-  public async cleanFailed(
-    grace: number = 24 * 60 * 60 * 1000,
-    limit: number = 100
-  ): Promise<number> {
-    try {
-      const jobs = await this.queue.clean(grace, limit, 'failed');
-      console.log(`QueueManager: Cleaned ${jobs.length} failed jobs`);
-      return jobs.length;
-    } catch (error) {
-      console.error('QueueManager: Failed to clean failed jobs', error);
-      return 0;
-    }
-  }
-
-  /**
-   * Get queue instance for advanced operations
-   * @returns BullMQ Queue instance
-   */
-  public getQueue(): Queue {
-    return this.queue;
-  }
-
-  /**
-   * Check if queue manager is initialized
-   * @returns True if initialized
-   */
-  public isReady(): boolean {
-    return this.initialized;
-  }
-
-  /**
-   * Get Dead Letter Queue statistics
-   * @returns DLQ statistics
-   */
-  public async getDLQStats(): Promise<DLQStats> {
-    if (!this.dlqManager) {
-      return {
-        total: 0,
-        byJobType: {},
-        byErrorType: {},
-        oldestJob: {}
-      };
-    }
-    return await this.dlqManager.getStats();
-  }
-
-  /**
-   * Reprocess job from Dead Letter Queue
-   * @param dlqJobId - DLQ job ID
-   * @param options - Recovery options
-   * @returns Recovery result
-   */
-  public async reprocessDLQJob(dlqJobId: string, options?: any) {
-    if (!this.dlqManager) {
-      return { success: false, error: 'DLQ Manager not initialized' };
-    }
-    return await this.dlqManager.reprocessJob(dlqJobId, options);
-  }
-
-  /**
-   * Get Dead Letter Queue manager instance
-   * @returns DLQ Manager instance
-   */
-  public getDLQManager(): DeadLetterQueueManager | null {
-    return this.dlqManager;
-  }
-
-  /**
-   * Close queue connection
-   */
-  public async close(): Promise<void> {
-    try {
-      if (this.dlqManager) {
-        await this.dlqManager.close();
-      }
-      await this.queue.close();
-      this.initialized = false;
-      console.log(`QueueManager: Queue '${this.config.name}' closed`);
-    } catch (error) {
-      console.error('QueueManager: Error closing queue', error);
-    }
-  }
-
-  /**
-   * Get Redis configuration for BullMQ
-   * @private
-   */
-  private getRedisConfig() {
-    const redisConfig = {
-      host: this.config.redis.host,
-      port: this.config.redis.port,
-      ...(this.config.redis.db !== undefined && { db: this.config.redis.db })
+  async getHealthInfo(): Promise<QueueHealthInfo> {
+    const health: QueueHealthInfo = {
+      overall: QueueHealth.HEALTHY,
+      database: { connected: true },
+      cache: { connected: !!this.cacheManager },
+      workers: { active: 0, failed: 0 },
+      queues: { backlog: 0, stalled: 0, processing: 0 }
     };
 
-    if (this.config.redis.password) {
-      return {
-        ...redisConfig,
-        password: this.config.redis.password
-      };
+    // Determine overall health
+    if (!health.database.connected) {
+      health.overall = QueueHealth.CRITICAL;
+    } else if (!health.cache.connected) {
+      health.overall = QueueHealth.DEGRADED;
     }
 
-    return redisConfig;
+    return health;
   }
 
-  /**
-   * Validate job data
-   * @private
-   */
-  private validateJobData(jobData: JobData): void {
-    if (!jobData) {
-      throw new Error('Job data is required');
-    }
+  // Private helper methods
 
-    if (typeof jobData !== 'object') {
-      throw new Error('Job data must be an object');
-    }
+  private generateJobId(jobType: string): string {
+    const timestamp = Date.now().toString(36);
+    const random = Math.random().toString(36).substring(2, 8);
+    return `${jobType.replace(':', '_')}_${timestamp}_${random}`;
+  }
 
-    // Basic sanitization
-    if (typeof jobData === 'object') {
-      for (const [key, value] of Object.entries(jobData)) {
-        if (typeof value === 'string') {
-          // Basic XSS protection
-          if (value.includes('<script>') || value.includes('javascript:')) {
-            throw new Error(`Potentially malicious content detected in field: ${key}`);
-          }
-        }
-      }
+  private isBatchExpired(batch: JobBatch): boolean {
+    const expiresAt = new Date(batch.loadedAt.getTime() + batch.ttl * 1000);
+    return new Date() > expiresAt;
+  }
+
+  private async invalidateBatchCache(): Promise<void> {
+    if (this.currentBatch && this.cacheManager) {
+      await this.cacheManager.del(`batch:${this.currentBatch.id}`);
+      this.currentBatch = null;
     }
   }
-}
 
-/**
- * Get default queue manager instance
- * @returns QueueManager singleton
- */
-export function getDefaultQueueManager(): QueueManager {
-  return QueueManager.getInstance('main');
-}
+  private async acquireDatabaseLock(
+    jobId: string,
+    workerId: string,
+    timeout: number
+  ): Promise<boolean> {
+    try {
+      const result = await this.jobRepository.updateJobStatus(jobId, 'processing', {
+        processingBy: workerId,
+        processingAt: new Date()
+      });
+      return !!result;
+    } catch (error) {
+      return false;
+    }
+  }
 
-/**
- * Create a new queue manager
- * @param queueName - Name of the queue
- * @returns New QueueManager instance
- */
-export function createQueueManager(queueName: string): QueueManager {
-  return new QueueManager(queueName);
+  private async releaseDatabaseLock(jobId: string, workerId: string): Promise<boolean> {
+    try {
+      const result = await this.jobRepository.updateJobStatus(jobId, 'pending', {
+        processingBy: null,
+        processingAt: null
+      });
+      return !!result;
+    } catch (error) {
+      return false;
+    }
+  }
 }

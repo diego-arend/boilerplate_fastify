@@ -13,8 +13,22 @@ export class UserRepositoryFactory {
   /**
    * Create UserRepository instance with injected dependencies
    */
-  static createUserRepository(connectionManager?: IMongoConnectionManager): IUserRepository {
-    const connManager = connectionManager || MongoConnectionManagerFactory.create();
+  static async createUserRepository(
+    connectionManager?: IMongoConnectionManager
+  ): Promise<IUserRepository> {
+    let connManager: IMongoConnectionManager;
+
+    if (connectionManager) {
+      connManager = connectionManager;
+    } else {
+      connManager = await MongoConnectionManagerFactory.create();
+    }
+
+    // Wait for connection to be established
+    if (!connManager.isConnected()) {
+      await connManager.connect();
+    }
+
     const baseRepository = new BaseRepository<IUser>(UserModel, connManager);
     return new UserRepository(baseRepository);
   }

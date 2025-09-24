@@ -5,6 +5,9 @@ import type { Document, FilterQuery, UpdateQuery, ClientSession } from 'mongoose
  */
 export interface RepositoryOptions {
   session?: ClientSession;
+  sort?: Record<string, 1 | -1>;
+  limit?: number;
+  returnDocument?: 'before' | 'after';
 }
 
 /**
@@ -24,10 +27,11 @@ export interface PaginationResult<T> {
  * Pagination options interface
  */
 export interface PaginationOptions {
-  page: number;
-  limit: number;
+  page?: number;
+  limit?: number;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
+  sort?: Record<string, 1 | -1>;
 }
 
 /**
@@ -53,6 +57,11 @@ export interface IBaseRepository<T extends Document> {
   // Update operations
   updateById(id: string, update: UpdateQuery<T>, options?: RepositoryOptions): Promise<T | null>;
   updateOne(
+    filter: FilterQuery<T>,
+    update: UpdateQuery<T>,
+    options?: RepositoryOptions
+  ): Promise<T | null>;
+  findOneAndUpdate(
     filter: FilterQuery<T>,
     update: UpdateQuery<T>,
     options?: RepositoryOptions

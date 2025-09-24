@@ -1,17 +1,30 @@
 // Queue infrastructure exports
-export { getDefaultQueueManager } from './queue.manager.js';
+export { QueueFactory, getDefaultQueueManager, resetDefaultQueueManager } from './queue.factory.js';
+export { QueueManager } from './queue.manager.js';
+export { QueueWorker } from './queue.worker.js';
+
+// Queue types
 export type {
-  JobType,
   JobPriority,
-  JobData,
-  JobOptions,
+  JobStatus,
+  QueueJobType,
+  QueueConfig,
+  QueueStatistics,
+  JobBatch,
+  BatchLoadOptions,
+  ConcurrencyLock,
+  ConcurrencyLockResult,
+  DLQStats,
+  BatchConfig,
+  WorkerLockConfig,
+  JobCacheConfig,
+  DLQConfig,
   JobResult,
-  QueueStats,
-  BaseJobData,
-  EmailJobData,
-  UserNotificationJobData,
-  DataExportJobData,
-  FileProcessJobData,
-  CacheWarmJobData,
-  CleanupJobData
+  BatchMetadata,
+  WorkerStatus,
+  ReprocessOptions,
+  DLQQueryOptions,
+  JobHandler,
+  QueueHealthStatus,
+  QueueHealthInfo
 } from './queue.types.js';

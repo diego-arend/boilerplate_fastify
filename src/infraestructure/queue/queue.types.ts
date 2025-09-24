@@ -1,11 +1,118 @@
 /**
- * Queue system types and interfaces for BullMQ integration
+ * Queue system types and interfaces with MongoDB persistence
  */
 
+import type { IJob } from '../../entities/job/index.js';
+
 /**
- * Available job types in the queue system
+ * Job types with database persistence support
  */
-export const JobType = {
+export const QueueJobType = {
+  EMAIL_SEND: 'email_send',
+  USER_NOTIFICATION: 'user_notification',
+  DATA_EXPORT: 'data_export',
+  FILE_PROCESS: 'file_process',
+  CACHE_WARM: 'cache_warm',
+  CLEANUP: 'cleanup'
+} as const;
+
+export type QueueJobType = (typeof QueueJobType)[keyof typeof QueueJobType];
+
+/**
+ * Job priority levels
+ */
+export const JobPriority = {
+  CRITICAL: 20,
+  HIGH: 15,
+  NORMAL: 10,
+  LOW: 5
+} as const;
+
+export type JobPriority = (typeof JobPriority)[keyof typeof JobPriority];
+
+/**
+ * Job status types
+ */
+export const JobStatus = {
+  PENDING: 'pending',
+  PROCESSING: 'processing',
+  COMPLETED: 'completed',
+  FAILED: 'failed',
+  CANCELLED: 'cancelled'
+} as const;
+
+export type JobStatus = (typeof JobStatus)[keyof typeof JobStatus];
+
+/**
+ * Job batch for memory processing
+ */
+export interface JobBatch {
+  id: string;
+  jobs: IJob[];
+  priority: number;
+  minPriority: number;
+  maxPriority: number;
+  loadedAt: Date;
+  ttl: number;
+  size: number;
+}
+
+/**
+ * Batch loading options
+ */
+export interface BatchLoadOptions {
+  batchSize?: number;
+  priorities?: number[];
+  useCache?: boolean;
+}
+
+/**
+ * Concurrency lock information
+ */
+export interface ConcurrencyLock {
+  jobId: string;
+  workerId: string;
+  acquiredAt: Date;
+  expiresAt: Date;
+  timeout: number;
+}
+
+/**
+ * Queue statistics with batch info
+ */
+export interface QueueStats {
+  pending: number;
+  processing: number;
+  completed: number;
+  failed: number;
+  cancelled: number;
+  batchInfo?: {
+    currentBatchSize: number;
+    currentBatchPriority: number;
+    batchLoadedAt: Date;
+  } | null;
+  redisConnected: boolean;
+  cacheConnected: boolean;
+}
+
+/**
+ * DLQ statistics by type
+ */
+export interface DLQStats {
+  total: number;
+  byType: Record<string, number>;
+  byPriority: Record<string, number>;
+  oldest?: {
+    id: string;
+    movedAt: Date;
+    daysSince: number;
+  };
+}
+
+/**
+ * Modern job types with database persistence support
+ */
+export const ModernJobType = {
   EMAIL_SEND: 'email:send',
   USER_NOTIFICATION: 'user:notification',
   DATA_EXPORT: 'data:export',
@@ -14,124 +121,48 @@ export const JobType = {
   CLEANUP: 'cleanup'
 } as const;
 
-export type JobType = (typeof JobType)[keyof typeof JobType];
+export type ModernJobType = (typeof ModernJobType)[keyof typeof ModernJobType];
 
 /**
- * Job priority levels
+ * Job batch configuration
  */
-export enum JobPriority {
-  LOW = 1,
-  NORMAL = 5,
-  HIGH = 10,
-  CRITICAL = 15
-}
-
-/**
- * Job status for tracking
- */
-export enum JobStatus {
-  WAITING = 'waiting',
-  ACTIVE = 'active',
-  COMPLETED = 'completed',
-  FAILED = 'failed',
-  DELAYED = 'delayed',
-  PAUSED = 'paused'
-}
-
-/**
- * Base job data interface
- */
-export interface BaseJobData {
-  userId?: string;
-  timestamp: number;
-  metadata?: Record<string, any>;
-}
-
-/**
- * Email job data
- */
-export interface EmailJobData extends BaseJobData {
-  to: string;
-  subject: string;
-  body: string;
-  template?: string;
-  variables?: Record<string, any>;
-}
-
-/**
- * User notification job data
- */
-export interface UserNotificationJobData extends BaseJobData {
-  userId: string;
-  title: string;
-  message: string;
-  type: 'info' | 'warning' | 'success' | 'error';
-  channels?: ('push' | 'email' | 'sms')[];
-}
-
-/**
- * Data export job data
- */
-export interface DataExportJobData extends BaseJobData {
-  userId: string;
-  format: 'csv' | 'json' | 'xlsx';
-  filters?: Record<string, any>;
-  outputPath?: string;
-}
-
-/**
- * File processing job data
- */
-export interface FileProcessJobData extends BaseJobData {
-  fileId: string;
-  filePath: string;
-  operation: 'compress' | 'resize' | 'convert' | 'analyze';
-  options?: Record<string, any>;
-}
-
-/**
- * Cache warming job data
- */
-export interface CacheWarmJobData extends BaseJobData {
-  cacheKey: string;
-  dataSource: string;
-  ttl?: number;
-}
-
-/**
- * Cleanup job data
- */
-export interface CleanupJobData extends BaseJobData {
-  target: 'temp_files' | 'old_logs' | 'expired_sessions' | 'cache';
-  olderThan?: number; // days
-  pattern?: string;
-}
-
-/**
- * Union type for all job data types
- */
-export type JobData =
-  | EmailJobData
-  | UserNotificationJobData
-  | DataExportJobData
-  | FileProcessJobData
-  | CacheWarmJobData
-  | CleanupJobData;
-
-/**
- * Job options for BullMQ
- */
-export interface JobOptions {
-  priority?: JobPriority;
-  delay?: number; // milliseconds
-  attempts?: number;
-  backoff?: {
-    type: 'exponential' | 'fixed';
-    delay: number;
+export interface BatchConfig {
+  size: number; // Number of jobs to load in each batch
+  ttl: number; // TTL in seconds for cached jobs
+  priorityLevels: {
+    critical: { min: 15; max: 20 };
+    high: { min: 10; max: 14 };
+    normal: { min: 5; max: 9 };
+    low: { min: 1; max: 4 };
   };
-  removeOnComplete?: number;
-  removeOnFail?: number;
-  jobId?: string;
+}
+
+/**
+ * Worker lock configuration
+ */
+export interface WorkerLockConfig {
+  lockTimeout: number; // Lock timeout in milliseconds
+  heartbeatInterval: number; // Heartbeat interval in milliseconds
+  maxRetries: number; // Maximum lock acquisition retries
+}
+
+/**
+ * Cache configuration for jobs
+ */
+export interface JobCacheConfig {
+  namespace: string; // Cache namespace
+  ttl: number; // Default TTL in seconds
+  refreshThreshold: number; // When to refresh cache (percentage of TTL)
+}
+
+/**
+ * DLQ configuration
+ */
+export interface DLQConfig {
+  autoMove: boolean; // Automatically move failed jobs to DLQ
+  maxReprocessAttempts: number; // Maximum reprocess attempts from DLQ
+  cleanupInterval: number; // Cleanup interval in hours
+  retentionDays: number; // How long to keep resolved DLQ entries
 }
 
 /**
@@ -139,73 +170,243 @@ export interface JobOptions {
  */
 export interface QueueConfig {
   name: string;
+
+  // Database configuration
+  mongodb: {
+    enabled: boolean;
+    connectionString?: string;
+  };
+
+  // Redis cache configuration
   redis: {
     host: string;
     port: number;
     password?: string;
     db?: number;
   };
-  defaultJobOptions?: JobOptions;
-  settings?: {
-    stalledInterval?: number;
-    maxStalledCount?: number;
+
+  // Batch processing configuration
+  batch: BatchConfig;
+
+  // Worker configuration
+  worker: WorkerLockConfig;
+
+  // Cache configuration
+  cache: JobCacheConfig;
+
+  // DLQ configuration
+  dlq: DLQConfig;
+
+  // Legacy BullMQ options (for compatibility)
+  defaultJobOptions?: {
+    attempts?: number;
+    backoff?: {
+      type: 'exponential' | 'fixed';
+      delay: number;
+    };
+    removeOnComplete?: number;
+    removeOnFail?: number;
   };
 }
 
 /**
- * Job statistics
- */
-export interface QueueStats {
-  waiting: number;
-  active: number;
-  completed: number;
-  failed: number;
-  delayed: number;
-  paused: number;
-}
-
-/**
- * Job result interface
+ * Job processing result with metadata
  */
 export interface JobResult {
   success: boolean;
+  jobId: string;
   data?: any;
   error?: string;
   processedAt: number;
-  processingTime: number; // milliseconds
+  processingTime: number;
+  workerId: string;
+
+  // Enhanced metadata
+  fromCache?: boolean; // Whether job was loaded from cache
+  batchId?: string; // ID of the batch this job belonged to
+  retryCount?: number; // Current retry count
+
+  // DLQ information (if moved to DLQ)
+  movedToDLQ?: boolean;
+  dlqReason?: string;
 }
 
 /**
- * Worker configuration
+ * Batch processing metadata
  */
-export interface WorkerConfig {
-  concurrency?: number;
-  limiter?: {
-    max: number;
-    duration: number;
+export interface BatchMetadata {
+  batchId: string;
+  loadedAt: number;
+  expiresAt: number;
+  priority: JobPriority;
+  jobCount: number;
+  processedCount: number;
+  source: 'database' | 'cache' | 'hybrid';
+}
+
+/**
+ * Worker status information
+ */
+export interface WorkerStatus {
+  workerId: string;
+  status: 'active' | 'idle' | 'failed' | 'shutdown';
+  currentJob?: string;
+  lockedAt?: Date;
+  heartbeatAt: Date;
+  processedJobs: number;
+  failedJobs: number;
+  uptime: number; // in milliseconds
+}
+
+/**
+ * Queue statistics
+ */
+export interface QueueStatistics {
+  // Basic counts
+  pending: number;
+  processing: number;
+  completed: number;
+  failed: number;
+
+  // Priority breakdown
+  priorityBreakdown: Record<string, number>;
+
+  // Cache metrics
+  cache: {
+    hits: number;
+    misses: number;
+    hitRate: number;
+    activeBatches: number;
+    totalCachedJobs: number;
   };
-  settings?: {
-    stalledInterval?: number;
-    retryProcessDelay?: number;
+
+  // DLQ metrics
+  dlq: {
+    total: number;
+    pending: number;
+    resolved: number;
+    reprocessed: number;
+    bySeverity: Record<string, number>;
+  };
+
+  // Worker metrics
+  workers: {
+    active: number;
+    idle: number;
+    failed: number;
+    totalJobs: number;
+  };
+
+  // Performance metrics
+  performance: {
+    avgProcessingTime: number;
+    jobsPerMinute: number;
+    errorRate: number;
   };
 }
 
 /**
- * Job handler function type
+ * Concurrency control result
  */
-export type JobHandler<T extends BaseJobData = BaseJobData> = (
-  jobData: T,
-  jobId: string
+export interface ConcurrencyLockResult {
+  success: boolean;
+  lockId?: string;
+  expiresAt?: Date;
+  error?: string;
+}
+
+/**
+ * Job reprocessing options
+ */
+export interface ReprocessOptions {
+  resetAttempts?: boolean;
+  resetData?: Record<string, any>;
+  increaseMaxAttempts?: boolean;
+  priority?: JobPriority;
+  reprocessedBy: string;
+}
+
+/**
+ * DLQ query options
+ */
+export interface DLQQueryOptions {
+  status?: string[];
+  severity?: string[];
+  jobType?: string;
+  dateRange?: {
+    start: Date;
+    end: Date;
+  };
+  limit?: number;
+  offset?: number;
+  sortBy?: 'movedToDLQAt' | 'severity' | 'jobType';
+  sortOrder?: 'asc' | 'desc';
+}
+
+/**
+ * Job handler function type with metadata
+ */
+export type JobHandler<T = any> = (
+  data: T,
+  jobId: string,
+  logger: any,
+  metadata?: {
+    attempt: number;
+    maxAttempts: number;
+    queuedAt: Date;
+    processingAt: Date;
+  }
 ) => Promise<JobResult>;
 
 /**
- * Job handlers map
+ * Queue health status
  */
-export type JobHandlers = {
-  [K in JobType]: JobHandler<
-    Extract<
-      JobData,
-      { [P in keyof JobData]: JobData[P] extends { type?: K } ? JobData : never }[keyof JobData]
-    >
-  >;
-};
+export const QueueHealth = {
+  HEALTHY: 'healthy',
+  DEGRADED: 'degraded',
+  CRITICAL: 'critical',
+  DOWN: 'down'
+} as const;
+
+export type QueueHealthStatus = (typeof QueueHealth)[keyof typeof QueueHealth];
+
+/**
+ * Queue health information
+ */
+export interface QueueHealthInfo {
+  overall: QueueHealthStatus;
+  database: {
+    connected: boolean;
+    responseTime?: number;
+    error?: string;
+  };
+  cache: {
+    connected: boolean;
+    responseTime?: number;
+    error?: string;
+  };
+  workers: {
+    active: number;
+    failed: number;
+    lastHeartbeat?: Date;
+  };
+  queues: {
+    backlog: number;
+    stalled: number;
+    processing: number;
+  };
+}
+
+/**
+ * Cleanup operation result
+ */
+export interface CleanupResult {
+  deleted: number;
+  errors: number;
+  duration: number;
+  details: Array<{
+    operation: string;
+    count: number;
+    error?: string;
+  }>;
+}

@@ -31,7 +31,7 @@ async function mongoPlugin(
   options: MongoPluginOptions = {}
 ): Promise<void> {
   // Create connection manager
-  const connectionManager = MongoConnectionManagerFactory.create(options.connectionString);
+  const connectionManager = await MongoConnectionManagerFactory.create(options.connectionString);
 
   // Connect if not skipped (useful for testing)
   if (!options.skipConnection) {

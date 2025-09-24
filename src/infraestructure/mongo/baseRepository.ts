@@ -140,6 +140,20 @@ export class BaseRepository<T extends Document> implements IBaseRepository<T> {
   }
 
   /**
+   * Find one document and update it (alias for updateOne)
+   * @param filter - Filter query
+   * @param update - Update query
+   * @param options - Repository options including optional session
+   */
+  async findOneAndUpdate(
+    filter: FilterQuery<T>,
+    update: UpdateQuery<T>,
+    options: RepositoryOptions = {}
+  ): Promise<T | null> {
+    return await this.updateOne(filter, update, options);
+  }
+
+  /**
    * Update multiple documents
    * @param filter - Filter query
    * @param update - Update query
