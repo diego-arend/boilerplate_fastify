@@ -1,272 +1,202 @@
 # Queue Jobs System
 
-Sistema de jobs assíncronos com suporte completo a templates de email e processamento em background.
+Sistema de jobs assíncronos com **arquitetura limpa** e **jobs auto-contidos** para máxima reutilização e testabilidade.
 
-## 📁 **Estrutura**
+## 🏗️ **Arquitetura Atual**
+
+### **Jobs Auto-Contidos e Reutilizáveis**
+
+Cada job é completamente independente e pode ser usado fora do contexto BullMQ:
+
+- ✅ **Zero dependências externas**: Jobs não dependem de DI ou contexto
+- ✅ **Testabilidade**: Podem ser testados unitariamente
+- ✅ **Reutilização**: Usáveis em CLI, cron jobs, outros sistemas
+- ✅ **Logs estruturados**: Logging detalhado e configurável
+
+### **Estrutura de Arquivos**
 
 ```
 jobs/
-├── business/               # Jobs de regras de negócio
-│   ├── emailSend.job.ts   # ✅ Job de envio de emails com templates
-│   └── emailSend.examples.ts # Exemplos de uso de emails
-├── maintenance/           # Jobs de manutenção do sistema
-└── index.ts              # Registry de todos os handlers
+├── business/                       # 💼 Jobs de regras de negócio
+│   └── registrationEmailJob.ts    # ✅ Email de registro (implementado)
+├── maintenance/                    # 🔧 Jobs de manutenção (futuros)
+│   ├── cacheWarm.job.ts           # 🔄 Cache warming
+│   └── cleanup.job.ts             # 🧹 Limpeza de arquivos
+├── index.ts                       # 📜 Registry de todos os handlers
+└── README.md                      # 📚 Esta documentação
 ```
 
-## 📧 **Email Job Handler**
+## 📧 **Registration Email Job** ✅
 
-### **Características Principais**
+### **Implementação Atual**
 
-- ✅ **7 Templates Predefinidos**: Welcome, Password Reset, Order Confirmation, Invoice, Newsletter, System Alert, Custom
-- ✅ **Validação Automática**: Variáveis obrigatórias por template
-- ✅ **Multi-destinatários**: TO, CC, BCC com validação de emails
-- ✅ **Anexos**: Suporte a múltiplos anexos (até 25MB total)
-- ✅ **Agendamento**: Envio programado com timezone
-- ✅ **Rastreamento**: Opens e clicks tracking
-- ✅ **Prioridades**: High, Normal, Low
-- ✅ **Retry Logic**: Tentativas automáticas com DLQ
+**Arquivo**: `business/registrationEmailJob.ts`
 
-### **Templates Disponíveis**
-
-| Template             | Variáveis Obrigatórias                                     | Uso                             |
-| -------------------- | ---------------------------------------------------------- | ------------------------------- |
-| `WELCOME`            | userName, activationLink                                   | Boas-vindas para novos usuários |
-| `PASSWORD_RESET`     | userName, resetLink, expiresIn                             | Reset de senhas                 |
-| `ORDER_CONFIRMATION` | orderNumber, customerName, orderItems, totalAmount         | Confirmação de pedidos          |
-| `INVOICE`            | invoiceNumber, customerName, amount, dueDate, downloadLink | Faturas e cobrança              |
-| `NEWSLETTER`         | unsubscribeLink                                            | Newsletters e campanhas         |
-| `SYSTEM_ALERT`       | alertType, message, timestamp                              | Alertas do sistema              |
-| `CUSTOM`             | _(nenhuma - usa customHtml/customText)_                    | Emails personalizados           |
-
-### **Como Usar**
+#### **Interface do Job**
 
 ```typescript
-import { QueueJobType, JobPriority } from '../queue.types.js';
-import { EmailTemplateConstants } from './jobs/index.js';
+interface RegistrationEmailData {
+  userId: string;
+  userName: string;
+  userEmail: string;
+}
 
-// 1. Email de boas-vindas
-const welcomeJob = await queueManager.addJob({
-  type: QueueJobType.EMAIL_SEND,
-  data: {
-    to: 'newuser@example.com',
-    subject: 'Welcome to Our Platform!',
-    template: EmailTemplateConstants.WELCOME,
-    variables: {
-      userName: 'John Doe',
-      activationLink: 'https://app.example.com/activate?token=abc123'
-    },
-    priority: 'high',
-    trackOpens: true,
-    userId: 'user_123'
-  },
-  priority: JobPriority.HIGH,
-  maxAttempts: 3
-});
-
-// 2. Reset de senha
-const resetJob = await queueManager.addJob({
-  type: QueueJobType.EMAIL_SEND,
-  data: {
-    to: 'user@example.com',
-    template: EmailTemplateConstants.PASSWORD_RESET,
-    variables: {
-      userName: 'Jane Smith',
-      resetLink: 'https://app.example.com/reset?token=xyz789',
-      expiresIn: '24 hours'
-    },
-    priority: 'high',
-    trackOpens: true
-  },
-  priority: JobPriority.CRITICAL
-});
-
-// 3. Confirmação de pedido
-const orderJob = await queueManager.addJob({
-  type: QueueJobType.EMAIL_SEND,
-  data: {
-    to: 'customer@example.com',
-    cc: 'sales@company.com',
-    template: EmailTemplateConstants.ORDER_CONFIRMATION,
-    variables: {
-      orderNumber: 'ORD-2024-001',
-      customerName: 'Alice Johnson',
-      orderItems: [
-        { name: 'Widget', quantity: 2, price: '29.99' },
-        { name: 'Gadget', quantity: 1, price: '49.99' }
-      ],
-      totalAmount: '109.97'
-    },
-    priority: 'high',
-    trackOpens: true
-  },
-  priority: JobPriority.HIGH
-});
-
-// 4. Newsletter para múltiplos destinatários
-const newsletterJob = await queueManager.addJob({
-  type: QueueJobType.EMAIL_SEND,
-  data: {
-    to: ['subscriber1@example.com', 'subscriber2@example.com', 'subscriber3@example.com'],
-    template: EmailTemplateConstants.NEWSLETTER,
-    variables: {
-      title: 'Weekly Updates',
-      content: "<h2>What's New This Week</h2><p>...</p>",
-      unsubscribeLink: 'https://app.example.com/unsubscribe'
-    },
-    priority: 'low',
-    campaignId: 'weekly_2024'
-  },
-  priority: JobPriority.LOW
-});
-
-// 5. Email customizado
-const customJob = await queueManager.addJob({
-  type: QueueJobType.EMAIL_SEND,
-  data: {
-    to: 'client@example.com',
-    subject: 'Special Offer!',
-    template: EmailTemplateConstants.CUSTOM,
-    customHtml: '<h1>50% Off!</h1><p>Limited time offer...</p>',
-    customText: '50% Off! Limited time offer...',
-    attachments: [
-      {
-        filename: 'offer.pdf',
-        path: '/files/special-offer.pdf',
-        contentType: 'application/pdf'
-      }
-    ],
-    priority: 'normal'
-  },
-  priority: JobPriority.NORMAL
-});
-
-// 6. Email agendado
-const scheduledJob = await queueManager.addJob({
-  type: QueueJobType.EMAIL_SEND,
-  data: {
-    to: 'user@example.com',
-    subject: 'Happy Birthday!',
-    template: EmailTemplateConstants.CUSTOM,
-    customHtml: '<h1>Happy Birthday! 🎂</h1>',
-    sendAt: new Date('2024-03-15T09:00:00Z'),
-    timezone: 'America/New_York',
-    priority: 'normal'
-  },
-  priority: JobPriority.NORMAL,
-  scheduledFor: new Date('2024-03-15T09:00:00Z')
-});
+interface RegistrationEmailJobResult {
+  success: boolean;
+  jobId: string;
+  messageId?: string;
+  error?: string;
+  processingTime: number;
+  userId: string;
+  movedToDLQ?: boolean;
+  dlqReason?: string;
+}
 ```
 
-### **Características Avançadas**
-
-#### **Validação Automática**
+#### **Como Usar**
 
 ```typescript
-// ❌ Erro: variáveis obrigatórias ausentes
-await queueManager.addJob({
-  type: QueueJobType.EMAIL_SEND,
-  data: {
-    to: 'user@example.com',
-    template: EmailTemplateConstants.WELCOME
-    // Missing: userName, activationLink
+// 1. Via Fastify (usado no AuthController)
+const jobId = await fastify.addJob(
+  `registration-email-${user.id}-${Date.now()}`,
+  'registration-email',
+  {
+    userId: user.id,
+    userName: user.name,
+    userEmail: user.email
+  },
+  {
+    attempts: 1, // Single attempt (evita duplicatas)
+    priority: 10 // Alta prioridade
   }
-});
-// Error: Missing required variables for template welcome: userName, activationLink
+);
+
+// 2. Diretamente (para testes ou CLI)
+import { handleRegistrationEmailJob } from './business/registrationEmailJob.js';
+
+const result = await handleRegistrationEmailJob(
+  {
+    userId: 'user_123',
+    userName: 'João Silva',
+    userEmail: 'joao@example.com'
+  },
+  'manual-job-123',
+  logger
+);
 ```
 
-#### **Múltiplos Anexos**
+#### **Características Técnicas**
 
-```typescript
-const jobWithAttachments = await queueManager.addJob({
-  type: QueueJobType.EMAIL_SEND,
-  data: {
-    to: 'client@example.com',
-    template: EmailTemplateConstants.INVOICE,
-    variables: {
-      /* ... */
-    },
-    attachments: [
-      {
-        filename: 'invoice.pdf',
-        path: '/invoices/INV-001.pdf',
-        contentType: 'application/pdf'
-      },
-      {
-        filename: 'terms.pdf',
-        content: Buffer.from('PDF content...'),
-        contentType: 'application/pdf'
-      }
-    ]
-  }
-});
-```
+- ✅ **Template Integrado**: Usa `registration_success` template
+- ✅ **SMTP Configurado**: Funciona com Mailpit/SMTP real
+- ✅ **Error Handling**: Tratamento completo de erros
+- ✅ **Logging Estruturado**: Logs detalhados com métricas
+- ✅ **Configuração Dinâmica**: Lê configurações do ambiente
+- ✅ **Single Attempt**: Evita emails duplicados
+- ✅ **Performance**: ~83ms tempo médio de processamento
 
-#### **Rastreamento e Analytics**
-
-```typescript
-const trackedJob = await queueManager.addJob({
-  type: QueueJobType.EMAIL_SEND,
-  data: {
-    to: 'user@example.com',
-    template: EmailTemplateConstants.NEWSLETTER,
-    variables: {
-      /* ... */
-    },
-    trackOpens: true, // Rastrear aberturas
-    trackClicks: true, // Rastrear cliques
-    campaignId: 'spring_promo_2024',
-    metadata: {
-      segment: 'premium_users',
-      source: 'automated_campaign'
-    }
-  }
-});
-```
-
-### **Monitoramento e Logs**
-
-Todos os jobs de email incluem logs estruturados:
+#### **Exemplo de Log**
 
 ```bash
-# Logs de processamento
-INFO: Processing email send job
-  jobId: "job_email_001"
-  template: "welcome"
-  recipients: 1
+# Processamento iniciado
+INFO: Processing registration email job
+  jobId: "registration-email-68d85d0b-1759010059"
+  userId: "68d85d0b1ef3a564e56b5b63"
+  userEmail: "ana@example.com"
   attempt: 1
 
-# Logs de sucesso
-INFO: Email job completed successfully
-  jobId: "job_email_001"
-  messageId: "msg_1234567890"
-  processingTime: 850
-  template: "welcome"
+# Email enviado com sucesso
+INFO: Registration email sent successfully
+  jobId: "registration-email-68d85d0b-1759010059"
+  userId: "68d85d0b1ef3a564e56b5b63"
+  messageId: "<7d17cbf6-ce16-37bd-d727-1c6c0826d022@boilerplate.com>"
+  processingTime: 51
+  template: "registration_success"
+```
 
-# Logs de erro
-ERROR: Email job processing failed
-  jobId: "job_email_001"
-  error: "Invalid email address: invalid@"
-  attempt: 2
-  maxAttempts: 3
+### **Template de Email**
+
+O job usa o template `registration_success` com as seguintes variáveis:
+
+- `userName`: Nome do usuário para personalização
+- **Subject**: "🎉 Parabéns {userName}! Seu cadastro foi realizado com sucesso"
+- **Conteúdo**: HTML responsivo com boas-vindas e instruções
+
+## 🔄 **Jobs Placeholder** (Para desenvolvimento futuro)
+
+### **User Notification Job**
+
+```typescript
+// Futuro: user:notification
+interface UserNotificationData {
+  userId: string;
+  message: string;
+  type: 'info' | 'warning' | 'error' | 'success';
+  channels?: ('email' | 'push' | 'sms')[];
+}
+
+// Uso futuro
+await fastify.addJob('user-notification-123', 'user:notification', {
+  userId: '123',
+  message: 'Seu pedido foi processado com sucesso',
+  type: 'info',
+  channels: ['email', 'push']
+});
+```
+
+### **Data Export Job**
+
+```typescript
+// Futuro: data:export
+interface DataExportData {
+  exportType: 'users' | 'orders' | 'reports';
+  format: 'csv' | 'json' | 'xlsx';
+  filters?: Record<string, any>;
+  requestedBy: string;
+}
+
+// Uso futuro
+await fastify.addJob('data-export-456', 'data:export', {
+  exportType: 'users',
+  format: 'csv',
+  requestedBy: 'admin_123'
+});
 ```
 
 ## 🔧 **Adicionando Novos Jobs**
 
-### **1. Criar Handler**
+### **1. Criar Job Auto-Contido**
 
 ```typescript
-// src/infraestructure/queue/jobs/business/myJob.job.ts
+// src/infraestructure/queue/jobs/business/myNewJob.ts
 import type { FastifyBaseLogger } from 'fastify';
-import type { JobResult } from '../../queue.types.js';
 
-export interface MyJobData {
+/**
+ * Data interface para o novo job
+ */
+export interface MyNewJobData {
   userId: string;
   action: string;
-  // ... outras propriedades
+  parameters?: Record<string, any>;
 }
 
-export async function handleMyJob(
-  data: MyJobData,
+/**
+ * Result interface para o novo job
+ */
+export interface MyNewJobResult {
+  success: boolean;
+  jobId: string;
+  data?: any;
+  error?: string;
+  processingTime: number;
+  userId: string;
+}
+
+/**
+ * Handler auto-contido - funciona independentemente do BullMQ
+ */
+export async function handleMyNewJob(
+  data: MyNewJobData,
   jobId: string,
   logger: FastifyBaseLogger,
   metadata?: {
@@ -275,194 +205,309 @@ export async function handleMyJob(
     queuedAt: Date;
     processingAt: Date;
   }
-): Promise<JobResult> {
+): Promise<MyNewJobResult> {
   const startTime = Date.now();
 
-  logger.info({ jobId, userId: data.userId }, 'Processing my custom job');
+  logger.info(
+    {
+      jobId,
+      userId: data.userId,
+      action: data.action,
+      attempt: metadata?.attempt || 1
+    },
+    'Processing my new job'
+  );
 
   try {
     // Validação dos dados
-    if (!data.userId) {
-      throw new Error('userId is required');
+    if (!data.userId || !data.action) {
+      throw new Error('Missing required fields: userId or action');
     }
 
-    // Processamento do job
-    const result = await processMyJob(data);
+    // Lógica do job (auto-contida)
+    const result = await processMyNewJobLogic(data);
+
+    const processingTime = Date.now() - startTime;
+
+    logger.info(
+      {
+        jobId,
+        userId: data.userId,
+        action: data.action,
+        processingTime,
+        result: result.status
+      },
+      'My new job completed successfully'
+    );
 
     return {
       success: true,
       jobId,
       data: result,
-      processedAt: Date.now(),
-      processingTime: Date.now() - startTime,
-      workerId: process.env.WORKER_ID || 'unknown'
+      processingTime,
+      userId: data.userId
     };
   } catch (error) {
+    const processingTime = Date.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+    logger.error(
+      {
+        jobId,
+        userId: data.userId,
+        error: errorMessage,
+        processingTime,
+        attempt: metadata?.attempt || 1
+      },
+      'My new job failed'
+    );
 
     return {
       success: false,
       jobId,
       error: errorMessage,
-      processedAt: Date.now(),
-      processingTime: Date.now() - startTime,
-      workerId: process.env.WORKER_ID || 'unknown'
+      processingTime,
+      userId: data.userId
     };
   }
 }
 
-async function processMyJob(data: MyJobData): Promise<any> {
-  // Implementar lógica do job
-  return { processed: true };
+/**
+ * Lógica de processamento auto-contida
+ */
+async function processMyNewJobLogic(data: MyNewJobData): Promise<any> {
+  // Implementar a lógica específica aqui
+  // Esta função não depende de BullMQ ou Fastify
+
+  return {
+    status: 'processed',
+    action: data.action,
+    processedAt: new Date().toISOString()
+  };
 }
 ```
 
-### **2. Registrar no Index**
+### **2. Criar Adapter BullMQ**
 
 ```typescript
-// src/infraestructure/queue/jobs/index.ts
-import { handleMyJob } from './business/myJob.job.js';
+// src/infraestructure/queue/handlers.ts
+import { handleMyNewJob, type MyNewJobData } from './jobs/business/myNewJob.js';
 
-export const JOB_HANDLERS: Record<string, JobHandler> = {
-  [QueueJobType.EMAIL_SEND]: handleEmailSend,
-  [QueueJobType.MY_JOB]: handleMyJob // ← Adicionar novo handler
-} as const;
+export async function bullmqMyNewJobHandler(
+  data: MyNewJobData,
+  logger?: FastifyBaseLogger
+): Promise<any> {
+  const jobLogger = logger || defaultLogger;
+  const jobId = `my-new-job-${data.userId}-${Date.now()}`;
 
-// Re-export
-export { handleMyJob } from './business/myJob.job.js';
-export type { MyJobData } from './business/myJob.job.js';
+  try {
+    const result = await handleMyNewJob(data, jobId, jobLogger, {
+      attempt: 1,
+      maxAttempts: 1,
+      queuedAt: new Date(),
+      processingAt: new Date()
+    });
+
+    if (result.success) {
+      jobLogger.info(`My new job completed: ${jobId}`);
+      return result.data;
+    } else {
+      throw new Error(result.error || 'My new job failed');
+    }
+  } catch (error) {
+    jobLogger.error(`My new job failed: ${jobId} - ${error}`);
+    throw error;
+  }
+}
+
+// Adicionar ao registry
+export const QUEUE_HANDLERS: Record<string, QueueJobHandler> = {
+  'registration-email': bullmqRegistrationEmailHandler,
+  'user:notification': bullmqUserNotificationHandler,
+  'data:export': bullmqDataExportHandler,
+  'my-new-job': bullmqMyNewJobHandler // ← Novo handler
+};
 ```
 
-### **3. Adicionar Tipo ao Queue Types**
+### **3. Usar o Novo Job**
 
 ```typescript
-// src/infraestructure/queue/queue.types.ts
-export const QueueJobType = {
-  EMAIL_SEND: 'email_send',
-  MY_JOB: 'my_job' // ← Adicionar novo tipo
-  // ...
-} as const;
-```
-
-### **4. Usar o Job**
-
-```typescript
-const job = await queueManager.addJob({
-  type: QueueJobType.MY_JOB,
-  data: {
+// No controller ou service
+const jobId = await fastify.addJob(
+  `my-new-job-${userId}-${Date.now()}`,
+  'my-new-job',
+  {
     userId: 'user_123',
-    action: 'process_data'
+    action: 'process_data',
+    parameters: { type: 'full' }
   },
-  priority: JobPriority.NORMAL,
-  maxAttempts: 3
-});
+  {
+    attempts: 1,
+    priority: 5
+  }
+);
 ```
 
 ## 🧪 **Testando Jobs**
 
-### **Testes Unitários**
+### **Teste Unitário (Job Isolado)**
 
 ```typescript
-// tests/jobs/emailSend.test.ts
-import { handleEmailSend } from '../src/infraestructure/queue/jobs/business/emailSend.job.js';
+// tests/jobs/registrationEmail.test.ts
+import { handleRegistrationEmailJob } from '../../../src/infraestructure/queue/jobs/business/registrationEmailJob.js';
 
-describe('Email Send Job', () => {
-  it('should send welcome email successfully', async () => {
-    const result = await handleEmailSend(
+describe('Registration Email Job', () => {
+  const mockLogger = {
+    info: jest.fn(),
+    error: jest.fn(),
+    warn: jest.fn(),
+    debug: jest.fn()
+  } as any;
+
+  it('should process registration email successfully', async () => {
+    const result = await handleRegistrationEmailJob(
       {
-        to: 'test@example.com',
-        template: 'welcome',
-        variables: {
-          userName: 'Test User',
-          activationLink: 'https://test.com/activate'
-        }
+        userId: 'test_user_123',
+        userName: 'Test User',
+        userEmail: 'test@example.com'
       },
       'test_job_123',
-      logger
+      mockLogger
     );
 
     expect(result.success).toBe(true);
-    expect(result.data.messageId).toBeDefined();
+    expect(result.jobId).toBe('test_job_123');
+    expect(result.userId).toBe('test_user_123');
+    expect(result.messageId).toBeDefined();
   });
 
-  it('should fail with missing variables', async () => {
-    const result = await handleEmailSend(
+  it('should fail with missing data', async () => {
+    const result = await handleRegistrationEmailJob(
       {
-        to: 'test@example.com',
-        template: 'welcome',
-        variables: {} // Missing required variables
+        userId: '',
+        userName: 'Test User',
+        userEmail: 'test@example.com'
       },
       'test_job_456',
-      logger
+      mockLogger
     );
 
     expect(result.success).toBe(false);
-    expect(result.error).toContain('Missing required variables');
+    expect(result.error).toContain('Missing required registration email data');
   });
 });
 ```
 
-### **Teste Manual com HTTP**
+### **Teste de Integração (BullMQ)**
+
+```typescript
+// tests/integration/queue.test.ts
+describe('Queue Integration', () => {
+  it('should process registration email via BullMQ', async () => {
+    const jobId = await fastify.addJob(
+      'test-registration-email-integration',
+      'registration-email',
+      {
+        userId: 'test_user_integration',
+        userName: 'Integration Test User',
+        userEmail: 'integration@test.com'
+      }
+    );
+
+    // Wait for job processing
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // Verify job completion
+    const stats = await fastify.queueManager.getStats();
+    expect(stats.completed).toBeGreaterThan(0);
+  });
+});
+```
+
+### **Teste Manual via API**
 
 ```bash
-# Teste via API REST
-curl -X POST http://localhost:3001/api/queue/jobs \
-  -H "Content-Type: application/json" \
-  -d '{
-    "type": "email_send",
-    "data": {
-      "to": "test@example.com",
-      "template": "welcome",
-      "variables": {
-        "userName": "Test User",
-        "activationLink": "https://test.com/activate"
-      }
-    },
-    "priority": 15,
-    "maxAttempts": 3
-  }'
+# Testar job de registro via REST
+curl -X POST http://localhost:3001/test-delayed-email \
+  -H "Content-Type: application/json"
+
+# Response esperado:
+# {
+#   "success": true,
+#   "message": "Delayed job added successfully",
+#   "data": {
+#     "jobId": "test-delayed-email-1759010259123",
+#     "delay": 10000
+#   }
+# }
 ```
 
-## 📊 **Métricas e Monitoramento**
+## 📊 **Monitoramento de Jobs**
 
-### **Jobs Stats**
+### **Bull Dashboard**
+
+- **URL**: http://localhost:3002/ui
+- **Métricas**: Active, Waiting, Completed, Failed, Delayed jobs
+- **Real-time**: Updates automáticos conforme jobs são processados
+
+### **Logs Estruturados**
+
+```bash
+# Job iniciado
+INFO: Processing registration email job
+  jobId: "registration-email-123"
+  userId: "user_456"
+  attempt: 1
+
+# Job concluído
+INFO: Registration email sent successfully
+  jobId: "registration-email-123"
+  messageId: "<abc@boilerplate.com>"
+  processingTime: 83
+```
+
+### **Estatísticas Via API**
 
 ```typescript
-// Estatísticas por tipo de job
-const stats = await queueManager.getStats();
+// Estatísticas da queue
+const stats = await fastify.queueManager.getStats();
 console.log({
-  emailJobs: {
-    pending: stats.emailSend.pending,
-    completed: stats.emailSend.completed,
-    failed: stats.emailSend.failed
-  }
+  waiting: stats.waiting, // Jobs aguardando processamento
+  active: stats.active, // Jobs sendo processados
+  completed: stats.completed, // Jobs concluídos
+  failed: stats.failed // Jobs que falharam
 });
 ```
 
-### **DLQ (Dead Letter Queue)**
+## 🚀 **Roadmap de Jobs**
 
-```typescript
-// Jobs que falharam múltiplas vezes
-const dlqStats = await queueManager.getDLQStats();
-console.log({
-  totalInDLQ: dlqStats.total,
-  emailJobsInDLQ: dlqStats.byType['email_send'] || 0
-});
+### **Próximos Jobs Planejados**
 
-// Reprocessar jobs do DLQ
-await queueManager.reprocessDLQJobs({
-  jobType: 'email_send',
-  limit: 10,
-  resetAttempts: true
-});
-```
+#### **High Priority**
 
-## 🚀 **Próximos Jobs Planejados**
+- [ ] **File Processing Job**: Image resize, document conversion
+- [ ] **User Notification Job**: Push, SMS, email notifications
+- [ ] **Data Export Job**: CSV, JSON, Excel exports
 
-- [ ] **User Notification Job**: Notificações push, SMS, in-app
-- [ ] **Data Export Job**: Exportação CSV, JSON, Excel
-- [ ] **File Process Job**: Resize, compression, conversion
-- [ ] **Cache Warm Job**: Pré-aquecimento de cache
-- [ ] **Cleanup Job**: Limpeza de arquivos temporários
+#### **Medium Priority**
 
-O sistema está pronto para expansão com novos jobs seguindo os mesmos padrões! 🎯
+- [ ] **Cache Warming Job**: Pré-aquecimento de dados críticos
+- [ ] **Cleanup Jobs**: Limpeza automática de arquivos temporários
+- [ ] **Report Generation Job**: Relatórios automáticos
+
+#### **Future Enhancements**
+
+- [ ] **Job Scheduling**: Cron-like jobs recorrentes
+- [ ] **Job Chaining**: Pipeline de jobs dependentes
+- [ ] **Batch Processing**: Processamento em lotes eficiente
+
+### **Padrões Estabelecidos** ✅
+
+1. **Jobs Auto-Contidos**: Funcionam independentemente do BullMQ
+2. **Interfaces TypeScript**: Tipagem forte para dados e resultados
+3. **Logging Estruturado**: Logs detalhados e configuráveis
+4. **Error Handling**: Tratamento completo de erros e edge cases
+5. **Performance Tracking**: Métricas de tempo de processamento
+6. **Testabilidade**: Jobs facilmente testáveis unitariamente
+
+O sistema está preparado para expansão seguindo estes padrões estabelecidos! 🎯

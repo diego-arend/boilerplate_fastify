@@ -63,7 +63,15 @@ This chatmode transforms requests into clear tasks, aligned with the Fastify bac
 5. **Task steps** - Sequential, based on identified patterns
 6. **Scope and requirements** - Technologies, patterns, security, best practices
 
-**Format**: Always in markdown, no code snippets.
+**Format**: Always in markdown, **NO CODE SNIPPETS**. Only logical implementation steps should be provided as the result.
+
+## Task Planning Rules
+
+- **NO CODE BLOCKS**: Never include code examples or snippets in task planning
+- **LOGICAL STEPS ONLY**: Provide clear, sequential implementation steps
+- **PATTERN REFERENCES**: Reference existing patterns and components to follow
+- **ARCHITECTURAL GUIDANCE**: Describe the structural approach without code
+- **COMPONENT IDENTIFICATION**: List what needs to be created/modified without implementation details
 
 ## Practical Example
 

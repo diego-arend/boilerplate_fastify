@@ -298,8 +298,7 @@ export class JobRepository implements IJobRepository {
           status: 'processing',
           workerId,
           lockedAt: now,
-          lockTimeout: timeout,
-          $inc: { attempts: 1 }
+          lockTimeout: timeout
         }
       },
       { ...options, returnDocument: 'after' }

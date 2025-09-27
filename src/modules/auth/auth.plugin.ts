@@ -1,11 +1,12 @@
 import type { FastifyInstance, FastifyPluginOptions, FastifyRequest, FastifyReply } from 'fastify';
+import fp from 'fastify-plugin';
 import { JwtStrategy, AuthenticateCommand } from './services/index.js';
 import { CacheServiceFactory, type DataCache } from '../../infraestructure/cache/index.js';
 import { config } from '../../lib/validators/validateEnv.js';
 import authController from './auth.controller.js';
 import { defaultLogger } from '../../lib/logger/index.js';
 
-export default async function (fastify: FastifyInstance, opts: FastifyPluginOptions) {
+async function authPluginFunction(fastify: FastifyInstance, opts: FastifyPluginOptions) {
   const logger = defaultLogger.child({ context: 'auth-plugin' });
 
   if (process.env.NODE_ENV === 'development') {
@@ -235,3 +236,8 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
     });
   }
 }
+
+export default fp(authPluginFunction, {
+  name: 'auth',
+  dependencies: ['cache', 'queue'] // Ensure auth loads after queue (BullMQ)
+});

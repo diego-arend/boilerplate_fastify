@@ -31,34 +31,6 @@ services:
       retries: 3
       start_period: 40s
 
-  queue-worker:
-    build:
-      context: .
-      dockerfile: Dockerfile.worker
-    container_name: boilerplate_queue_worker
-    restart: unless-stopped
-    env_file:
-      - .env.production
-    depends_on:
-      - mongodb
-      - redis
-    networks:
-      - boilerplate_network
-    deploy:
-      resources:
-        limits:
-          cpus: "1.0"
-          memory: 1G
-        reservations:
-          cpus: "0.5"
-          memory: 512M
-    healthcheck:
-      test: ["CMD", "pgrep", "-f", "queue.worker.js"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 20s
-
   mongodb:
     image: mongo:latest
     container_name: boilerplate_mongodb

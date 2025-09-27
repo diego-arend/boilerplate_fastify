@@ -14,7 +14,6 @@ services:
     depends_on:
       - mongodb
       - redis
-      - mailhog
     networks:
       - boilerplate_network
     volumes:
@@ -35,39 +34,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
-
-  queue-worker:
-    build:
-      context: .
-      dockerfile: Dockerfile.worker.dev
-    container_name: boilerplate_queue_worker_dev
-    restart: unless-stopped
-    env_file:
-      - .env
-    depends_on:
-      - mongodb
-      - redis
-      - mailhog
-    networks:
-      - boilerplate_network
-    volumes:
-      - .:/app
-      - /app/node_modules
-    command: pnpm run worker:queue
-    deploy:
-      resources:
-        limits:
-          cpus: "1.0"
-          memory: 1G
-        reservations:
-          cpus: "0.5"
-          memory: 512M
-    healthcheck:
-      test: ["CMD", "pgrep", "-f", "queue.worker.ts"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 20s
 
   mongodb:
     image: mongo:latest
@@ -124,18 +90,28 @@ services:
       - redis
 
   # Fake email server smtp for send email and dashboard for visualize emails
-  mailhog:
-    image: mailhog/mailhog:latest
-    container_name: mailhog
+  # mailhog:
+  #   image: mailhog/mailhog:latest
+  #   container_name: mailhog
+  #   ports:
+  #     - "1025:1025" # Port server SMTP
+  #     - "8025:8025" # Port web interface
+  #   # Persist emails
+  #   environment:
+  #     - MH_STORAGE=maildir
+  #     - MH_MAILDIR_PATH=/maildir
+  #   volumes:
+  #     - mailhog_data:/maildir
+  #   networks:
+  #     - boilerplate_network
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: mailpit
     ports:
-      - "1025:1025" # Port server SMTP
-      - "8025:8025" # Port web interface
-    # Persist emails
-    environment:
-      - MH_STORAGE=maildir
-      - MH_MAILDIR_PATH=/maildir
-    volumes:
-      - mailhog_data:/maildir
+      - "1025:1025" # Porta SMTP - a mesma que você usa no Nodemailer
+      - "8025:8025" # Porta da Interface Web - acesse http://localhost:8025
+    restart: unless-stopped
     networks:
       - boilerplate_network
 

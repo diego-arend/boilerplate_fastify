@@ -85,7 +85,7 @@ export class EmailService {
     transporterConfig.port = config.port || 587;
     transporterConfig.secure = config.secure || false;
 
-    if (config.auth) {
+    if (config.auth && config.auth.user && config.auth.pass) {
       transporterConfig.auth = config.auth;
     }
 
@@ -106,11 +106,29 @@ export class EmailService {
       transporterConfig.rateLimit = config.rateLimit;
     }
 
-    if (config.tls) {
+    // Special handling for MailHog - disable TLS completely
+    const isMailHog =
+      config.host?.toLowerCase() === 'mailhog' || config.host?.toLowerCase().includes('mailhog');
+    if (isMailHog) {
+      transporterConfig.ignoreTLS = true;
+      transporterConfig.requireTLS = false;
+      // Remove any TLS config for MailHog
+    } else if (config.tls) {
       transporterConfig.tls = config.tls;
     }
 
-    this.logger.info({ host: config.host }, 'Creating email transporter');
+    this.logger.info(
+      {
+        host: config.host,
+        port: config.port,
+        secure: config.secure,
+        isMailHog,
+        ignoreTLS: transporterConfig.ignoreTLS,
+        requireTLS: transporterConfig.requireTLS,
+        hasTLS: !!transporterConfig.tls
+      },
+      'Creating email transporter'
+    );
 
     return nodemailer.createTransport(transporterConfig);
   }
@@ -250,6 +268,10 @@ declare module 'fastify' {
  * Email plugin function
  */
 async function emailPluginFunction(fastify: FastifyInstance): Promise<void> {
+  // Configure TLS based on environment
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  const isMailHog = process.env.SMTP_HOST?.toLowerCase().includes('mailhog');
+
   const emailConfig: EmailConfig = {
     host: process.env.SMTP_HOST || undefined,
     port: process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT, 10) : 587,
@@ -267,7 +289,15 @@ async function emailPluginFunction(fastify: FastifyInstance): Promise<void> {
       ? parseInt(process.env.EMAIL_MAX_MESSAGES, 10)
       : 100,
     rateLimit: process.env.EMAIL_RATE_LIMIT ? parseInt(process.env.EMAIL_RATE_LIMIT, 10) : 5,
-    tls: { rejectUnauthorized: process.env.EMAIL_TLS_REJECT_UNAUTHORIZED !== 'false' }
+    // TLS configuration based on environment and SMTP server
+    // MailHog (development): No TLS at all
+    // Other development: Allow self-signed certificates
+    // Production: Require valid certificates for security
+    tls: isMailHog
+      ? undefined
+      : {
+          rejectUnauthorized: isDevelopment ? false : true
+        }
   };
 
   const emailService = new EmailService(emailConfig, fastify.log);

@@ -3,7 +3,7 @@ import authPlugin from './modules/auth/auth.plugin.js';
 import healthPlugin from './modules/health/health.plugin.js';
 import cachePlugin from './infraestructure/cache/cache.plugin.js';
 import mongodbPlugin from './infraestructure/mongo/mongodb.plugin.js';
-import queuePlugin from './infraestructure/queue/queue.plugin.js';
+import queuePlugin from './infraestructure/queue/plugin.js';
 import emailPlugin from './infraestructure/email/email.plugin.js';
 import rateLimitPlugin from './infraestructure/server/rateLimit.plugin.js';
 import corsPlugin from './infraestructure/server/cors.plugin.js';
@@ -32,7 +32,9 @@ export default async function app(fastify: FastifyInstance, opts: FastifyPluginO
 
   // Register queue plugin AFTER both MongoDB and cache for job processing
   await fastify.register(queuePlugin, {
-    config: fastify.config
+    config: fastify.config,
+    queueName: 'app-queue',
+    concurrency: 5
   });
 
   // Register CORS plugin BEFORE rate limiting for proper request handling
@@ -80,7 +82,8 @@ export default async function app(fastify: FastifyInstance, opts: FastifyPluginO
     fastify.log.info('Swagger registrado em /docs');
   }
 
-  // Register modules
+  // Register modules AFTER all infrastructure plugins are loaded
+  // This ensures bullQueue, cache, etc. are available in controllers
   await registerModule(fastify, healthPlugin, '', 'health');
   await registerModule(fastify, authPlugin, '/auth', 'auth');
 }

@@ -94,6 +94,13 @@ For implementation patterns and guidelines, refer to component-specific READMEs:
 - **TypeScript**: Strict mode enabled, ES Modules
 - **Architecture**: Modular DDD with clean domain boundaries
 
+### Code Simplicity & Efficiency
+- **Keep It Simple**: Always generate the simplest, most direct solution to the problem
+- **Use Existing Libraries**: ALWAYS prefer libraries already installed in package.json over adding new dependencies
+- **Minimal Code**: Write concise, readable code that solves the problem without over-engineering
+- **Existing Patterns**: Follow established patterns already present in the codebase
+- **No Unnecessary Abstractions**: Avoid complex patterns when simple solutions work
+
 ### Security Patterns
 - **Input Validation**: XSS protection, NoSQL injection prevention
 - **Authentication**: JWT with secure token handling

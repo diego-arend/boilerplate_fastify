@@ -1,18 +1,34 @@
 /**
- * Job handlers registry
- * Central registry for all job handlers in the queue system
+ * Queue Job handlers registry - Specialized Jobs Only
+ * Central registry for specialized job handlers
  */
 
-import type { JobHandler } from '../queue.types.js';
-import { JobType } from '../queue.types.js';
-import { handleEmailSend } from './business/emailSend.job.js';
+import {
+  handleRegistrationEmailJob,
+  type RegistrationEmailData
+} from './business/registrationEmailJob.js';
 
 /**
- * Job handlers mapping
- * Maps job types to their corresponding handler functions
+ * Job handler interface
+ */
+export interface JobHandler {
+  (data: any, jobId: string, logger: any, jobInfo: any): Promise<any>;
+}
+
+/**
+ * Job types for the queue system
+ */
+export const JobType = {
+  REGISTRATION_EMAIL: 'registration:email',
+  USER_NOTIFICATION: 'user:notification',
+  DATA_EXPORT: 'data:export'
+} as const;
+
+/**
+ * Job handlers mapping - Each handler is specialized
  */
 export const JOB_HANDLERS: Record<string, JobHandler> = {
-  [JobType.EMAIL_SEND]: handleEmailSend
+  [JobType.REGISTRATION_EMAIL]: handleRegistrationEmailJob
 } as const;
 
 /**
@@ -34,8 +50,8 @@ export function getJobHandler(jobType: string): JobHandler | null {
   return JOB_HANDLERS[jobType] || null;
 }
 
-// Re-export job handlers for convenience
-export { handleEmailSend } from './business/emailSend.job.js';
+// Re-export specialized job handlers
+export { handleRegistrationEmailJob } from './business/registrationEmailJob.js';
 
-// Re-export types from email job
-export type { EmailJobData } from './business/emailSend.job.js';
+// Re-export types
+export type { RegistrationEmailData } from './business/registrationEmailJob.js';

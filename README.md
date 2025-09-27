@@ -99,7 +99,7 @@ docker-compose up -d --build
   - Failed job inspection and retry functionality
   - Job search and filtering capabilities
   - Worker status and health monitoring
-- **MailHog (Email Testing)**:
+- **MailPit (Email Testing)**:
   - SMTP Server: localhost:1025 (for application email sending)
   - Web Dashboard: http://localhost:8025 - Email testing and debugging interface
   - Catches all emails sent by the application
@@ -147,12 +147,12 @@ REDIS_PORT=6379
 REDIS_PASSWORD=
 REDIS_DB=0
 
-# Email Configuration (Development with MailHog)
-SMTP_HOST=mailhog
+# Email Configuration (Development with Mailpit)
+SMTP_HOST=mailpit
 SMTP_PORT=1025
 SMTP_SECURE=false
 EMAIL_FROM=noreply@example.com
-# Note: SMTP_USER and SMTP_PASS not required for MailHog
+# Note: SMTP_USER and SMTP_PASS not required for Mailpit
 ```
 
 ## 🛠️ Development Commands
