@@ -16,18 +16,21 @@ This project implements a **modular, scalable architecture** designed for enterp
 ## 🚀 Technology Stack
 
 ### Core Technologies
+
 - **[Fastify](https://fastify.dev/)** - High-performance web framework
 - **[TypeScript](https://www.typescriptlang.org/)** - Type-safe development
 - **[MongoDB](https://www.mongodb.com/)** - NoSQL database with Mongoose ODM
 - **[Redis](https://redis.io/)** - In-memory data store for caching and queues
 
 ### Infrastructure
+
 - **[BullMQ](https://bullmq.io/)** - Background job processing and queue management
 - **[Docker](https://www.docker.com/)** - Containerization for development and production
 - **[JWT](https://jwt.io/)** - Secure authentication with role-based access
 - **[Swagger/OpenAPI](https://swagger.io/)** - Interactive API documentation (development only)
 
 ### Development Tools
+
 - **[pnpm](https://pnpm.io/)** - Fast, disk space efficient package manager
 - **[Zod](https://zod.dev/)** - TypeScript-first schema validation
 - **[ESLint](https://eslint.org/)** - Code linting and quality
@@ -55,10 +58,12 @@ src/
 ## 🏃‍♂️ Quick Start
 
 ### Prerequisites
+
 - Docker and Docker Compose
 - Node.js 18+ with pnpm (for local development)
 
 ### Development Environment
+
 ```bash
 # Start all services with hot reload
 docker-compose -f docker-compose.dev.yml up --build
@@ -68,6 +73,7 @@ docker-compose -f docker-compose.dev.yml up -d --build
 ```
 
 ### Production Environment
+
 ```bash
 # Start production services
 docker-compose up --build
@@ -76,32 +82,56 @@ docker-compose up --build
 docker-compose up -d --build
 ```
 
-### Available Services
-- **API Server**: http://localhost:3001
+### Available Services & Development Tools
+
+#### Core Services
+
+- **API Server**: http://localhost:3001 - Main Fastify application
 - **Queue Worker**: Background job processing container
 - **MongoDB**: localhost:27017 (admin/password)
 - **Redis**: localhost:6379 (shared by cache and queue)
-- **Swagger UI** (dev only): http://localhost:3001/docs
+
+#### Development & Testing Tools
+
+- **Swagger UI**: http://localhost:3001/docs - Interactive API documentation and endpoint testing (development only)
+- **BullMQ Dashboard**: http://localhost:3002/ui - Queue monitoring, job management, and performance metrics
+  - Real-time job monitoring and statistics
+  - Failed job inspection and retry functionality
+  - Job search and filtering capabilities
+  - Worker status and health monitoring
+- **MailHog (Email Testing)**:
+  - SMTP Server: localhost:1025 (for application email sending)
+  - Web Dashboard: http://localhost:8025 - Email testing and debugging interface
+  - Catches all emails sent by the application
+  - Web interface for email inspection (HTML/text)
+  - Attachment preview and email organization
+  - Safe testing environment (no actual email delivery)
+
+_Development tools are automatically started with `docker-compose.dev.yml`_
 
 ## �📚 Module Documentation
 
 Each infrastructure module has comprehensive documentation with implementation details, examples, and best practices:
 
 ### Core Infrastructure
+
 - **[Cache System](src/infraestructure/cache/README.md)** - Redis-based automatic caching with TTL, user-scoped keys, and graceful fallback
 - **[MongoDB Integration](src/infraestructure/mongo/README.md)** - Connection management, repository pattern, atomic transactions, and database operations
 - **[Queue System](src/infraestructure/queue/README.md)** - Enterprise-grade job processing with Dead Letter Queue and resilient manager
 - **[Server Configuration](src/infraestructure/server/README.md)** - Fastify setup, plugins, and middleware configuration
 
 ### Business Modules
+
 - **[Authentication](src/modules/auth/README.md)** - JWT authentication with RBAC, user management, and security features
 
 ### Shared Libraries
+
 - **[Response Handler](src/lib/response/README.md)** - Standardized API responses with consistent error handling
 
 ## 🔧 Environment Configuration
 
 ### Required Environment Variables
+
 ```bash
 # Server
 PORT=3001
@@ -116,6 +146,13 @@ REDIS_HOST=redis
 REDIS_PORT=6379
 REDIS_PASSWORD=
 REDIS_DB=0
+
+# Email Configuration (Development with MailHog)
+SMTP_HOST=mailhog
+SMTP_PORT=1025
+SMTP_SECURE=false
+EMAIL_FROM=noreply@example.com
+# Note: SMTP_USER and SMTP_PASS not required for MailHog
 ```
 
 ## 🛠️ Development Commands
@@ -151,17 +188,19 @@ The application includes comprehensive health checks:
 
 ## 📊 API Documentation
 
-### Development Documentation
-- **Swagger UI**: http://localhost:3001/docs (development only)
+### Documentation Resources
+
+- **Interactive API Documentation**: Available via Swagger UI (see Services & Tools section above)
 - **HTTP Tests**: `http-docs/` directory with example requests
 - **OpenAPI 3.0**: Complete API specification with schemas
 
 ### Main API Endpoints
+
 - **Health**: `GET /health` - Application and services status
 - **Authentication**: `POST /auth/register`, `POST /auth/login`, `GET /auth/me`
 - **Cache Testing**: Available through HTTP test files
 
-*For detailed endpoint documentation and usage examples, see the module-specific README files.*
+_For detailed endpoint documentation and usage examples, see the module-specific README files._
 
 ## 🔐 Security Features
 
@@ -172,11 +211,12 @@ The application includes comprehensive health checks:
 - **Password Security** with bcrypt hashing
 - **Rate Limiting** and security headers in production
 
-*For detailed security implementation, see [Authentication README](src/modules/auth/README.md)*
+_For detailed security implementation, see [Authentication README](src/modules/auth/README.md)_
 
 ## 🚀 Production Deployment
 
 ### Docker Production Setup
+
 - **Multi-stage builds** for optimized container images
 - **Health checks** for all services with automatic restart policies
 - **Volume persistence** for MongoDB and Redis data
@@ -184,6 +224,7 @@ The application includes comprehensive health checks:
 - **Graceful shutdown** handling for zero-downtime deployments
 
 ### Scaling Considerations
+
 - **Queue workers** can be scaled independently
 - **Redis clustering** support for high availability
 - **MongoDB replica sets** for data redundancy
@@ -192,6 +233,7 @@ The application includes comprehensive health checks:
 ## 🔧 Troubleshooting
 
 ### Service Issues
+
 ```bash
 # Check all services status
 docker-compose ps
@@ -207,12 +249,15 @@ docker-compose down -v
 ```
 
 ### Common Issues
+
 - **Redis Connection**: Check if Redis service is running and accessible
 - **MongoDB Connection**: Verify MongoDB service status and credentials
 - **Queue Processing**: Ensure queue worker container is running
-- **Port Conflicts**: Make sure ports 3001, 27017, 6379 are available
+- **Email Testing**: Use MailHog dashboard (http://localhost:8025) to verify email delivery
+- **Queue Monitoring**: Use BullMQ dashboard (http://localhost:3002/ui) to debug job processing
+- **Port Conflicts**: Make sure ports 3001, 3002, 8025, 27017, 6379 are available
 
-*For detailed troubleshooting guides, refer to the specific module README files.*
+_For detailed troubleshooting guides, refer to the specific module README files._
 
 ## 📈 Performance & Monitoring
 
@@ -222,7 +267,7 @@ docker-compose down -v
 - **Resource Monitoring**: Built-in health checks and logging
 - **Graceful Degradation**: Services continue operating when dependencies fail
 
-*For performance optimization details, see individual module documentation.*
+_For performance optimization details, see individual module documentation._
 
 ---
 

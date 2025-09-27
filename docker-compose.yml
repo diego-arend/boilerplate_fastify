@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   app:
@@ -9,15 +9,8 @@ services:
     restart: unless-stopped
     ports:
       - "3001:3001"
-    environment:
-      - PORT=3001
-      - MONGO_URI=mongodb://admin:password@mongodb:27017/boilerplate?authSource=admin
-      - JWT_SECRET=hjsgddgdbnasbd23yeasdfb2iq3u1esdKJHSzjdcbs8eho2w12wjasJK
-      - NODE_ENV=production
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - REDIS_PASSWORD=
-      - REDIS_DB=0
+    env_file:
+      - .env.production
     depends_on:
       - mongodb
       - redis
@@ -26,10 +19,10 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1.0'
+          cpus: "1.0"
           memory: 1G
         reservations:
-          cpus: '0.5'
+          cpus: "0.5"
           memory: 512M
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
@@ -44,15 +37,8 @@ services:
       dockerfile: Dockerfile.worker
     container_name: boilerplate_queue_worker
     restart: unless-stopped
-    environment:
-      - MONGO_URI=mongodb://admin:password@mongodb:27017/boilerplate?authSource=admin
-      - JWT_SECRET=hjsgddgdbnasbd23yeasdfb2iq3u1esdKJHSzjdcbs8eho2w12wjasJK
-      - NODE_ENV=production
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - REDIS_PASSWORD=
-      - REDIS_DB=0
-      - QUEUE_NAME=main
+    env_file:
+      - .env.production
     depends_on:
       - mongodb
       - redis
@@ -61,10 +47,10 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1.0'
+          cpus: "1.0"
           memory: 1G
         reservations:
-          cpus: '0.5'
+          cpus: "0.5"
           memory: 512M
     healthcheck:
       test: ["CMD", "pgrep", "-f", "queue.worker.js"]

@@ -4,10 +4,7 @@ import { AuthRepositoryFactory } from './factory/auth.factory.js';
 import { UserValidations } from '../../entities/user/index.js';
 import { ApiResponseHandler } from '../../lib/response/index.js';
 import { JobType, JobPriority } from '../../infraestructure/queue/queue.types.js';
-import {
-  EmailTemplate,
-  type EmailJobData
-} from '../../infraestructure/queue/jobs/business/emailSend.job.js';
+import { type EmailJobData } from '../../infraestructure/queue/jobs/business/emailSend.job.js';
 import { z } from 'zod';
 import { defaultLogger } from '../../lib/logger/index.js';
 
@@ -126,17 +123,11 @@ export default async function authController(fastify: FastifyInstance) {
             const emailJobData: EmailJobData = {
               to: newUser.email,
               subject: `🎉 Parabéns ${newUser.name}! Seu cadastro foi realizado com sucesso`,
-              template: EmailTemplate.REGISTRATION_SUCCESS,
+              template: 'registration_success',
               variables: {
                 userName: newUser.name
               },
-              priority: 'high',
-              trackOpens: true,
-              userId: String(newUser._id),
-              metadata: {
-                registrationDate: new Date().toISOString(),
-                userRole: newUser.role
-              }
+              priority: 'high'
             };
 
             // Add email job to queue
@@ -152,7 +143,7 @@ export default async function authController(fastify: FastifyInstance) {
                 jobId,
                 userId: newUser._id,
                 userEmail: newUser.email,
-                template: EmailTemplate.REGISTRATION_SUCCESS
+                template: 'registration_success'
               });
             }
           } catch (emailError) {

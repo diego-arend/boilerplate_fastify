@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   app:
@@ -9,18 +9,12 @@ services:
     restart: unless-stopped
     ports:
       - "3001:3001"
-    environment:
-      - PORT=3001
-      - MONGO_URI=mongodb://admin:password@mongodb:27017/boilerplate?authSource=admin
-      - JWT_SECRET=hjsgddgdbnasbd23yeasdfb2iq3u1esdKJHSzjdcbs8eho2w12wjasJK
-      - NODE_ENV=development
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - REDIS_PASSWORD=
-      - REDIS_DB=0
+    env_file:
+      - .env
     depends_on:
       - mongodb
       - redis
+      - mailhog
     networks:
       - boilerplate_network
     volumes:
@@ -30,10 +24,10 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1.0'
+          cpus: "1.0"
           memory: 1G
         reservations:
-          cpus: '0.5'
+          cpus: "0.5"
           memory: 512M
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
@@ -48,18 +42,12 @@ services:
       dockerfile: Dockerfile.worker.dev
     container_name: boilerplate_queue_worker_dev
     restart: unless-stopped
-    environment:
-      - MONGO_URI=mongodb://admin:password@mongodb:27017/boilerplate?authSource=admin
-      - JWT_SECRET=hjsgddgdbnasbd23yeasdfb2iq3u1esdKJHSzjdcbs8eho2w12wjasJK
-      - NODE_ENV=development
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - REDIS_PASSWORD=
-      - REDIS_DB=0
-      - QUEUE_NAME=main
+    env_file:
+      - .env
     depends_on:
       - mongodb
       - redis
+      - mailhog
     networks:
       - boilerplate_network
     volumes:
@@ -69,10 +57,10 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1.0'
+          cpus: "1.0"
           memory: 1G
         reservations:
-          cpus: '0.5'
+          cpus: "0.5"
           memory: 512M
     healthcheck:
       test: ["CMD", "pgrep", "-f", "queue.worker.ts"]
@@ -119,9 +107,42 @@ services:
       retries: 3
       start_period: 30s
 
+  # Services container for development
+  # BullMq Dashboard
+  bull-board:
+    build:
+      context: ./bullDashboard
+      dockerfile: Dockerfile
+    container_name: bull-dashboard
+    ports:
+      - "3002:3002"
+    environment:
+      - REDIS_HOST=redis # O nome do serviço Redis no Compose
+    networks:
+      - boilerplate_network
+    depends_on:
+      - redis
+
+  # Fake email server smtp for send email and dashboard for visualize emails
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: mailhog
+    ports:
+      - "1025:1025" # Port server SMTP
+      - "8025:8025" # Port web interface
+    # Persist emails
+    environment:
+      - MH_STORAGE=maildir
+      - MH_MAILDIR_PATH=/maildir
+    volumes:
+      - mailhog_data:/maildir
+    networks:
+      - boilerplate_network
+
 volumes:
   mongodb_data:
   redis_data:
+  mailhog_data:
 
 networks:
   boilerplate_network:

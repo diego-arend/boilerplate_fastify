@@ -12,16 +12,15 @@ O sistema de email utiliza **Nodemailer** para envio de emails através de **con
 src/infraestructure/email/
 ├── email.plugin.ts      # Plugin principal do Fastify
 ├── index.ts            # Exportações do módulo
+├── templates/          # Sistema de templates
+│   ├── types.ts       # Interfaces base
+│   ├── welcome.ts     # Template de boas-vindas
+│   ├── passwordReset.ts # Template de reset de senha
+│   └── ...           # Outros templates
 └── README.md           # Esta documentação
 
 src/infraestructure/queue/jobs/business/
 └── emailSend.job.ts    # Job handler para envio de emails
-
-src/lib/templates/      # Sistema de templates
-├── types.ts           # Interfaces base
-├── welcome.js         # Template de boas-vindas
-├── passwordReset.js   # Template de reset de senha
-└── ...               # Outros templates
 ```
 
 ## ⚙️ Configuração

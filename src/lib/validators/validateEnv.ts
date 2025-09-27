@@ -54,16 +54,26 @@ const envSchema = z
   })
   .refine(
     data => {
-      // If any SMTP variable is provided, all required ones must be provided
+      // If any SMTP variable is provided, SMTP_HOST is required
+      // For MailHog development setup, only SMTP_HOST and SMTP_PORT are required
       const hasAnySmtp = data.SMTP_HOST || data.SMTP_USER || data.SMTP_PASS || data.EMAIL_FROM;
       if (hasAnySmtp) {
-        return data.SMTP_HOST && data.SMTP_USER && data.SMTP_PASS && data.EMAIL_FROM;
+        // Always require SMTP_HOST if any SMTP config is provided
+        if (!data.SMTP_HOST) return false;
+
+        // For production, require all SMTP credentials
+        if (data.NODE_ENV === 'production') {
+          return data.SMTP_HOST && data.SMTP_USER && data.SMTP_PASS && data.EMAIL_FROM;
+        }
+
+        // For development, SMTP_HOST is sufficient (allows MailHog usage)
+        return true;
       }
       return true;
     },
     {
       message:
-        'When using email functionality, SMTP_HOST, SMTP_USER, SMTP_PASS, and EMAIL_FROM are all required',
+        'SMTP_HOST is required when using email functionality. For production, SMTP_USER, SMTP_PASS, and EMAIL_FROM are also required.',
       path: ['SMTP_HOST']
     }
   );
