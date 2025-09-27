@@ -4,7 +4,7 @@
  */
 
 import type { JobHandler } from '../queue.types.js';
-import { QueueJobType } from '../queue.types.js';
+import { JobType } from '../queue.types.js';
 import { handleEmailSend } from './business/emailSend.job.js';
 
 /**
@@ -12,7 +12,7 @@ import { handleEmailSend } from './business/emailSend.job.js';
  * Maps job types to their corresponding handler functions
  */
 export const JOB_HANDLERS: Record<string, JobHandler> = {
-  [QueueJobType.EMAIL_SEND]: handleEmailSend
+  [JobType.EMAIL_SEND]: handleEmailSend
 } as const;
 
 /**

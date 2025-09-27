@@ -6,7 +6,7 @@ This directory contains all authentication-related services, strategies, and com
 
 ### Password Service (`password.service.ts`)
 
-Provides secure password hashing and verification functionality using bcryptjs with salt rounds for enhanced security.
+Provides secure password hashing and verification functionality using bcryptjs with salt rounds for security.
 
 **Key Features:**
 

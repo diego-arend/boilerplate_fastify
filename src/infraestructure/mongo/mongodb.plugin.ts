@@ -58,6 +58,6 @@ async function mongoPlugin(
 }
 
 export default fp(mongoPlugin, {
-  name: 'mongodb-plugin',
+  name: 'mongodb',
   fastify: '>=5.0.0'
 });

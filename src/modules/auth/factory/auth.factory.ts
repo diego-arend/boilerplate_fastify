@@ -21,14 +21,14 @@ export class AuthRepositoryFactory {
 
   /**
    * Create AuthRepository instance with cache support (Database 0 - Cache Client)
-   * Uses enhanced multi-client Redis architecture for authentication data caching
+   * Uses multi-client Redis architecture for authentication data caching
    */
   static async createAuthRepositoryWithCache(): Promise<IAuthRepository> {
     const connectionManager = await MongoConnectionManagerFactory.create();
     const userRepository = await UserRepositoryFactory.createUserRepository(connectionManager);
 
     // Use Cache Client (Database 0) for authentication data
-    const cacheService = await CacheServiceFactory.createDefaultCacheService(config);
+    const cacheService = CacheServiceFactory.getDataCache();
 
     return new AuthRepository(userRepository, cacheService);
   }
@@ -66,7 +66,7 @@ export class AuthRepositoryFactory {
     const userRepository = await UserRepositoryFactory.createUserRepository(connectionManager);
 
     // Use Session Cache (Database 0, 24h TTL) for long-duration auth sessions
-    const sessionCacheService = await CacheServiceFactory.createSessionCacheService(config);
+    const sessionCacheService = CacheServiceFactory.getDataCache();
 
     return new AuthRepository(userRepository, sessionCacheService);
   }

@@ -129,7 +129,7 @@ export class UserRepository implements IUserRepository {
   }
 
   // ==========================================
-  // ENHANCED CRUD OPERATIONS
+  // CRUD OPERATIONS
   // ==========================================
 
   /**

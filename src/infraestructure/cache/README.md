@@ -1,306 +1,583 @@
-# Enhanced Cache Infrastructure
+# Cache Infrastructure - Simplified# Cache Infrastructure
 
-Sistema completo de cache usando **múltiplos clientes Redis** para aplicações Fastify com arquitetura aprimorada para separação de responsabilidades.
+Sistema simplificado de cache com **duas implementações focadas** para aplicações Fastify com separação clara de responsabilidades.Sistema completo de cache usando **múltiplos clientes Redis** para aplicações Fastify com arquitetura aprimorada para separação de responsabilidades.
 
-## 🏗️ **Nova Arquitetura Multi-Client**
+## 🏗️ **Arquitetura Simplificada**## 🏗️ **Nova Arquitetura Multi-Client**
 
-### **Componentes Principais**
+### **Estrutura Atual**### **Componentes Principais**
 
-- **MultiRedisConnectionManager**: Gerencia múltiplas conexões Redis com padrão singleton por tipo
-- **EnhancedCacheManager**: Interface de alto nível com suporte a clientes específicos
-- **CacheServiceFactory**: Factory para criação de serviços especializados
-- **Separação de Databases**: Isolamento completo entre cache de API e operações de queue
+````- **MultiRedisConnectionManager**: Gerencia múltiplas conexões Redis com padrão singleton por tipo
 
-### **Estrutura de arquivos**
+src/infraestructure/cache/- **CacheManager**: Interface de alto nível com suporte a clientes específicos
 
-```
-src/infraestructure/cache/
+├── README.md          # Esta documentação- **CacheServiceFactory**: Factory para criação de serviços especializados
+
+├── cache.ts           # 🎯 Implementações DataCache + QueueCache- **Separação de Databases**: Isolamento completo entre cache de API e operações de queue
+
+├── cache.factory.ts   # 🏭 Factory com compatibilidade legado
+
+├── cache.plugin.ts    # 🔌 Plugin Fastify### **Estrutura de arquivos**
+
+├── index.ts           # 📤 Exportações e interfaces
+
+└── redis.types.ts     # 🔧 Configurações Redis```
+
+```src/infraestructure/cache/
+
 ├── README.md                      # Esta documentação
-├── redis.types.ts                 # 🆕 Tipos e configurações Redis
+
+## 🎯 **Duas Implementações Focadas**├── redis.types.ts                 # 🆕 Tipos e configurações Redis
+
 ├── multi-redis.connection.ts      # 🆕 Gerenciador multi-client
-├── enhanced-cache.manager.ts      # 🆕 Cache manager aprimorado
-├── cache.factory.ts              # ✅ Factory atualizada
-├── cache.service.ts              # ✅ Serviços atualizados
-├── cache.plugin.ts               # ✅ Plugin Fastify atualizado
-└── index.ts                      # Exportações e API pública
-```
 
-## 🎯 **Arquitetura de Clientes**
+### **🔵 DataCache** - **Database 0**├── cache.manager.ts               # 🆕 Cache manager
 
-### **🔵 Cache Client** - **Database 0**
+- **Classe**: `DataCache`├── cache.factory.ts              # ✅ Factory atualizada
 
-- **Propósito**: Cache de requisições de API
-- **Uso**: Dados de aplicação, sessions, cache temporário
+- **Propósito**: Cache de dados da aplicação├── cache.service.ts              # ✅ Serviços atualizados
+
+- **Uso**: Variáveis, requisições HTTP, dados temporários├── cache.plugin.ts               # ✅ Plugin Fastify atualizado
+
+- **Redis DB**: 0 (padrão)└── index.ts                      # Exportações e API pública
+
+- **Singleton**: ✅```
+
+
+
+### **🟡 QueueCache** - **Database 1**  ## 🎯 **Arquitetura de Clientes**
+
+- **Classe**: `QueueCache`
+
+- **Propósito**: Cache para processamento de jobs### **🔵 Cache Client** - **Database 0**
+
+- **Uso**: Filas, jobs, processamento em lote
+
+- **Redis DB**: 1- **Propósito**: Cache de requisições de API
+
+- **Singleton**: ✅- **Uso**: Dados de aplicação, sessions, cache temporário
+
 - **Namespace padrão**: `cache`, `app`, `session`, `temp`
-- **TTL padrão**: 1 hora
 
-### **🟡 Queue Client** - **Database 1**
+## 🚀 **Configuração**- **TTL padrão**: 1 hora
 
-- **Propósito**: Cache relacionado ao sistema de filas
-- **Uso**: Coordenação de workers, cache de jobs, metadados de queue
-- **Namespace padrão**: `queue-cache`, `queue-worker`
-- **TTL padrão**: 30 minutos
 
-## 🚀 **Configuração**
 
-### **Variáveis de Ambiente**
+### **Variáveis de Ambiente**### **🟡 Queue Client** - **Database 1**
 
-```bash
-# Redis Principal (Cache de API - Database 0)
-REDIS_HOST=localhost            # Host do Redis
-REDIS_PORT=6379                # Porta do Redis
+
+
+```bash- **Propósito**: Cache relacionado ao sistema de filas
+
+# Redis Principal (DataCache - Database 0)- **Uso**: Coordenação de workers, cache de jobs, metadados de queue
+
+REDIS_HOST=localhost            # Host do Redis- **Namespace padrão**: `queue-cache`, `queue-worker`
+
+REDIS_PORT=6379                # Porta do Redis  - **TTL padrão**: 30 minutos
+
+REDIS_PASSWORD=optional        # Senha (opcional)
+
+REDIS_DB=0                     # Database para DataCache (padrão)## 🚀 **Configuração**
+
+
+
+# Redis para Queue (QueueCache - Database 1)### **Variáveis de Ambiente**
+
+QUEUE_REDIS_HOST=localhost     # Host para queue (usa REDIS_HOST se omitido)
+
+QUEUE_REDIS_PORT=6379          # Porta para queue (usa REDIS_PORT se omitido)```bash
+
+QUEUE_REDIS_PASSWORD=optional  # Senha para queue (usa REDIS_PASSWORD se omitido)  # Redis Principal (Cache de API - Database 0)
+
+QUEUE_REDIS_DB=1              # Database para QueueCache (padrão)REDIS_HOST=localhost            # Host do Redis
+
+```REDIS_PORT=6379                # Porta do Redis
+
 REDIS_PASSWORD=                # Senha do Redis (opcional)
-REDIS_DB=0                     # Database para cache de API
 
-# Redis Queue (Sistema de Filas - Database 1)
+### **Configuração Automática**REDIS_DB=0                     # Database para cache de API
+
+- Se variáveis `QUEUE_REDIS_*` não forem especificadas, usa configuração principal
+
+- Databases sempre separadas: DataCache (db0) e QueueCache (db1)# Redis Queue (Sistema de Filas - Database 1)
+
 QUEUE_REDIS_HOST=localhost     # Host Redis para queue (opcional, usa REDIS_HOST)
-QUEUE_REDIS_PORT=6379          # Porta Redis para queue (opcional, usa REDIS_PORT)
+
+## 📖 **API de Uso**QUEUE_REDIS_PORT=6379          # Porta Redis para queue (opcional, usa REDIS_PORT)
+
 QUEUE_REDIS_PASSWORD=          # Senha Redis para queue (opcional, usa REDIS_PASSWORD)
-QUEUE_REDIS_DB=1              # Database para sistema de filas
-```
 
-> **💡 Fallback Inteligente**: Se as configurações `QUEUE_REDIS_*` não forem fornecidas, o sistema usa as configurações principais (`REDIS_*`) automaticamente, mudando apenas o database para `1`.
+### **DataCache - Cache de Dados**QUEUE_REDIS_DB=1              # Database para sistema de filas
 
-## 📋 **Uso da Nova API**
+````
+
+````typescript
+
+import { getDataCache } from './infraestructure/cache';> **💡 Fallback Inteligente**: Se as configurações `QUEUE_REDIS_*` não forem fornecidas, o sistema usa as configurações principais (`REDIS_*`) automaticamente, mudando apenas o database para `1`.
+
+
+
+const dataCache = getDataCache();## 📋 **Uso da Nova API**
+
+await dataCache.connect();
 
 ### **1. Inicialização Multi-Client**
 
-```typescript
-import { getMultiRedisConnectionManager } from '../infraestructure/cache/index.js';
-import { config } from '../lib/validateEnv.js';
+// Operações básicas
 
-// Inicializar ambos os clientes Redis automaticamente
-const connectionManager = getMultiRedisConnectionManager();
-await connectionManager.initializeAll(config);
+await dataCache.set('user:123', userData, { ttl: 3600 });```typescript
 
-// Status de conexão para ambos os clientes
+const user = await dataCache.get<UserType>('user:123');import { getMultiRedisConnectionManager } from '../infraestructure/cache/index.js';
+
+await dataCache.del('user:123');import { config } from '../lib/validateEnv.js';
+
+
+
+// Operações avançadas// Inicializar ambos os clientes Redis automaticamente
+
+await dataCache.expire('key', 1800);const connectionManager = getMultiRedisConnectionManager();
+
+const exists = await dataCache.exists('key');await connectionManager.initializeAll(config);
+
+const keys = await dataCache.keys('user:*');
+
+await dataCache.flushAll();// Status de conexão para ambos os clientes
+
 const allStatus = connectionManager.getAllConnectionStatus();
-console.log('Cache Client Status:', allStatus.cache);
-console.log('Queue Client Status:', allStatus.queue);
-```
+
+// Utilitáriosconsole.log('Cache Client Status:', allStatus.cache);
+
+await dataCache.ping(); // "PONG"console.log('Queue Client Status:', allStatus.queue);
+
+const stats = dataCache.getStats();```
+
+````
 
 ### **2. Cache Services com Factory**
 
-```typescript
-import { CacheServiceFactory } from '../infraestructure/cache/index.js';
-import { config } from '../lib/validateEnv.js';
+### **QueueCache - Cache de Jobs**
 
-// Cache de API (usa database 0)
-const apiCache = await CacheServiceFactory.createDefaultCacheService(config);
+````typescript
+
+```typescriptimport { CacheServiceFactory } from '../infraestructure/cache/index.js';
+
+import { getQueueCache } from './infraestructure/cache';import { config } from '../lib/validateEnv.js';
+
+
+
+const queueCache = getQueueCache();  // Cache de API (usa database 0)
+
+await queueCache.connect();const apiCache = await CacheServiceFactory.createDefaultCacheService(config);
+
 const sessionCache = await CacheServiceFactory.createSessionCacheService(config);
 
-// Cache de Queue (usa database 1)
-const queueCache = await CacheServiceFactory.createQueueCacheService(config);
-const workerCache = await CacheServiceFactory.createQueueWorkerService(config);
+// Operações de queue
 
-// Uso isolado - sem conflitos entre databases
-await apiCache.set('user:123', userData); // Database 0
-await queueCache.set('job:456', jobData); // Database 1
-```
+await queueCache.pushJob('email-queue', emailData, 5); // prioridade 5// Cache de Queue (usa database 1)
 
-### **3. Enhanced Cache Manager Direto**
+const job = await queueCache.popJob('email-queue');const queueCache = await CacheServiceFactory.createQueueCacheService(config);
 
-```typescript
-import { getCacheCacheManager, getQueueCacheManager } from '../infraestructure/cache/index.js';
+const pending = await queueCache.peekJob('email-queue');const workerCache = await CacheServiceFactory.createQueueWorkerService(config);
 
-// Cache Manager para API (Database 0)
+
+
+// Gerenciamento de filas// Uso isolado - sem conflitos entre databases
+
+const length = await queueCache.getQueueLength('email-queue');await apiCache.set('user:123', userData); // Database 0
+
+const queues = await queueCache.getQueueNames();await queueCache.set('job:456', jobData); // Database 1
+
+await queueCache.clearQueue('email-queue');```
+
+
+
+// Status de jobs### **3. Cache Manager Direto**
+
+await queueCache.setJobStatus('job:123', 'processing');
+
+const status = await queueCache.getJobStatus('job:123');```typescript
+
+```import { getCacheCacheManager, getQueueCacheManager } from '../infraestructure/cache/index.js';
+
+
+
+### **Factory Pattern**// Cache Manager para API (Database 0)
+
 const apiCacheManager = getCacheCacheManager(3600, 'api');
-await apiCacheManager.initialize(config);
+
+```typescriptawait apiCacheManager.initialize(config);
+
+import { CacheServiceFactory } from './infraestructure/cache';
 
 // Cache Manager para Queue (Database 1)
-const queueCacheManager = getQueueCacheManager(1800, 'queue');
-await queueCacheManager.initialize(config);
+
+// Nova APIconst queueCacheManager = getQueueCacheManager(1800, 'queue');
+
+const dataCache = CacheServiceFactory.getDataCache();await queueCacheManager.initialize(config);
+
+const queueCache = CacheServiceFactory.getQueueCache();
 
 // Operações com isolamento completo
-await apiCacheManager.set('route:/users', responseData);
-await queueCacheManager.set('worker:stats', workerStats);
-```
 
-### **4. Integração com Fastify Plugin**
+// Inicializar tudoawait apiCacheManager.set('route:/users', responseData);
+
+const { dataCache, queueCache } = await CacheServiceFactory.initializeAll();await queueCacheManager.set('worker:stats', workerStats);
+
+````
+
+// Desconectar tudo
+
+await CacheServiceFactory.disconnectAll();### **4. Integração com Fastify Plugin**
+
+````
 
 ```typescript
-// cache.plugin.ts - Plugin aprimorado
+
+## 🔄 **Compatibilidade com Código Legado**// cache.plugin.ts - Plugin aprimorado
+
 import type { FastifyInstance, FastifyPluginOptions } from 'fastify';
-import { CacheServiceFactory } from '../infraestructure/cache/index.js';
 
-export default async function enhancedCachePlugin(
-  fastify: FastifyInstance,
-  opts: FastifyPluginOptions
-) {
+### **Interface ICacheService**import { CacheServiceFactory } from '../infraestructure/cache/index.js';
+
+
+
+Para facilitar migração, mantemos interface compatível:export default async function CachePlugin(fastify: FastifyInstance, opts: FastifyPluginOptions) {
+
   // Inicializar serviços de cache
-  const apiCache = await CacheServiceFactory.createDefaultCacheService(fastify.config);
-  const sessionCache = await CacheServiceFactory.createSessionCacheService(fastify.config);
 
-  // Decorar instância Fastify com ambos os serviços
-  fastify.decorate('apiCache', apiCache);
-  fastify.decorate('sessionCache', sessionCache);
+```typescript  const apiCache = await CacheServiceFactory.createDefaultCacheService(fastify.config);
 
-  // Hook para cache automático de rotas GET
+import type { ICacheService } from './infraestructure/cache';  const sessionCache = await CacheServiceFactory.createSessionCacheService(fastify.config);
+
+
+
+// DataCache implementa ICacheService  // Decorar instância Fastify com ambos os serviços
+
+const legacyCache: ICacheService = getDataCache();  fastify.decorate('apiCache', apiCache);
+
+await legacyCache.get('key');  fastify.decorate('sessionCache', sessionCache);
+
+await legacyCache.set('key', 'value', { ttl: 3600, namespace: 'app' });
+
+```  // Hook para cache automático de rotas GET
+
   fastify.addHook('preHandler', async (request, reply) => {
-    if (request.method === 'GET') {
+
+### **Métodos Deprecados (Mantidos)**    if (request.method === 'GET') {
+
       const cacheKey = `route:${request.url}`;
-      const cached = await fastify.apiCache.get(cacheKey);
 
-      if (cached) {
+```typescript      const cached = await fastify.apiCache.get(cacheKey);
+
+// ⚠️ Deprecado - use getDataCache()
+
+CacheServiceFactory.createDefaultCacheService()      if (cached) {
+
         reply.send(cached);
-        return;
-      }
+
+// ⚠️ Deprecado - use getDataCache()         return;
+
+CacheServiceFactory.createSessionCacheService()      }
+
       request.cacheKey = cacheKey;
-    }
-  });
 
-  // Hook para salvar resposta no cache
-  fastify.addHook('onSend', async (request, reply, payload) => {
+// ⚠️ Deprecado - use getQueueCache()    }
+
+CacheServiceFactory.createQueueCacheService()  });
+
+````
+
+// Hook para salvar resposta no cache
+
+## 📊 **Estatísticas e Monitoramento** fastify.addHook('onSend', async (request, reply, payload) => {
+
     if (request.cacheKey && reply.statusCode === 200) {
-      await fastify.apiCache.set(request.cacheKey, payload, { ttl: 300 });
+
+### **Métricas Disponíveis** await fastify.apiCache.set(request.cacheKey, payload, { ttl: 300 });
+
     }
-    return payload;
-  });
-}
-```
 
-## 🎨 **Patterns de Uso**
+````typescript return payload;
 
-### **1. API Response Caching (Database 0)**
+const stats = dataCache.getStats();  });
+
+console.log({}
+
+  hits: stats.hits,      // Cache hits```
+
+  misses: stats.misses,  // Cache misses
+
+  sets: stats.sets,      // Operações set## 🎨 **Patterns de Uso**
+
+  deletes: stats.deletes, // Operações delete
+
+  errors: stats.errors    // Erros### **1. API Response Caching (Database 0)**
+
+});
 
 ```typescript
-const apiCache = await CacheServiceFactory.createDefaultCacheService(config);
 
-// Cache de resposta de API
-async function getUserProfile(userId: string) {
+// Hit ratioconst apiCache = await CacheServiceFactory.createDefaultCacheService(config);
+
+const ratio = (stats.hits / (stats.hits + stats.misses)) * 100;
+
+console.log(`Hit ratio: ${ratio}%`);// Cache de resposta de API
+
+```async function getUserProfile(userId: string) {
+
   const cacheKey = `profile:${userId}`;
 
+## 🔧 **Plugin Fastify**
+
   let profile = await apiCache.get(cacheKey);
-  if (!profile) {
+
+### **Registro Automático**  if (!profile) {
+
     profile = await userRepository.findById(userId);
-    await apiCache.set(cacheKey, profile, { ttl: 3600 }); // 1 hora
-  }
 
-  return profile;
+```typescript    await apiCache.set(cacheKey, profile, { ttl: 3600 }); // 1 hora
+
+// src/infraestructure/cache/cache.plugin.ts  }
+
+import fp from 'fastify-plugin';
+
+import { getDataCache } from './cache.js';  return profile;
+
 }
-```
 
-### **2. Session Management (Database 0)**
+export default fp(async function (fastify) {```
 
-```typescript
-const sessionCache = await CacheServiceFactory.createSessionCacheService(config);
+  const dataCache = getDataCache();
 
-// Gerenciamento de sessões
-async function storeUserSession(sessionId: string, userData: any) {
-  await sessionCache.set(sessionId, userData, {
-    ttl: 86400, // 24 horas
+  await dataCache.connect();### **2. Session Management (Database 0)**
+
+
+
+  fastify.decorate('cache', dataCache);```typescript
+
+  const sessionCache = await CacheServiceFactory.createSessionCacheService(config);
+
+  fastify.addHook('onClose', async () => {
+
+    await dataCache.disconnect();// Gerenciamento de sessões
+
+  });async function storeUserSession(sessionId: string, userData: any) {
+
+});  await sessionCache.set(sessionId, userData, {
+
+```    ttl: 86400, // 24 horas
+
     namespace: 'session'
-  });
-}
 
-async function getUserSession(sessionId: string) {
-  return await sessionCache.get(sessionId, { namespace: 'session' });
-}
-```
+### **Uso no Fastify**  });
 
-### **3. Queue Coordination (Database 1)**
+}
 
 ```typescript
-const queueCache = await CacheServiceFactory.createQueueCacheService(config);
+
+// Em qualquer rota ou handlerasync function getUserSession(sessionId: string) {
+
+export async function getUserHandler(request: FastifyRequest, reply: FastifyReply) {  return await sessionCache.get(sessionId, { namespace: 'session' });
+
+  const cached = await request.server.cache.get(`user:${userId}`);}
+
+  if (cached) return reply.send(cached);```
+
+
+
+  // ... buscar dados### **3. Queue Coordination (Database 1)**
+
+  await request.server.cache.set(`user:${userId}`, userData, { ttl: 3600 });
+
+  return reply.send(userData);```typescript
+
+}const queueCache = await CacheServiceFactory.createQueueCacheService(config);
+
+````
 
 // Cache para coordenação de filas
-async function cacheJobResult(jobId: string, result: any) {
-  await queueCache.set(`result:${jobId}`, result, {
-    ttl: 1800, // 30 minutos
-    namespace: 'queue-cache'
-  });
-}
 
-// Worker statistics
-async function updateWorkerStats(workerId: string, stats: any) {
-  const workerCache = await CacheServiceFactory.createQueueWorkerService(config);
-  await workerCache.set(`worker:${workerId}`, stats, {
-    ttl: 900, // 15 minutos
-    namespace: 'queue-worker'
-  });
-}
-```
+## 🚀 **Vantagens da Nova Arquitetura**async function cacheJobResult(jobId: string, result: any) {
 
-### **4. Mixed Operations com Isolamento**
+await queueCache.set(`result:${jobId}`, result, {
 
-```typescript
-// Operações simultâneas sem conflitos
+### **Simplicidade** ttl: 1800, // 30 minutos
+
+- **2 classes focadas** vs estrutura complexa anterior namespace: 'queue-cache'
+
+- **API intuitiva** com métodos claros para cada caso de uso });
+
+- **Configuração automática** via variáveis de ambiente}
+
+### **Performance** // Worker statistics
+
+- **Conexões singleton** evitam overhead de múltiplas instânciasasync function updateWorkerStats(workerId: string, stats: any) {
+
+- **Separação de databases** (db0 para dados, db1 para jobs) const workerCache = await CacheServiceFactory.createQueueWorkerService(config);
+
+- **Pooling automático** do cliente Redis await workerCache.set(`worker:${workerId}`, stats, {
+
+  ttl: 900, // 15 minutos
+
+### **Manutenibilidade** namespace: 'queue-worker'
+
+- **Menos arquivos** (~600 linhas vs ~1500 anterior) });
+
+- **Responsabilidades claras** entre DataCache e QueueCache}
+
+- **Interface consistente** entre ambas implementações```
+
+### **Compatibilidade**### **4. Mixed Operations com Isolamento**
+
+- **Migração gradual** via interfaces de compatibilidade
+
+- **Métodos deprecados mantidos** para não quebrar código existente```typescript
+
+- **Factory pattern** para facilitar injeção de dependência// Operações simultâneas sem conflitos
+
 async function mixedOperations() {
-  const apiCache = await CacheServiceFactory.createDefaultCacheService(config);
-  const queueCache = await CacheServiceFactory.createQueueCacheService(config);
 
-  // Mesmo key, databases diferentes - sem conflito
-  await apiCache.set('user:123', { name: 'API User Data' }); // Database 0
-  await queueCache.set('user:123', { job: 'Queue Job Data' }); // Database 1
+## 📝 **Exemplos Práticos** const apiCache = await CacheServiceFactory.createDefaultCacheService(config);
 
-  const apiData = await apiCache.get('user:123'); // { name: 'API User Data' }
-  const queueData = await queueCache.get('user:123'); // { job: 'Queue Job Data' }
+const queueCache = await CacheServiceFactory.createQueueCacheService(config);
+
+### **Cache de Autenticação**
+
+// Mesmo key, databases diferentes - sem conflito
+
+````typescript await apiCache.set('user:123', { name: 'API User Data' }); // Database 0
+
+// Login com cache  await queueCache.set('user:123', { job: 'Queue Job Data' }); // Database 1
+
+async function loginUser(email: string) {
+
+  const cacheKey = `auth:user:${email.toLowerCase()}`;  const apiData = await apiCache.get('user:123'); // { name: 'API User Data' }
+
+    const queueData = await queueCache.get('user:123'); // { job: 'Queue Job Data' }
+
+  let user = await dataCache.get<User>(cacheKey);}
+
+  if (!user) {```
+
+    user = await userRepository.findByEmail(email);
+
+    if (user) {## 🔧 **Advanced Features**
+
+      await dataCache.set(cacheKey, user, { ttl: 1800 }); // 30 min
+
+    }### **Health Monitoring**
+
+  }
+
+  ```typescript
+
+  return user;const connectionManager = getMultiRedisConnectionManager();
+
 }
-```
 
-## 🔧 **Advanced Features**
+```// Status individual de cada cliente
 
-### **Health Monitoring**
-
-```typescript
-const connectionManager = getMultiRedisConnectionManager();
-
-// Status individual de cada cliente
 const cacheStatus = connectionManager.getConnectionStatus(RedisClientType.CACHE);
-const queueStatus = connectionManager.getConnectionStatus(RedisClientType.QUEUE);
 
-// Ping específico para cada cliente
-try {
-  await connectionManager.ping(RedisClientType.CACHE);
-  await connectionManager.ping(RedisClientType.QUEUE);
-  console.log('Ambos os clientes estão operacionais');
-} catch (error) {
-  console.error('Problema de conectividade:', error);
-}
-```
+### **Sistema de Filas**const queueStatus = connectionManager.getConnectionStatus(RedisClientType.QUEUE);
 
-### **Graceful Shutdown**
 
-```typescript
-// Desconectar todos os clientes graciosamente
-process.on('SIGTERM', async () => {
-  const connectionManager = getMultiRedisConnectionManager();
-  await connectionManager.disconnectAll();
-  console.log('Todos os clientes Redis desconectados');
-});
-```
 
-### **Custom Client Configuration**
+```typescript  // Ping específico para cada cliente
 
-```typescript
-// Criar serviço personalizado
+// Processar jobs com prioridadetry {
+
+async function processEmailQueue() {  await connectionManager.ping(RedisClientType.CACHE);
+
+  const queueName = 'email-queue';  await connectionManager.ping(RedisClientType.QUEUE);
+
+    console.log('Ambos os clientes estão operacionais');
+
+  while (true) {} catch (error) {
+
+    const job = await queueCache.popJob(queueName);  console.error('Problema de conectividade:', error);
+
+    if (!job) {}
+
+      await new Promise(resolve => setTimeout(resolve, 1000));```
+
+      continue;
+
+    }### **Graceful Shutdown**
+
+
+
+    await queueCache.setJobStatus(job.id, 'processing');```typescript
+
+    // Desconectar todos os clientes graciosamente
+
+    try {process.on('SIGTERM', async () => {
+
+      await sendEmail(job.data);  const connectionManager = getMultiRedisConnectionManager();
+
+      await queueCache.setJobStatus(job.id, 'completed');  await connectionManager.disconnectAll();
+
+    } catch (error) {  console.log('Todos os clientes Redis desconectados');
+
+      await queueCache.setJobStatus(job.id, 'failed');});
+
+      // Requeue com menor prioridade```
+
+      await queueCache.pushJob(queueName, job.data, job.priority - 1);
+
+    }### **Custom Client Configuration**
+
+  }
+
+}```typescript
+
+```// Criar serviço personalizado
+
 const customCache = await CacheServiceFactory.createCustomCacheService(
-  config,
-  7200, // 2 horas TTL
-  'custom-namespace', // Namespace personalizado
-  RedisClientType.QUEUE // Usar cliente de queue explicitamente
-);
-```
 
-## 📊 **Monitoramento e Métricas**
+## 🔄 **Migração do Sistema Antigo**  config,
+
+  7200, // 2 horas TTL
+
+### **Passos para Migração Completa**  'custom-namespace', // Namespace personalizado
+
+  RedisClientType.QUEUE // Usar cliente de queue explicitamente
+
+1. **✅ Implementação nova concluída** - Cache simplificado operacional);
+
+2. **🔄 Atualizar imports** - Trocar imports dos arquivos antigos  ```
+
+3. **🔄 Ajustar interfaces** - Usar `DataCache`/`QueueCache` diretamente
+
+4. **🔄 Remover arquivos antigos** - Limpar cache.manager.ts, cache.service.ts, etc.## 📊 **Monitoramento e Métricas**
+
+5. **✅ Testes** - Validar funcionamento completo
 
 ### **Connection Status**
 
-```typescript
-const allStatus = connectionManager.getAllConnectionStatus();
+### **Status Atual**
 
-console.log('🔵 Cache Client (DB0):', {
+- ✅ **Nova estrutura**: Implementada e funcional```typescript
+
+- ✅ **Compatibilidade**: Mantida via wrappers  const allStatus = connectionManager.getAllConnectionStatus();
+
+- 🔄 **Migração arquivos**: Em progresso (arquivos antigos removidos)
+
+- 🔄 **Atualização dependentes**: Pendente para alguns módulosconsole.log('🔵 Cache Client (DB0):', {
+
   connected: allStatus.cache.connected,
-  host: allStatus.cache.host,
+
+---  host: allStatus.cache.host,
+
   db: allStatus.cache.db
-});
+
+**A nova arquitetura está pronta para uso e oferece uma base sólida, simples e performática para todas as operações de cache da aplicação.**});
 
 console.log('🟡 Queue Client (DB1):', {
   connected: allStatus.queue.connected,
   host: allStatus.queue.host,
   db: allStatus.queue.db
 });
-```
+````
 
 ### **Cache Statistics por Cliente**
 
@@ -348,7 +625,7 @@ await apiCache.set('user:123', data2, { namespace: 'temp' });
 // ✅ Código existente continua funcionando (usa o novo sistema internamente)
 import { getDefaultCache } from '../infraestructure/cache/index.js';
 
-const cache = getDefaultCache(); // Agora usa EnhancedCacheManager com Cache Client (DB0)
+const cache = getDefaultCache(); // Agora usa CacheManager com Cache Client (DB0)
 await cache.initialize(config);
 await cache.set('key', 'value');
 ```

@@ -8,38 +8,65 @@ const envLogger = {
   }
 };
 
-const envSchema = z.object({
-  // Core application settings
-  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  PORT: z.coerce.number().min(1).max(65535).default(3000),
+const envSchema = z
+  .object({
+    // Core application settings
+    NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+    PORT: z.coerce.number().min(1).max(65535).default(3000),
 
-  // JWT Authentication
-  JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters long'),
+    // JWT Authentication
+    JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters long'),
 
-  // MongoDB Database
-  MONGO_URI: z.string().url('MONGO_URI must be a valid URL'),
+    // MongoDB Database
+    MONGO_URI: z.string().url('MONGO_URI must be a valid URL'),
 
-  // Redis Cache Configuration - Primary (API Cache)
-  REDIS_HOST: z.string().min(1, 'REDIS_HOST cannot be empty').default('localhost'),
-  REDIS_PORT: z.coerce.number().min(1).max(65535).default(6379),
-  REDIS_PASSWORD: z.string().optional(),
-  REDIS_DB: z.coerce.number().min(0).max(15).default(0).optional(),
+    // Redis Cache Configuration - Primary (API Cache)
+    REDIS_HOST: z.string().min(1, 'REDIS_HOST cannot be empty').default('localhost'),
+    REDIS_PORT: z.coerce.number().min(1).max(65535).default(6379),
+    REDIS_PASSWORD: z.string().optional(),
+    REDIS_DB: z.coerce.number().min(0).max(15).default(0).optional(),
 
-  // Redis Queue Configuration - Secondary (Queue Worker Cache)
-  QUEUE_REDIS_HOST: z.string().min(1, 'QUEUE_REDIS_HOST cannot be empty').optional(),
-  QUEUE_REDIS_PORT: z.coerce.number().min(1).max(65535).optional(),
-  QUEUE_REDIS_PASSWORD: z.string().optional(),
-  QUEUE_REDIS_DB: z.coerce.number().min(0).max(15).default(1).optional(),
+    // Redis Queue Configuration - Secondary (Queue Worker Cache)
+    QUEUE_REDIS_HOST: z.string().min(1, 'QUEUE_REDIS_HOST cannot be empty').optional(),
+    QUEUE_REDIS_PORT: z.coerce.number().min(1).max(65535).optional(),
+    QUEUE_REDIS_PASSWORD: z.string().optional(),
+    QUEUE_REDIS_DB: z.coerce.number().min(0).max(15).default(1).optional(),
 
-  // Optional: Logging configuration
-  LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
+    // Optional: Logging configuration
+    LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
 
-  // Optional: Additional security settings
-  CORS_ORIGIN: z.string().optional(),
-  CORS_ALLOW_CREDENTIALS: z.coerce.boolean().default(false).optional(),
-  RATE_LIMIT_MAX: z.coerce.number().positive().default(100).optional(),
-  RATE_LIMIT_WINDOW_MS: z.coerce.number().positive().default(60000).optional() // 1 minute
-});
+    // Optional: Additional security settings
+    CORS_ORIGIN: z.string().optional(),
+    CORS_ALLOW_CREDENTIALS: z.coerce.boolean().default(false).optional(),
+    RATE_LIMIT_MAX: z.coerce.number().positive().default(100).optional(),
+    RATE_LIMIT_WINDOW_MS: z.coerce.number().positive().default(60000).optional(), // 1 minute
+
+    // SMTP Email Configuration
+    SMTP_HOST: z.string().min(1, 'SMTP_HOST cannot be empty').optional(),
+    SMTP_PORT: z.coerce.number().min(1).max(65535).default(587).optional(),
+    SMTP_SECURE: z.coerce.boolean().default(false).optional(),
+    SMTP_USER: z.string().optional(),
+    SMTP_PASS: z.string().optional(),
+    EMAIL_FROM: z.string().email('EMAIL_FROM must be a valid email address').optional(),
+    EMAIL_POOL: z.coerce.boolean().default(false).optional(),
+    EMAIL_MAX_CONNECTIONS: z.coerce.number().positive().optional(),
+    EMAIL_MAX_MESSAGES: z.coerce.number().positive().optional()
+  })
+  .refine(
+    data => {
+      // If any SMTP variable is provided, all required ones must be provided
+      const hasAnySmtp = data.SMTP_HOST || data.SMTP_USER || data.SMTP_PASS || data.EMAIL_FROM;
+      if (hasAnySmtp) {
+        return data.SMTP_HOST && data.SMTP_USER && data.SMTP_PASS && data.EMAIL_FROM;
+      }
+      return true;
+    },
+    {
+      message:
+        'When using email functionality, SMTP_HOST, SMTP_USER, SMTP_PASS, and EMAIL_FROM are all required',
+      path: ['SMTP_HOST']
+    }
+  );
 
 const parsed = envSchema.safeParse(process.env);
 
@@ -67,7 +94,16 @@ if (!parsed.success) {
       CORS_ORIGIN: process.env.CORS_ORIGIN,
       CORS_ALLOW_CREDENTIALS: process.env.CORS_ALLOW_CREDENTIALS,
       RATE_LIMIT_MAX: process.env.RATE_LIMIT_MAX,
-      RATE_LIMIT_WINDOW_MS: process.env.RATE_LIMIT_WINDOW_MS
+      RATE_LIMIT_WINDOW_MS: process.env.RATE_LIMIT_WINDOW_MS,
+      SMTP_HOST: process.env.SMTP_HOST,
+      SMTP_PORT: process.env.SMTP_PORT,
+      SMTP_SECURE: process.env.SMTP_SECURE,
+      SMTP_USER: process.env.SMTP_USER ? '[REDACTED]' : 'NOT_SET',
+      SMTP_PASS: process.env.SMTP_PASS ? '[REDACTED]' : 'NOT_SET',
+      EMAIL_FROM: process.env.EMAIL_FROM,
+      EMAIL_POOL: process.env.EMAIL_POOL,
+      EMAIL_MAX_CONNECTIONS: process.env.EMAIL_MAX_CONNECTIONS,
+      EMAIL_MAX_MESSAGES: process.env.EMAIL_MAX_MESSAGES
     }
   });
 

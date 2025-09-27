@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import { AuthRepositoryFactory } from './factory/auth.factory.js';
 import { UserValidations } from '../../entities/user/index.js';
 import { ApiResponseHandler } from '../../lib/response/index.js';
+import { JobType, JobPriority } from '../../infraestructure/queue/queue.types.js';
 import {
   EmailTemplate,
   type EmailJobData
@@ -139,8 +140,8 @@ export default async function authController(fastify: FastifyInstance) {
             };
 
             // Add email job to queue
-            const jobId = await fastify.queueManager.addJob('emailSend', emailJobData, {
-              priority: 1, // High priority for registration emails
+            const jobId = await fastify.queueManager.addJob(JobType.EMAIL_SEND, emailJobData, {
+              priority: JobPriority.HIGH, // High priority for registration emails
               attempts: 3 // Retry up to 3 times
             });
 

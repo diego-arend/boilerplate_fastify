@@ -1,10 +1,10 @@
 # Authentication Module
 
-This module implements complete JWT authentication using **dependency injection architecture** with **enhanced Redis caching** for better testability, maintainability, and performance.
+This module implements complete JWT authentication using **dependency injection architecture** with **Redis caching** for better testability, maintainability, and performance.
 
 ## 🏗️ Architecture
 
-### **Enhanced Dependency Injection with Cache Support**
+### **Dependency Injection with Cache Support**
 
 - **AuthRepository** receives `IUserRepository` and `ICacheService` via constructor injection
 - **UserRepository** receives `IBaseRepository` via constructor injection
@@ -25,7 +25,7 @@ This module implements complete JWT authentication using **dependency injection 
 
 - User registration with password hashing
 - JWT login with secure password comparison
-- **Enhanced caching** for improved performance
+- **Caching** for improved performance
 - **Rate limiting** with Redis-based attempt tracking
 - Protected routes with authentication middleware
 - User search (admin)
@@ -110,7 +110,7 @@ const authRepository = AuthRepositoryFactory.createAuthRepositoryForTesting(mock
 ✅ **Single Responsibility**: Each repository has one clear purpose  
 ✅ **Type Safety**: Interface contracts prevent runtime errors  
 ✅ **SOLID Principles**: Follows dependency inversion principle  
-✅ **Enhanced Performance**: Redis caching with Cache Client (Database 0)  
+✅ **Performance**: Redis caching with Cache Client (Database 0)  
 ✅ **Rate Limiting**: Built-in brute force protection  
 ✅ **Security First**: Password data never cached, secure token hashing  
 ✅ **Cache Isolation**: Authentication data separated in dedicated database

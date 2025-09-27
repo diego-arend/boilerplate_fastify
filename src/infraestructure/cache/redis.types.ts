@@ -3,8 +3,6 @@
  * Defines types for multiple Redis client configurations
  */
 
-import type { config } from '../../lib/validators/validateEnv.js';
-
 /**
  * Redis client types for different purposes
  */
@@ -21,19 +19,31 @@ export interface RedisConfig {
   port: number;
   password?: string | undefined;
   db: number;
-  clientType: RedisClientType;
+}
+
+/**
+ * Application configuration interface for Redis
+ */
+export interface RedisAppConfig {
+  REDIS_HOST: string;
+  REDIS_PORT: number;
+  REDIS_PASSWORD?: string | undefined;
+  REDIS_DB?: number | undefined;
+  QUEUE_REDIS_HOST?: string | undefined;
+  QUEUE_REDIS_PORT?: number | undefined;
+  QUEUE_REDIS_PASSWORD?: string | undefined;
+  QUEUE_REDIS_DB?: number | undefined;
 }
 
 /**
  * Extract Redis configuration from app config for cache client
  */
-export function getCacheRedisConfig(appConfig: typeof config): RedisConfig {
+export function getCacheRedisConfig(appConfig: RedisAppConfig): RedisConfig {
   return {
     host: appConfig.REDIS_HOST,
     port: appConfig.REDIS_PORT,
     password: appConfig.REDIS_PASSWORD,
-    db: appConfig.REDIS_DB || 0,
-    clientType: RedisClientType.CACHE
+    db: appConfig.REDIS_DB || 0
   };
 }
 
@@ -41,13 +51,12 @@ export function getCacheRedisConfig(appConfig: typeof config): RedisConfig {
  * Extract Redis configuration from app config for queue client
  * Falls back to cache config if queue-specific config is not provided
  */
-export function getQueueRedisConfig(appConfig: typeof config): RedisConfig {
+export function getQueueRedisConfig(appConfig: RedisAppConfig): RedisConfig {
   return {
     host: appConfig.QUEUE_REDIS_HOST || appConfig.REDIS_HOST,
     port: appConfig.QUEUE_REDIS_PORT || appConfig.REDIS_PORT,
     password: appConfig.QUEUE_REDIS_PASSWORD || appConfig.REDIS_PASSWORD,
-    db: appConfig.QUEUE_REDIS_DB || 1, // Default to db1 for queue
-    clientType: RedisClientType.QUEUE
+    db: appConfig.QUEUE_REDIS_DB || 1 // Default to db1 for queue
   };
 }
 

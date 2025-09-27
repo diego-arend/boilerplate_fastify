@@ -1,127 +1,74 @@
-import { getCacheCacheManager, getQueueCacheManager } from './enhanced-cache.manager.js';
-import { RedisCacheService, MemoryCacheService, type ICacheService } from './cache.service.js';
-import type { config } from '../../lib/validators/validateEnv.js';
-import { RedisClientType } from './redis.types.js';
+/**
+ * Cache Factory
+ *
+ * Provides factory methods for the simplified cache structure:
+ * - DataCache for application data (Redis db0)
+ * - QueueCache for job processing (Redis db1)
+ */
+
+import { getDataCache, getQueueCache, initializeCaches, disconnectCaches } from './cache.js';
+import type { DataCache, QueueCache } from './cache.js';
 
 /**
- * Enhanced Cache service factory for dependency injection
- * Provides different cache implementations with multi-Redis client support
- * Supports both cache and queue Redis clients with proper isolation
+ * Cache Factory with static methods
  */
 export class CacheServiceFactory {
-  private static defaultService: ICacheService | null = null;
-  private static sessionService: ICacheService | null = null;
-  private static tempService: ICacheService | null = null;
-  private static queueCacheService: ICacheService | null = null;
-  private static queueWorkerService: ICacheService | null = null;
-
   /**
-   * Create default cache service (1 hour TTL, 'app' namespace, uses cache Redis client)
-   * Uses Redis cache client (db0) for API caching operations
+   * Get DataCache instance for application data
+   * Uses Redis db0 for variables, HTTP requests, and general app caching
    */
-  static async createDefaultCacheService(appConfig: typeof config): Promise<ICacheService> {
-    if (!this.defaultService) {
-      const cacheManager = getCacheCacheManager(3600, 'app');
-      await cacheManager.initialize(appConfig);
-      this.defaultService = new RedisCacheService(cacheManager);
-    }
-    return this.defaultService;
+  static getDataCache(): DataCache {
+    return getDataCache();
   }
 
   /**
-   * Create session cache service (24 hours TTL, 'session' namespace, uses cache Redis client)
-   * Uses Redis cache client (db0) for session data
+   * Get QueueCache instance for job processing
+   * Uses Redis db1 for job batches, worker processing, and queue operations
    */
-  static async createSessionCacheService(appConfig: typeof config): Promise<ICacheService> {
-    if (!this.sessionService) {
-      const cacheManager = getCacheCacheManager(86400, 'session');
-      await cacheManager.initialize(appConfig);
-      this.sessionService = new RedisCacheService(cacheManager);
-    }
-    return this.sessionService;
+  static getQueueCache(): QueueCache {
+    return getQueueCache();
   }
 
   /**
-   * Create temporary cache service (5 minutes TTL, 'temp' namespace, uses cache Redis client)
-   * Uses Redis cache client (db0) for temporary data
+   * Initialize all cache instances
    */
-  static async createTempCacheService(appConfig: typeof config): Promise<ICacheService> {
-    if (!this.tempService) {
-      const cacheManager = getCacheCacheManager(300, 'temp');
-      await cacheManager.initialize(appConfig);
-      this.tempService = new RedisCacheService(cacheManager);
-    }
-    return this.tempService;
+  static async initializeAll(): Promise<{ dataCache: DataCache; queueCache: QueueCache }> {
+    return initializeCaches();
   }
 
   /**
-   * Create queue cache service (30 minutes TTL, 'queue-cache' namespace, uses queue Redis client)
-   * Uses Redis queue client (db1) for queue-related caching
+   * Disconnect all cache instances
    */
-  static async createQueueCacheService(appConfig: typeof config): Promise<ICacheService> {
-    if (!this.queueCacheService) {
-      const queueManager = getQueueCacheManager(1800, 'queue-cache');
-      await queueManager.initialize(appConfig);
-      this.queueCacheService = new RedisCacheService(queueManager);
-    }
-    return this.queueCacheService;
+  static async disconnectAll(): Promise<void> {
+    return disconnectCaches();
   }
 
   /**
-   * Create queue worker service (15 minutes TTL, 'queue-worker' namespace, uses queue Redis client)
-   * Uses Redis queue client (db1) for worker-specific caching and coordination
+   * Create in-memory cache service for testing
    */
-  static async createQueueWorkerService(appConfig: typeof config): Promise<ICacheService> {
-    if (!this.queueWorkerService) {
-      const queueManager = getQueueCacheManager(900, 'queue-worker');
-      await queueManager.initialize(appConfig);
-      this.queueWorkerService = new RedisCacheService(queueManager);
-    }
-    return this.queueWorkerService;
-  }
-
-  /**
-   * Create memory cache service for testing
-   * Doesn't require Redis connection
-   */
-  static createMemoryCacheService(): ICacheService {
-    return new MemoryCacheService();
-  }
-
-  /**
-   * Create custom Redis cache service with specific configuration
-   * Uses cache Redis client (db0) by default
-   */
-  static async createCustomCacheService(
-    appConfig: typeof config,
-    defaultTTL: number = 3600,
-    defaultNamespace: string = 'custom',
-    clientType: RedisClientType = RedisClientType.CACHE
-  ): Promise<ICacheService> {
-    const cacheManager =
-      clientType === RedisClientType.CACHE
-        ? getCacheCacheManager(defaultTTL, defaultNamespace)
-        : getQueueCacheManager(defaultTTL, defaultNamespace);
-
-    await cacheManager.initialize(appConfig);
-    return new RedisCacheService(cacheManager);
-  }
-
-  /**
-   * Create cache service for testing with mocked implementation
-   */
-  static createCacheServiceForTesting(mockCacheService?: ICacheService): ICacheService {
-    return mockCacheService || new MemoryCacheService();
-  }
-
-  /**
-   * Reset factory state (useful for testing)
-   */
-  static reset(): void {
-    this.defaultService = null;
-    this.sessionService = null;
-    this.tempService = null;
-    this.queueCacheService = null;
-    this.queueWorkerService = null;
+  static createMemoryCacheService(): any {
+    return {
+      data: new Map(),
+      async get(key: string) {
+        return this.data.get(key) || null;
+      },
+      async set(key: string, value: any) {
+        this.data.set(key, value);
+      },
+      async del(key: string) {
+        return this.data.delete(key);
+      },
+      async exists(key: string) {
+        return this.data.has(key);
+      },
+      async clear() {
+        this.data.clear();
+        return this.data.size;
+      },
+      isReady: () => true,
+      connect: () => Promise.resolve(),
+      disconnect: () => Promise.resolve(),
+      ping: () => Promise.resolve('PONG')
+    };
   }
 }

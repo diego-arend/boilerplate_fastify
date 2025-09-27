@@ -9,9 +9,10 @@ import type { ClientSession } from 'mongoose';
 import type { IJob } from '../../entities/job/index.js';
 import type { QueueManager } from './queue.manager.js';
 import type { JobResult, JobHandler } from './queue.types.js';
+import { EmailService, type EmailConfig } from '../email/index.js';
 
 import { JOB_HANDLERS } from './jobs/index.js';
-import { QueueJobType } from './queue.types.js';
+import { JobType } from './queue.types.js';
 
 /**
  * Queue Worker with features:
@@ -28,16 +29,27 @@ export class QueueWorker {
   private processedJobs = 0;
   private failedJobs = 0;
   private startTime: Date;
+  private emailService: EmailService | null = null;
 
   constructor(
     private queueManager: QueueManager,
     private logger: FastifyBaseLogger,
     private concurrency = 1,
     private batchSize = 50,
-    private pollInterval = 5000 // 5 seconds
+    private pollInterval = 5000, // 5 seconds
+    emailConfig?: EmailConfig
   ) {
     this.workerId = `worker_${randomUUID()}`;
     this.startTime = new Date();
+
+    // Initialize EmailService if config provided
+    if (emailConfig && emailConfig.host) {
+      try {
+        this.emailService = new EmailService(emailConfig, this.logger);
+      } catch (error) {
+        this.logger.warn({ error }, 'Failed to initialize EmailService, email jobs may fail');
+      }
+    }
   }
 
   /**
@@ -115,11 +127,10 @@ export class QueueWorker {
     while (this.isRunning && !this.isShuttingDown) {
       try {
         // Load batch of jobs
-        const batch = await this.queueManager.loadNextBatch({
-          batchSize: this.batchSize,
-          priorities: [15, 10, 5, 1], // CRITICAL → HIGH → NORMAL → LOW
-          useCache: true
-        });
+        const batch = await this.queueManager.loadNextBatch(
+          this.batchSize,
+          [20, 15, 10, 5] // CRITICAL → HIGH → NORMAL → LOW
+        );
 
         if (!batch || batch.jobs.length === 0) {
           // No jobs available, wait before next poll
@@ -228,8 +239,21 @@ export class QueueWorker {
         attempts: job.attempts + 1
       });
 
-      // Execute the job handler
-      const result = await handler(job.data, job.jobId, this.logger);
+      // Prepare metadata for job handler
+      const metadata = {
+        attempt: job.attempts + 1,
+        maxAttempts: job.maxAttempts,
+        queuedAt: job.createdAt,
+        processingAt: new Date()
+      };
+
+      // Prepare services object
+      const services = {
+        emailService: this.emailService
+      };
+
+      // Execute the job handler with enhanced parameters
+      const result = await handler(job.data, job.jobId, this.logger, metadata, services);
 
       const processingTime = Date.now() - startTime;
 

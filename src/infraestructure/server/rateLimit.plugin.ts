@@ -124,23 +124,58 @@ export default async function rateLimitPlugin(
   // Use Redis as store if available and configured
   if (rateLimitConfig.useRedis) {
     try {
-      // Get Redis client from cache plugin if available
-      const redisClient = (fastify as any).redis || (fastify as any).cache?.redis;
+      // Get Redis client from our cache system
+      const cacheManager = (fastify as any).cache;
 
-      if (redisClient) {
-        rateLimitOptions.redis = redisClient;
+      if (cacheManager && cacheManager.isReady()) {
+        // Create a wrapper that mimics ioredis interface for fastify/rate-limit
+        const redisClient = cacheManager.getRedisClient();
 
-        if (config.NODE_ENV === 'development') {
-          logger.info({
-            message: 'Rate limit using Redis store',
-            redisHost: config.REDIS_HOST,
-            redisPort: config.REDIS_PORT,
-            redisDb: config.REDIS_DB
+        if (redisClient) {
+          // Create a Redis-like interface that fastify/rate-limit expects
+          const redisWrapper = {
+            ...redisClient,
+            // Ensure defineCommand method exists (required by fastify/rate-limit)
+            defineCommand:
+              redisClient.defineCommand?.bind(redisClient) ||
+              function () {
+                logger.warn(
+                  'defineCommand method not available on Redis client, rate limiting may not work optimally'
+                );
+              },
+            // Ensure other required methods exist
+            eval: redisClient.eval?.bind(redisClient) || redisClient.evalsha?.bind(redisClient),
+            multi: redisClient.multi?.bind(redisClient),
+            pipeline: redisClient.pipeline?.bind(redisClient),
+            // Common Redis commands
+            get: redisClient.get?.bind(redisClient),
+            set: redisClient.set?.bind(redisClient),
+            incr: redisClient.incr?.bind(redisClient),
+            expire: redisClient.expire?.bind(redisClient),
+            del: redisClient.del?.bind(redisClient),
+            exists: redisClient.exists?.bind(redisClient),
+            ttl: redisClient.ttl?.bind(redisClient)
+          };
+
+          rateLimitOptions.redis = redisWrapper;
+
+          if (config.NODE_ENV === 'development') {
+            logger.info({
+              message: 'Rate limit using Redis store',
+              redisHost: config.REDIS_HOST,
+              redisPort: config.REDIS_PORT,
+              redisDb: config.REDIS_DB
+            });
+          }
+        } else {
+          // If Redis client not available, disable Redis for rate limiting
+          logger.warn({
+            message: 'Redis client not available for rate limiting, using memory store'
           });
         }
       } else {
         logger.warn({
-          message: 'Redis not available for rate limiting, using memory store',
+          message: 'Cache manager not ready for rate limiting, using memory store',
           redisConfigured: !!config.REDIS_HOST
         });
       }

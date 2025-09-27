@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyPluginOptions, FastifyRequest, FastifyReply } from 'fastify';
 import { JwtStrategy, AuthenticateCommand } from './services/index.js';
-import { CacheServiceFactory, type ICacheService } from '../../infraestructure/cache/index.js';
+import { CacheServiceFactory, type DataCache } from '../../infraestructure/cache/index.js';
 import { config } from '../../lib/validators/validateEnv.js';
 import authController from './auth.controller.js';
 import { defaultLogger } from '../../lib/logger/index.js';
@@ -8,33 +8,25 @@ import { defaultLogger } from '../../lib/logger/index.js';
 export default async function (fastify: FastifyInstance, opts: FastifyPluginOptions) {
   const logger = defaultLogger.child({ context: 'auth-plugin' });
 
-  // Log plugin initialization (development only)
   if (process.env.NODE_ENV === 'development') {
     logger.info({
       message: 'Initializing authentication plugin',
-      hasJwtSecret: !!fastify.config.JWT_SECRET,
-      pluginOptions: {
-        ...opts,
-        // Remove sensitive data from logs
-        secret: opts.secret ? '[REDACTED]' : undefined
-      }
+      hasJwtSecret: !!fastify.config.JWT_SECRET
     });
   }
 
   const SECRET = fastify.config.JWT_SECRET;
 
-  // Create cache service for JWT strategy (Database 0 - Cache Client)
-  let cacheService: ICacheService | undefined;
+  // Create cache service using simplified DataCache
+  let cacheService: DataCache | undefined;
   try {
-    // Use Cache Client (Database 0) for JWT token caching and auth data
-    cacheService = await CacheServiceFactory.createDefaultCacheService(config);
+    cacheService = CacheServiceFactory.getDataCache();
+    await cacheService.connect();
 
     if (process.env.NODE_ENV === 'development') {
       logger.info({
-        message: 'Cache service initialized for JWT strategy',
-        cacheReady: cacheService.isReady(),
-        cacheType: 'Cache Client (Database 0)',
-        purpose: 'JWT tokens and authentication data'
+        message: 'DataCache service initialized for authentication',
+        cacheType: 'DataCache (Redis db0)'
       });
     }
   } catch (error) {

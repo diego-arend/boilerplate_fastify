@@ -29,7 +29,7 @@ export interface IAuthRepository {
 }
 
 /**
- * AuthRepository - Authentication-specific repository using composition with enhanced cache support
+ * AuthRepository - Authentication-specific repository using composition with cache support
  *
  * Cache Strategy:
  * - Uses Cache Client (Database 0) for all authentication data

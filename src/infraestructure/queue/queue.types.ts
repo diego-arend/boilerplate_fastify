@@ -1,22 +1,28 @@
 /**
- * Queue system types and interfaces with MongoDB persistence
+ * Simplified Queue System Types
+ *
+ * Architecture:
+ * 1. Jobs persisted in MongoDB
+ * 2. Batch processing through memory cache (QueueCache - Redis db1)
+ * 3. Failed jobs moved to Dead Letter Queue (DLQ) in MongoDB
+ * 4. Independent worker process for Docker deployment
  */
 
 import type { IJob } from '../../entities/job/index.js';
 
 /**
- * Job types with database persistence support
+ * Job types
  */
-export const QueueJobType = {
-  EMAIL_SEND: 'email_send',
-  USER_NOTIFICATION: 'user_notification',
-  DATA_EXPORT: 'data_export',
-  FILE_PROCESS: 'file_process',
-  CACHE_WARM: 'cache_warm',
+export const JobType = {
+  EMAIL_SEND: 'email:send',
+  USER_NOTIFICATION: 'user:notification',
+  DATA_EXPORT: 'data:export',
+  FILE_PROCESS: 'file:process',
+  CACHE_WARM: 'cache:warm',
   CLEANUP: 'cleanup'
 } as const;
 
-export type QueueJobType = (typeof QueueJobType)[keyof typeof QueueJobType];
+export type JobType = (typeof JobType)[keyof typeof JobType];
 
 /**
  * Job priority levels
@@ -31,14 +37,13 @@ export const JobPriority = {
 export type JobPriority = (typeof JobPriority)[keyof typeof JobPriority];
 
 /**
- * Job status types
+ * Job status
  */
 export const JobStatus = {
   PENDING: 'pending',
   PROCESSING: 'processing',
   COMPLETED: 'completed',
-  FAILED: 'failed',
-  CANCELLED: 'cancelled'
+  FAILED: 'failed'
 } as const;
 
 export type JobStatus = (typeof JobStatus)[keyof typeof JobStatus];
@@ -49,168 +54,42 @@ export type JobStatus = (typeof JobStatus)[keyof typeof JobStatus];
 export interface JobBatch {
   id: string;
   jobs: IJob[];
-  priority: number;
-  minPriority: number;
-  maxPriority: number;
+  priority: JobPriority;
   loadedAt: Date;
-  ttl: number;
-  size: number;
+  ttl: number; // Cache TTL in seconds
 }
 
 /**
- * Batch loading options
- */
-export interface BatchLoadOptions {
-  batchSize?: number;
-  priorities?: number[];
-  useCache?: boolean;
-}
-
-/**
- * Concurrency lock information
- */
-export interface ConcurrencyLock {
-  jobId: string;
-  workerId: string;
-  acquiredAt: Date;
-  expiresAt: Date;
-  timeout: number;
-}
-
-/**
- * Queue statistics with batch info
+ * Queue statistics
  */
 export interface QueueStats {
   pending: number;
   processing: number;
   completed: number;
   failed: number;
-  cancelled: number;
-  batchInfo?: {
-    currentBatchSize: number;
-    currentBatchPriority: number;
-    batchLoadedAt: Date;
-  } | null;
-  redisConnected: boolean;
-  cacheConnected: boolean;
+  currentBatch: {
+    id: string | null;
+    size: number;
+    priority: JobPriority | null;
+    loadedAt: Date | null;
+  };
 }
 
 /**
- * DLQ statistics by type
+ * Dead Letter Queue statistics
  */
 export interface DLQStats {
   total: number;
-  byType: Record<string, number>;
-  byPriority: Record<string, number>;
-  oldest?: {
+  byType: Record<JobType, number>;
+  oldest: {
     id: string;
-    movedAt: Date;
+    failedAt: Date;
     daysSince: number;
-  };
+  } | null;
 }
 
 /**
- * Modern job types with database persistence support
- */
-export const ModernJobType = {
-  EMAIL_SEND: 'email:send',
-  USER_NOTIFICATION: 'user:notification',
-  DATA_EXPORT: 'data:export',
-  FILE_PROCESS: 'file:process',
-  CACHE_WARM: 'cache:warm',
-  CLEANUP: 'cleanup'
-} as const;
-
-export type ModernJobType = (typeof ModernJobType)[keyof typeof ModernJobType];
-
-/**
- * Job batch configuration
- */
-export interface BatchConfig {
-  size: number; // Number of jobs to load in each batch
-  ttl: number; // TTL in seconds for cached jobs
-  priorityLevels: {
-    critical: { min: 15; max: 20 };
-    high: { min: 10; max: 14 };
-    normal: { min: 5; max: 9 };
-    low: { min: 1; max: 4 };
-  };
-}
-
-/**
- * Worker lock configuration
- */
-export interface WorkerLockConfig {
-  lockTimeout: number; // Lock timeout in milliseconds
-  heartbeatInterval: number; // Heartbeat interval in milliseconds
-  maxRetries: number; // Maximum lock acquisition retries
-}
-
-/**
- * Cache configuration for jobs
- */
-export interface JobCacheConfig {
-  namespace: string; // Cache namespace
-  ttl: number; // Default TTL in seconds
-  refreshThreshold: number; // When to refresh cache (percentage of TTL)
-}
-
-/**
- * DLQ configuration
- */
-export interface DLQConfig {
-  autoMove: boolean; // Automatically move failed jobs to DLQ
-  maxReprocessAttempts: number; // Maximum reprocess attempts from DLQ
-  cleanupInterval: number; // Cleanup interval in hours
-  retentionDays: number; // How long to keep resolved DLQ entries
-}
-
-/**
- * Queue configuration
- */
-export interface QueueConfig {
-  name: string;
-
-  // Database configuration
-  mongodb: {
-    enabled: boolean;
-    connectionString?: string;
-  };
-
-  // Redis cache configuration
-  redis: {
-    host: string;
-    port: number;
-    password?: string;
-    db?: number;
-  };
-
-  // Batch processing configuration
-  batch: BatchConfig;
-
-  // Worker configuration
-  worker: WorkerLockConfig;
-
-  // Cache configuration
-  cache: JobCacheConfig;
-
-  // DLQ configuration
-  dlq: DLQConfig;
-
-  // Legacy BullMQ options (for compatibility)
-  defaultJobOptions?: {
-    attempts?: number;
-    backoff?: {
-      type: 'exponential' | 'fixed';
-      delay: number;
-    };
-    removeOnComplete?: number;
-    removeOnFail?: number;
-  };
-}
-
-/**
- * Job processing result with metadata
+ * Job processing result
  */
 export interface JobResult {
   success: boolean;
@@ -218,133 +97,52 @@ export interface JobResult {
   data?: any;
   error?: string;
   processedAt: number;
-  processingTime: number;
-  workerId: string;
-
-  // Enhanced metadata
-  fromCache?: boolean; // Whether job was loaded from cache
-  batchId?: string; // ID of the batch this job belonged to
-  retryCount?: number; // Current retry count
-
-  // DLQ information (if moved to DLQ)
-  movedToDLQ?: boolean;
-  dlqReason?: string;
+  processingTime: number; // milliseconds
+  workerId?: string; // Optional worker identifier
+  retryCount?: number; // Optional retry count
+  movedToDLQ?: boolean; // Optional DLQ flag
 }
 
 /**
- * Batch processing metadata
+ * Worker configuration
  */
-export interface BatchMetadata {
-  batchId: string;
-  loadedAt: number;
-  expiresAt: number;
-  priority: JobPriority;
-  jobCount: number;
-  processedCount: number;
-  source: 'database' | 'cache' | 'hybrid';
+export interface WorkerConfig {
+  batchSize: number;
+  batchTTL: number; // seconds
+  maxRetries: number;
+  retryDelay: number; // milliseconds
+  concurrency: number; // max concurrent jobs
 }
 
 /**
- * Worker status information
+ * Queue health status
  */
-export interface WorkerStatus {
-  workerId: string;
-  status: 'active' | 'idle' | 'failed' | 'shutdown';
-  currentJob?: string;
-  lockedAt?: Date;
-  heartbeatAt: Date;
-  processedJobs: number;
-  failedJobs: number;
-  uptime: number; // in milliseconds
-}
+export const QueueHealth = {
+  HEALTHY: 'healthy',
+  DEGRADED: 'degraded',
+  DOWN: 'down'
+} as const;
+
+export type QueueHealthStatus = (typeof QueueHealth)[keyof typeof QueueHealth];
 
 /**
- * Queue statistics
+ * Queue health information
  */
-export interface QueueStatistics {
-  // Basic counts
-  pending: number;
-  processing: number;
-  completed: number;
-  failed: number;
-
-  // Priority breakdown
-  priorityBreakdown: Record<string, number>;
-
-  // Cache metrics
+export interface QueueHealthInfo {
+  status: QueueHealthStatus;
+  database: {
+    connected: boolean;
+    responseTime: number;
+  };
   cache: {
-    hits: number;
-    misses: number;
-    hitRate: number;
-    activeBatches: number;
-    totalCachedJobs: number;
+    connected: boolean;
+    responseTime: number;
   };
-
-  // DLQ metrics
-  dlq: {
-    total: number;
-    pending: number;
-    resolved: number;
-    reprocessed: number;
-    bySeverity: Record<string, number>;
-  };
-
-  // Worker metrics
-  workers: {
-    active: number;
-    idle: number;
-    failed: number;
-    totalJobs: number;
-  };
-
-  // Performance metrics
-  performance: {
-    avgProcessingTime: number;
-    jobsPerMinute: number;
-    errorRate: number;
-  };
+  stats: QueueStats;
 }
 
 /**
- * Concurrency control result
- */
-export interface ConcurrencyLockResult {
-  success: boolean;
-  lockId?: string;
-  expiresAt?: Date;
-  error?: string;
-}
-
-/**
- * Job reprocessing options
- */
-export interface ReprocessOptions {
-  resetAttempts?: boolean;
-  resetData?: Record<string, any>;
-  increaseMaxAttempts?: boolean;
-  priority?: JobPriority;
-  reprocessedBy: string;
-}
-
-/**
- * DLQ query options
- */
-export interface DLQQueryOptions {
-  status?: string[];
-  severity?: string[];
-  jobType?: string;
-  dateRange?: {
-    start: Date;
-    end: Date;
-  };
-  limit?: number;
-  offset?: number;
-  sortBy?: 'movedToDLQAt' | 'severity' | 'jobType';
-  sortOrder?: 'asc' | 'desc';
-}
-
-/**
- * Job handler function type with metadata
+ * Job handler function with optional metadata and services
  */
 export type JobHandler<T = any> = (
   data: T,
@@ -355,58 +153,6 @@ export type JobHandler<T = any> = (
     maxAttempts: number;
     queuedAt: Date;
     processingAt: Date;
-  }
+  },
+  services?: any
 ) => Promise<JobResult>;
-
-/**
- * Queue health status
- */
-export const QueueHealth = {
-  HEALTHY: 'healthy',
-  DEGRADED: 'degraded',
-  CRITICAL: 'critical',
-  DOWN: 'down'
-} as const;
-
-export type QueueHealthStatus = (typeof QueueHealth)[keyof typeof QueueHealth];
-
-/**
- * Queue health information
- */
-export interface QueueHealthInfo {
-  overall: QueueHealthStatus;
-  database: {
-    connected: boolean;
-    responseTime?: number;
-    error?: string;
-  };
-  cache: {
-    connected: boolean;
-    responseTime?: number;
-    error?: string;
-  };
-  workers: {
-    active: number;
-    failed: number;
-    lastHeartbeat?: Date;
-  };
-  queues: {
-    backlog: number;
-    stalled: number;
-    processing: number;
-  };
-}
-
-/**
- * Cleanup operation result
- */
-export interface CleanupResult {
-  deleted: number;
-  errors: number;
-  duration: number;
-  details: Array<{
-    operation: string;
-    count: number;
-    error?: string;
-  }>;
-}

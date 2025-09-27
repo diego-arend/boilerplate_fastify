@@ -1,6 +1,6 @@
 /**
  * Email Send Job Handler
- * Handles email sending with template support and delivery validation
+ * Handles email sending with Nodemailer integration and template support
  */
 
 import type { FastifyBaseLogger } from 'fastify';
@@ -10,6 +10,7 @@ import {
   AvailableTemplates,
   type TemplateResult
 } from '../../../../lib/templates/index.js';
+import { EmailService, type EmailSendOptions } from '../../../email/index.js';
 
 /**
  * Email template types with their required variables
@@ -114,8 +115,7 @@ class EmailTemplateRenderer {
 }
 
 /**
- * Email delivery service (mock implementation)
- * In production, integrate with services like SendGrid, SES, Mailgun, etc.
+ * Email delivery service using Nodemailer
  */
 class EmailDeliveryService {
   static async sendEmail(
@@ -132,7 +132,8 @@ class EmailDeliveryService {
       trackClicks?: boolean;
       campaignId?: string;
     } = {},
-    logger: FastifyBaseLogger
+    logger: FastifyBaseLogger,
+    emailService: EmailService
   ): Promise<{ messageId: string; status: 'sent' | 'failed'; error?: string }> {
     const recipientList = Array.isArray(recipients) ? recipients : [recipients];
 
@@ -143,38 +144,67 @@ class EmailDeliveryService {
         hasAttachments: (options.attachments?.length || 0) > 0,
         priority: options.priority || 'normal'
       },
-      'Sending email via delivery service'
+      'Sending email via Nodemailer'
     );
 
     try {
-      // Simulate email delivery delay
-      await new Promise(resolve => setTimeout(resolve, Math.random() * 1000 + 500));
-
-      // Mock email validation
+      // Validate email addresses
       const invalidEmails = recipientList.filter(email => !this.validateEmail(email));
       if (invalidEmails.length > 0) {
         throw new Error(`Invalid email addresses: ${invalidEmails.join(', ')}`);
       }
 
-      // Mock delivery service call
-      const messageId = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      // Prepare email options
+      const emailOptions: EmailSendOptions = {
+        to: recipients,
+        subject,
+        html: htmlContent,
+        text: textContent,
+        priority: (options.priority as 'high' | 'normal' | 'low') || 'normal'
+      };
 
-      // Simulate occasional failures (5% failure rate for testing)
-      if (Math.random() < 0.05) {
-        throw new Error('Email delivery service temporarily unavailable');
+      if (options.cc) emailOptions.cc = options.cc;
+      if (options.bcc) emailOptions.bcc = options.bcc;
+      if (options.attachments) emailOptions.attachments = options.attachments;
+
+      // Add tracking headers if enabled
+      if (options.trackOpens || options.trackClicks || options.campaignId) {
+        emailOptions.headers = {
+          ...(options.campaignId && { 'X-Campaign-ID': options.campaignId }),
+          ...(options.trackOpens && { 'X-Track-Opens': 'true' }),
+          ...(options.trackClicks && { 'X-Track-Clicks': 'true' })
+        };
       }
 
-      logger.info({ messageId, recipients: recipientList.length }, 'Email sent successfully');
+      // Send email using EmailService
+      const result = await emailService.sendMail(emailOptions);
+
+      logger.info(
+        {
+          messageId: result.messageId,
+          accepted: result.accepted.length,
+          rejected: result.rejected.length
+        },
+        'Email sent successfully via Nodemailer'
+      );
+
+      // Check if email was rejected
+      if (result.rejected.length > 0) {
+        logger.warn(
+          { rejected: result.rejected },
+          'Some recipients were rejected by the email service'
+        );
+      }
 
       return {
-        messageId,
+        messageId: result.messageId,
         status: 'sent'
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown delivery error';
       logger.error(
         { error: errorMessage, recipients: recipientList.length },
-        'Email delivery failed'
+        'Email delivery failed via Nodemailer'
       );
 
       return {
@@ -192,7 +222,7 @@ class EmailDeliveryService {
 }
 
 /**
- * Main email job handler
+ * Main email job handler - Updated to match new JobHandler interface
  */
 export async function handleEmailSend(
   data: EmailJobData,
@@ -203,6 +233,9 @@ export async function handleEmailSend(
     maxAttempts: number;
     queuedAt: Date;
     processingAt: Date;
+  },
+  services?: {
+    emailService?: EmailService;
   }
 ): Promise<JobResult> {
   const startTime = Date.now();
@@ -221,6 +254,14 @@ export async function handleEmailSend(
   try {
     // Validate email job data
     validateEmailJobData(data);
+
+    // If no email service provided, create a development one
+    if (!services?.emailService) {
+      logger.error('No email service provided and no SMTP configuration available');
+      throw new Error(
+        'Email service not available. Please configure SMTP settings or register email plugin.'
+      );
+    }
 
     // Render email template
     const renderedContent = await EmailTemplateRenderer.renderTemplate(
@@ -261,7 +302,8 @@ export async function handleEmailSend(
       finalHtmlContent,
       finalTextContent,
       emailOptions,
-      logger.child({ component: 'email-delivery' })
+      logger.child({ component: 'email-delivery' }),
+      services.emailService!
     );
 
     const processingTime = Date.now() - startTime;

@@ -1,132 +1,86 @@
 import type { FastifyInstance, FastifyPluginOptions, FastifyRequest, FastifyReply } from 'fastify';
-import { getCacheCacheManager } from './index.js';
+import fp from 'fastify-plugin';
+import { getDataCache } from './index.js';
 
 /**
- * Enhanced Cache plugin for Fastify using Cache Client (Database 0)
- * Provides automatic caching capabilities for GET requests using the new multi-client Redis architecture
+ * Simplified Cache plugin for Fastify using DataCache (Redis db0)
+ * Provides automatic caching capabilities for GET requests
  */
-export default async function cachePlugin(
-  fastify: FastifyInstance,
-  opts: FastifyPluginOptions
-): Promise<void> {
-  // Initialize cache manager using Cache Client (Database 0)
-  const cache = getCacheCacheManager();
-  await cache.initialize(fastify.config);
+async function cachePlugin(fastify: FastifyInstance, opts: FastifyPluginOptions): Promise<void> {
+  // Initialize simplified data cache
+  const cache = getDataCache();
+  await cache.connect();
 
-  // Add cache manager to Fastify instance
+  // Add cache to Fastify instance
   fastify.decorate('cache', cache);
 
   // Cache configuration options
   const cacheOptions = {
     defaultTTL: 300, // 5 minutes default
     enableAutoCache: true,
-    skipRoutes: ['/health', '/auth/login', '/auth/register'], // Routes to skip auto-caching
+    skipRoutes: ['/health', '/auth/login', '/auth/register'],
     ...opts
   };
 
   /**
    * Generate cache key for request
-   * @param request - Fastify request object
-   * @returns Cache key string
    */
   function generateCacheKey(request: FastifyRequest): string {
     const { method, url } = request;
     const userId = request.authenticatedUser?.id || 'anonymous';
-
-    // Include user ID for authenticated routes to avoid data leaks
     return `route:${method}:${url}:user:${userId}`;
   }
 
   /**
    * Check if route should be cached
-   * @param request - Fastify request object
-   * @returns True if route should be cached
    */
   function shouldCache(request: FastifyRequest): boolean {
-    // Only cache GET requests
-    if (request.method !== 'GET') {
-      return false;
-    }
-
-    // Skip routes in skipRoutes array
-    if (cacheOptions.skipRoutes.some(route => request.url.startsWith(route))) {
-      return false;
-    }
-
-    // Skip routes with query parameters by default (can be overridden)
-    if (Object.keys(request.query as object).length > 0 && !request.cacheWithQuery) {
-      return false;
-    }
-
+    if (request.method !== 'GET') return false;
+    if (cacheOptions.skipRoutes.some(route => request.url.startsWith(route))) return false;
+    if (Object.keys(request.query as object).length > 0 && !request.cacheWithQuery) return false;
     return cacheOptions.enableAutoCache;
   }
 
   /**
-   * Pre-handler hook to check cache before route execution
+   * Pre-handler hook to check cache
    */
   fastify.addHook('preHandler', async (request: FastifyRequest, reply: FastifyReply) => {
-    if (!shouldCache(request)) {
-      return;
-    }
+    if (!shouldCache(request)) return;
 
     try {
       const cacheKey = generateCacheKey(request);
       const cached = await cache.get(cacheKey);
 
       if (cached) {
-        fastify.log.debug(`Cache hit for ${cacheKey}`);
-
-        // Set cache hit header for debugging
         reply.header('X-Cache', 'HIT');
-        reply.header('X-Cache-Key', cacheKey);
-
-        // Send cached response
         reply.send(cached);
         return;
       }
 
-      // Cache miss - store key for onSend hook
       request.cacheKey = cacheKey;
-      fastify.log.debug(`Cache miss for ${cacheKey}`);
     } catch (error) {
-      fastify.log.error(`Cache preHandler error: ${(error as Error).message}`);
-      // Continue without cache on error
+      fastify.log.error(`Cache error: ${(error as Error).message}`);
     }
   });
 
   /**
-   * OnSend hook to save successful responses to cache
+   * OnSend hook to save responses
    */
   fastify.addHook('onSend', async (request: FastifyRequest, reply: FastifyReply, payload) => {
-    // Only cache if we have a cache key and successful response
-    if (!request.cacheKey || reply.statusCode !== 200) {
-      return payload;
-    }
+    if (!request.cacheKey || reply.statusCode !== 200) return payload;
 
     try {
-      // Determine TTL (can be set per route)
       const ttl = request.cacheTTL || cacheOptions.defaultTTL;
-
-      // Save to cache
       await cache.set(request.cacheKey, payload, { ttl });
-
-      // Set cache miss header for debugging
       reply.header('X-Cache', 'MISS');
-      reply.header('X-Cache-Key', request.cacheKey);
-      reply.header('X-Cache-TTL', ttl.toString());
-
-      fastify.log.debug(`Cached response for ${request.cacheKey} with TTL ${ttl}s`);
     } catch (error) {
-      fastify.log.error(`Cache onSend error: ${(error as Error).message}`);
-      // Continue without caching on error
+      fastify.log.error(`Cache save error: ${(error as Error).message}`);
     }
 
     return payload;
   });
 
-  /**
-   * Cache decorator methods for manual cache control
-   */
+  // Utility methods
   fastify.decorate('setCacheForRoute', (key: string, data: any, ttl?: number) => {
     return cache.set(key, data, { ttl: ttl || cacheOptions.defaultTTL });
   });
@@ -135,39 +89,20 @@ export default async function cachePlugin(
     return cache.get(key);
   });
 
-  fastify.decorate('invalidateCache', (pattern: string) => {
-    // For simple invalidation, we can delete specific keys
-    // For pattern-based, we'd need to implement key scanning
-    return cache.del(pattern);
+  fastify.decorate('invalidateCache', (key: string) => {
+    return cache.del(key);
   });
 
-  fastify.decorate('clearRouteCache', () => {
-    return cache.clear('route');
-  });
-
-  // Graceful shutdown
-  fastify.addHook('onClose', async () => {
-    try {
-      if (cache.isReady()) {
-        await cache.ping(); // Test if still connected
-        fastify.log.info('Cache connection closed gracefully');
-      }
-    } catch (error) {
-      fastify.log.error(`Error closing cache connection: ${(error as Error).message}`);
-    }
-  });
-
-  fastify.log.info('Cache plugin registered successfully');
+  fastify.log.info('Simplified cache plugin registered successfully');
 }
 
-// Extend FastifyInstance type to include cache methods
+// Extend types
 declare module 'fastify' {
   interface FastifyInstance {
-    cache: import('./enhanced-cache.manager.js').EnhancedCacheManager;
-    setCacheForRoute: (key: string, data: any, ttl?: number) => Promise<void>;
+    cache: import('./cache.js').DataCache;
+    setCacheForRoute: (key: string, data: any, ttl?: number) => Promise<boolean>;
     getCacheForRoute: (key: string) => Promise<any>;
-    invalidateCache: (pattern: string) => Promise<boolean>;
-    clearRouteCache: () => Promise<number>;
+    invalidateCache: (key: string) => Promise<boolean>;
   }
 
   interface FastifyRequest {
@@ -176,3 +111,8 @@ declare module 'fastify' {
     cacheWithQuery?: boolean;
   }
 }
+
+export default fp(cachePlugin, {
+  name: 'cache',
+  fastify: '>=5.0.0'
+});
