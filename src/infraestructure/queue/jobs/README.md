@@ -1,54 +1,242 @@
-# Queue Jobs System
+# Queue Jobs System# Queue Jobs System
 
-Sistema de jobs assíncronos com **arquitetura limpa** e **jobs auto-contidos** para máxima reutilização e testabilidade.
+Jobs auto-contidos para processamento assíncrono com **MongoDB persistência** e **BullMQ performance**.Jobs auto-contidos para processamento assíncrono com **MongoDB persistência** e **BullMQ performance**.
 
-## 🏗️ **Arquitetura Atual**
-
-### **Jobs Auto-Contidos e Reutilizáveis**
-
-Cada job é completamente independente e pode ser usado fora do contexto BullMQ:
-
-- ✅ **Zero dependências externas**: Jobs não dependem de DI ou contexto
-- ✅ **Testabilidade**: Podem ser testados unitariamente
-- ✅ **Reutilização**: Usáveis em CLI, cron jobs, outros sistemas
-- ✅ **Logs estruturados**: Logging detalhado e configurável
-
-### **Estrutura de Arquivos**
+## 🏗️ **Estrutura**## 🏗️ **Estrutura**
 
 ```
-jobs/
-├── business/                       # 💼 Jobs de regras de negócio
-│   └── registrationEmailJob.ts    # ✅ Email de registro (implementado)
-├── maintenance/                    # 🔧 Jobs de manutenção (futuros)
-│   ├── cacheWarm.job.ts           # 🔄 Cache warming
-│   └── cleanup.job.ts             # 🧹 Limpeza de arquivos
-├── index.ts                       # 📜 Registry de todos os handlers
-└── README.md                      # 📚 Esta documentação
+
+jobs/jobs/
+
+├── business/                       # 💼 Jobs de negócio├── business/                       # 💼 Jobs de negócio
+
+│   ├── emailSend.job.ts           # ✅ Envio de emails│   ├── emailSend.job.ts           # ✅ Envio de emails
+
+│   ├── userNotification.job.ts    # ✅ Notificações do usuário  │   ├── userNotification.job.ts    # ✅ Notificações do usuário
+
+│   ├── dataExport.job.ts          # ✅ Exportação de dados│   ├── dataExport.job.ts          # ✅ Exportação de dados
+
+│   └── fileProcess.job.ts         # ✅ Processamento de arquivos│   └── fileProcess.job.ts         # ✅ Processamento de arquivos
+
+├── maintenance/                    # 🔧 Manutenção do sistema├── maintenance/                    # 🔧 Manutenção do sistema
+
+│   └── cacheWarm.job.ts           # ✅ Cache warming│   └── cacheWarm.job.ts           # ✅ Cache warming
+
+└── README.md└── README.md
+
 ```
 
-## 📧 **Registration Email Job** ✅
+## 📧 **Email Send Job**## 📧 **Email Send Job**
 
-### **Implementação Atual**
+Envio de emails com templates integrados.Envio de emails com templates integrados.
 
-**Arquivo**: `business/registrationEmailJob.ts`
+### **Interface**### **Interface**
 
-#### **Interface do Job**
+`typescript`typescript
 
-```typescript
-interface RegistrationEmailData {
-  userId: string;
-  userName: string;
-  userEmail: string;
-}
+interface EmailSendData {interface EmailSendData {
 
-interface RegistrationEmailJobResult {
-  success: boolean;
-  jobId: string;
-  messageId?: string;
-  error?: string;
-  processingTime: number;
-  userId: string;
-  movedToDLQ?: boolean;
+userId: string; userId: string;
+
+template: 'welcome' | 'password_reset' | 'notification'; template: 'welcome' | 'password_reset' | 'notification';
+
+variables: Record<string, any>; variables: Record<string, any>;
+
+to: string; to: string;
+
+subject?: string; subject?: string;
+
+}}
+
+````
+
+
+
+### **Uso**### **Uso**
+
+```typescript```typescript
+
+await fastify.persistentQueueManager.addJob('email:send', {await fastify.persistentQueueManager.addJob('email:send', {
+
+  userId: '123',  userId: '123',
+
+  template: 'welcome',  template: 'welcome',
+
+  variables: { userName: 'John' },  variables: { userName: 'John' },
+
+  to: 'john@example.com'  to: 'john@example.com'
+
+});});
+
+````
+
+## 🔔 **User Notification Job**## 🔔 **User Notification Job**
+
+Notificações internas do sistema.Notificações internas do sistema.
+
+### **Interface**### **Interface**
+
+`typescript`typescript
+
+interface UserNotificationData {interface UserNotificationData {
+
+userId: string; userId: string;
+
+message: string; message: string;
+
+type: 'info' | 'warning' | 'success' | 'error'; type: 'info' | 'warning' | 'success' | 'error';
+
+data?: Record<string, any>; data?: Record<string, any>;
+
+}}
+
+````
+
+
+
+## 📊 **Data Export Job**## 📊 **Data Export Job**
+
+
+
+Exportação de dados em formatos CSV, JSON, Excel.Exportação de dados em formatos CSV, JSON, Excel.
+
+
+
+### **Interface**### **Interface**
+
+```typescript```typescript
+
+interface DataExportData {interface DataExportData {
+
+  exportType: 'users' | 'orders' | 'reports';  exportType: 'users' | 'orders' | 'reports';
+
+  format: 'csv' | 'json' | 'excel';  format: 'csv' | 'json' | 'excel';
+
+  filters?: Record<string, any>;  filters?: Record<string, any>;
+
+  userId: string; // Usuário que solicitou  userId: string; // Usuário que solicitou
+
+}}
+
+````
+
+## 🔄 **Características dos Jobs**## 🔄 **Características dos Jobs**
+
+### **Auto-Contidos**### **Auto-Contidos**
+
+- **Zero dependências externas**: Funcionam independentemente- **Zero dependências externas**: Funcionam independentemente
+
+- **Testabilidade**: Testes unitários completos- **Testabilidade**: Testes unitários completos
+
+- **Reutilização**: Usáveis fora do contexto BullMQ- **Reutilização**: Usáveis fora do contexto BullMQ
+
+### **Persistência Inteligente** ### **Persistência Inteligente**
+
+- **MongoDB**: Estado persistente do job- **MongoDB**: Estado persistente do job
+
+- **BullMQ**: Processing otimizado- **BullMQ**: Processing otimizado
+
+- **Sincronização**: Automática entre sistemas- **Sincronização**: Automática entre sistemas
+
+### **Error Handling**### **Error Handling**
+
+- **Retry Logic**: Configurável por job type- **Retry Logic**: Configurável por job type
+
+- **Dead Letter Queue**: Jobs com falhas múltiplas - **Dead Letter Queue**: Jobs com falhas múltiplas
+
+- **Logging**: Estruturado com contexto completo- **Logging**: Estruturado com contexto completo
+
+### **Performance**### **Performance**
+
+- **Batch Processing**: Grupos de jobs processados juntos- **Batch Processing**: Grupos de jobs processados juntos
+
+- **Priority Queues**: Jobs críticos processados primeiro- **Priority Queues**: Jobs críticos processados primeiro
+
+- **Resource Management**: Controle de concorrência- **Resource Management**: Controle de concorrência
+
+## 🎯 **Job Lifecycle**## 🎯 **Job Lifecycle**
+
+1. **Creation**: Persiste no MongoDB → Envia para Redis1. **Creation**: Persiste no MongoDB → Envia para Redis
+
+2. **Processing**: BullMQ processa via workers2. **Processing**: BullMQ processa via workers
+
+3. **Update**: Status atualizado no MongoDB3. **Update**: Status atualizado no MongoDB
+
+4. **Completion**: Resultado salvo + logs + cleanup4. **Completion**: Resultado salvo + logs + cleanup
+
+5. **Error**: Retry ou move para DLQ conforme configuração5. **Error**: Retry ou move para DLQ conforme configuração
+
+## 🔧 **Desenvolvimento**## 🔧 **Desenvolvimento**
+
+### **Criar Novo Job**### **Criar Novo Job**
+
+`typescript`typescript
+
+// jobs/business/myNewJob.ts// jobs/business/myNewJob.ts
+
+export async function handleMyNewJob(export async function handleMyNewJob(
+
+data: MyJobData, data: MyJobData,
+
+context: JobContext context: JobContext
+
+): Promise<MyJobResult> {): Promise<MyJobResult> {
+
+try { try {
+
+    // Lógica do job    // Lógica do job
+
+    return { success: true, result: processedData };    return { success: true, result: processedData };
+
+} catch (error) { } catch (error) {
+
+    return { success: false, error: error.message };    return { success: false, error: error.message };
+
+} }
+
+}}
+
+````
+
+
+
+### **Registrar Handler**### **Registrar Handler**
+
+```typescript```typescript
+
+// jobs/index.ts// jobs/index.ts
+
+export const JOB_HANDLERS = {export const JOB_HANDLERS = {
+
+  'my:newjob': handleMyNewJob,  'my:newjob': handleMyNewJob,
+
+  // ... outros handlers  // ... outros handlers
+
+};};
+
+````
+
+## 📊 **Monitoramento**## � **Monitoramento**
+
+### **Bull Dashboard**### **Bull Dashboard**
+
+- **URL**: http://localhost:3002/ui- **URL**: http://localhost:3002/ui
+
+- **Jobs**: Ativos, completados, falhos em tempo real- **Jobs**: Ativos, completados, falhos em tempo real
+
+- **Retry**: Gerenciamento de tentativas- **Retry**: Gerenciamento de tentativas
+
+### **Logs**### **Logs**
+
+`bash`bash
+
+INFO: Job email:send started (jobId: email-123-1699...)INFO: Job email:send started (jobId: email-123-1699...)
+
+INFO: Job email:send completed in 245msINFO: Job email:send completed in 245ms
+
+ERROR: Job data:export failed after 3 attempts, moved to DLQERROR: Job data:export failed after 3 attempts, moved to DLQ
+
+````
   dlqReason?: string;
 }
 ```
@@ -511,3 +699,4 @@ console.log({
 6. **Testabilidade**: Jobs facilmente testáveis unitariamente
 
 O sistema está preparado para expansão seguindo estes padrões estabelecidos! 🎯
+````

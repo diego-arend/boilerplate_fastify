@@ -34,7 +34,10 @@ export default async function app(fastify: FastifyInstance, opts: FastifyPluginO
   await fastify.register(queuePlugin, {
     config: fastify.config,
     queueName: 'app-queue',
-    concurrency: 5
+    concurrency: 5,
+    batchSize: 50,
+    processingInterval: 5000,
+    enablePersistence: true // Enable persistent job processing
   });
 
   // Register CORS plugin BEFORE rate limiting for proper request handling

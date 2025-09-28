@@ -537,6 +537,100 @@ export class QueueCache extends BaseCache {
       return null;
     }
   }
+
+  /**
+   * Get BullMQ compatible Redis configuration
+   */
+  getBullMQConnectionConfig(): {
+    host: string;
+    port: number;
+    db: number;
+    password?: string;
+    maxRetriesPerRequest: null;
+  } {
+    const config = getQueueRedisConfig(appConfig);
+    const bullConfig: {
+      host: string;
+      port: number;
+      db: number;
+      password?: string;
+      maxRetriesPerRequest: null;
+    } = {
+      host: config.host,
+      port: config.port,
+      db: config.db,
+      maxRetriesPerRequest: null // Required by BullMQ
+    };
+
+    if (config.password) {
+      bullConfig.password = config.password;
+    }
+
+    return bullConfig;
+  }
+
+  /**
+   * Check if QueueCache is ready for BullMQ integration
+   */
+  async isReadyForBullMQ(): Promise<boolean> {
+    try {
+      await this.connect();
+      const isConnected = this.client.isOpen;
+      const canPing = await this.ping();
+
+      return isConnected && canPing;
+    } catch (error) {
+      logger.error('QueueCache BullMQ readiness check failed:', { error: error as Error });
+      return false;
+    }
+  }
+
+  /**
+   * Get connection information for monitoring
+   */
+  getConnectionInfo(): {
+    host: string;
+    port: number;
+    db: number;
+    connected: boolean;
+  } {
+    const config = getQueueRedisConfig(appConfig);
+    return {
+      host: config.host,
+      port: config.port,
+      db: config.db,
+      connected: this.client?.isOpen || false
+    };
+  }
+
+  /**
+   * Create Redis client instance for external use (BullMQ)
+   * This provides a properly configured Redis client without breaking encapsulation
+   */
+  async createBullMQClient(): Promise<any> {
+    const config = this.getBullMQConnectionConfig();
+
+    // Import Redis from ioredis for BullMQ compatibility
+    const { Redis } = await import('ioredis');
+
+    const client = new Redis(config);
+
+    // Setup error handlers for the new client
+    client.on('error', (error: Error) => {
+      logger.error('BullMQ Redis client error:', { error });
+      this.stats.errors++;
+    });
+
+    client.on('connect', () => {
+      logger.debug('BullMQ Redis client connected');
+    });
+
+    client.on('reconnecting', () => {
+      logger.debug('BullMQ Redis client reconnecting...');
+    });
+
+    return client;
+  }
 }
 
 /**

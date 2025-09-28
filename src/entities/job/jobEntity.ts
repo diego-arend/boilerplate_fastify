@@ -25,6 +25,10 @@ export interface IJob extends Document {
   lockedAt?: Date; // When job was locked for processing
   lockTimeout?: Date; // When lock expires
 
+  // Batch processing fields
+  batchId?: string; // ID of the batch this job belongs to
+  redisJobId?: string; // ID of the job in Redis/BullMQ
+
   // Scheduling
   scheduledFor?: Date; // When job should be processed
   delay?: number; // Delay in milliseconds before processing
@@ -325,6 +329,20 @@ const jobSchema = new Schema<IJob>(
       type: Date,
       default: null,
       index: true // Index for lock timeout queries
+    },
+
+    batchId: {
+      type: String,
+      maxlength: [100, 'Batch ID must be at most 100 characters'],
+      default: null,
+      index: true // Index for batch queries
+    },
+
+    redisJobId: {
+      type: String,
+      maxlength: [100, 'Redis job ID must be at most 100 characters'],
+      default: null,
+      index: true // Index for Redis job ID queries
     },
 
     scheduledFor: {

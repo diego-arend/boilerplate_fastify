@@ -3,12 +3,14 @@
  *
  * BullMQ queue implementation with Redis backend
  * for job processing and queue management
+ *
+ * Integrated with QueueCache for proper Redis connection management
  */
 
 import { Queue, Worker, QueueEvents } from 'bullmq';
-import { Redis } from 'ioredis';
 import type { Logger } from 'pino';
 import { defaultLogger } from '../../lib/logger/index.js';
+import { QueueCache } from '../cache/cache.js';
 
 export interface JobOptions {
   priority?: number;
@@ -22,43 +24,61 @@ export interface JobHandler {
 }
 
 export class QueueManager {
-  private queue: Queue;
-  private worker: Worker;
-  private queueEvents: QueueEvents;
-  private redisConnection: Redis;
+  private queue!: Queue;
+  private worker!: Worker;
+  private queueEvents!: QueueEvents;
+  private redisConnection: any; // Using any to avoid ioredis type complexity
   private handlers = new Map<string, JobHandler>();
-  private logger?: Logger;
+  private logger: Logger;
+  private queueCache: QueueCache;
 
   constructor(
     private queueName: string,
     private concurrency: number = 5,
+    queueCache?: QueueCache,
     logger?: Logger
   ) {
     this.logger = logger || defaultLogger.child({ component: 'queue' });
+    this.queueCache = queueCache || QueueCache.getInstance();
+  }
 
-    // Create Redis connection for queue
-    this.redisConnection = new Redis({
-      host: process.env.QUEUE_REDIS_HOST || 'redis',
-      port: parseInt(process.env.QUEUE_REDIS_PORT || '6379'),
-      db: parseInt(process.env.QUEUE_REDIS_DB || '1'),
-      maxRetriesPerRequest: null // Required by BullMQ
-    });
+  /**
+   * Initialize BullMQ components using QueueCache
+   */
+  async initialize(): Promise<void> {
+    try {
+      // Ensure QueueCache is ready for BullMQ integration
+      const isReady = await this.queueCache.isReadyForBullMQ();
+      if (!isReady) {
+        throw new Error('QueueCache is not ready for BullMQ integration');
+      }
 
-    // Initialize BullMQ components
-    this.queue = new Queue(this.queueName, {
-      connection: this.redisConnection
-    });
+      // Get Redis connection from QueueCache
+      this.redisConnection = await this.queueCache.createBullMQClient();
 
-    this.worker = new Worker(this.queueName, this.processJob.bind(this), {
-      connection: this.redisConnection,
-      concurrency: this.concurrency
-    });
+      // Initialize BullMQ components with QueueCache connection
+      this.queue = new Queue(this.queueName, {
+        connection: this.redisConnection
+      });
 
-    this.queueEvents = new QueueEvents(this.queueName, {
-      connection: this.redisConnection
-    });
+      this.worker = new Worker(this.queueName, this.processJob.bind(this), {
+        connection: this.redisConnection,
+        concurrency: this.concurrency
+      });
 
-    this.setupEventListeners();
+      this.queueEvents = new QueueEvents(this.queueName, {
+        connection: this.redisConnection
+      });
+
+      this.setupEventListeners();
+
+      // Log connection info
+      const connectionInfo = this.queueCache.getConnectionInfo();
+      this.logger.info(`QueueManager initialized with QueueCache connection: ${this.queueName}`);
+    } catch (error) {
+      this.logger.error(`Failed to initialize QueueManager: ${error}`);
+      throw error;
+    }
   }
 
   /**
@@ -160,12 +180,32 @@ export class QueueManager {
    * Stop the worker and close connections
    */
   async stop(): Promise<void> {
-    this.logger?.info('Stopping BullMQ worker...');
+    this.logger.info('Stopping BullMQ worker...');
 
-    await Promise.all([this.worker.close(), this.queueEvents.close(), this.queue.close()]);
+    const closePromises: Promise<void>[] = [];
 
-    this.redisConnection.disconnect();
-    this.logger?.info('BullMQ worker stopped');
+    // Only close components that exist
+    if (this.worker) {
+      closePromises.push(this.worker.close());
+    }
+
+    if (this.queueEvents) {
+      closePromises.push(this.queueEvents.close());
+    }
+
+    if (this.queue) {
+      closePromises.push(this.queue.close());
+    }
+
+    // Wait for all components to close
+    await Promise.all(closePromises);
+
+    // Close Redis connection if it exists
+    if (this.redisConnection) {
+      this.redisConnection.disconnect();
+    }
+
+    this.logger.info('BullMQ worker stopped');
   }
 
   /**
@@ -194,7 +234,8 @@ export async function createQueueManager(
   concurrency: number = 5,
   logger?: Logger
 ): Promise<QueueManager> {
-  const queue = new QueueManager(queueName, concurrency, logger);
+  const queue = new QueueManager(queueName, concurrency, undefined, logger);
+  await queue.initialize();
   await queue.start();
   return queue;
 }

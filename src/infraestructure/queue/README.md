@@ -1,294 +1,125 @@
-# Queue Infrastructure - BullMQ
+# Queu```
 
-Sistema de filas robusto e escalável usando **BullMQ v5.58.7** com Redis para processamento de jobs em background, com arquitetura limpa e separação de responsabilidades.
-
-## 🏗️ **Arquitetura Atual**
-
-### **Separação Limpa de Responsabilidades**
-
-- **queue.ts**: Core BullMQ implementation - QueueManager class
-- **plugin.ts**: Fastify plugin integration com lifecycle management
-- **handlers.ts**: Adaptadores BullMQ para handlers especializados
-- **jobs/**: Jobs auto-contidos e reutilizáveis com lógica de negócio
-- **Bull Dashboard**: Interface web para monitoramento em tempo real
-
-### **Estrutura de Arquivos**
-
-```
 src/infraestructure/queue/
-├── queue.ts                        # 🎯 QueueManager - Core BullMQ implementation
-├── plugin.ts                       # 🔌 Fastify plugin com lifecycle management
-├── handlers.ts                     # � BullMQ handlers adaptados
-├── index.ts                        # 📤 Exports centralizados
-├── jobs/                           # 📋 Jobs especializados e reutilizáveis
-│   ├── business/                   # 💼 Jobs de regras de negócio
-│   │   └── registrationEmailJob.ts # 📧 Email de registro auto-contido
-│   ├── maintenance/                # 🔧 Jobs de manutenção do sistema
-│   └── index.ts                    # 📜 Job registry
-└── README.md                       # � Documentação
+├── persistentQueueManager.ts # 🎯 Coordenador principal - MongoDB + Redis
+├── plugin.ts # 🔌 Plugin Fastify com inicialização
+├── queue.ts # ⚡ BullMQ manager (Redis)
+├── handlers.ts # 🔄 Job handlers registry
+├── jobs/ # 📋 Implementações de jobs
+│ ├── business/ # 💼 Jobs de negócio
+│ └── maintenance/ # 🔧 Jobs de manutenção
+└── README.md
+
+```ture - Persistent Job Processing
+
+Sistema de processamento de jobs com **BullMQ v5.58.7** + **MongoDB** para persistência e **Redis** para performance, com Dead Letter Queue e batch processing.
+
+## 🏗️ **Arquitetura**
+
 ```
+
+src/infraestructure/queue/
+├── persistentQueueManager.ts # 🎯 Coordenador principal - MongoDB + Redis
+├── plugin.ts # 🔌 Plugin Fastify com inicialização
+├── queue.manager.ts # ⚡ BullMQ manager (Redis)
+├── resilient.queue.manager.ts # 🛡️ Resiliente com fallback Redis
+├── dlq.manager.ts # � Dead Letter Queue manager
+├── jobs/ # 📋 Implementações de jobs
+│ ├── business/ # 💼 Jobs de negócio
+│ └── maintenance/ # 🔧 Jobs de manutenção
+└── README.md
+
+````
 
 ## ⚙️ **Configuração**
 
 ### **Environment Variables**
-
 ```env
-# Redis Configuration for BullMQ (Database 1)
+# Redis (Queue + Cache)
 QUEUE_REDIS_HOST=redis
 QUEUE_REDIS_PORT=6379
 QUEUE_REDIS_DB=1
 
-# Job Processing
-QUEUE_CONCURRENCY=5
-```
+# MongoDB (Persistência)
+MONGODB_URI=mongodb://mongo:27017/boilerplate
 
-### **Docker Configuration**
+# Processing
+BATCH_SIZE=10
+BATCH_TIMEOUT=30000
+````
 
-```yaml
-services:
-  redis:
-    image: redis:7-alpine
-    ports:
-      - '6379:6379'
+## 🚀 **Uso**
 
-  # Bull Dashboard - BullMQ compatible
-  bull-board:
-    build:
-      context: ./bullDashboard
-    container_name: bull-dashboard
-    ports:
-      - '3002:3002'
-    environment:
-      - REDIS_HOST=redis
-    networks:
-      - boilerplate_network
-```
-
-## 🚀 **Uso Atual**
-
-### **Inicialização Automática**
+### **Adicionar Jobs**
 
 ```typescript
-// src/app.ts - Plugin registrado automaticamente
-await fastify.register(queuePlugin, {
-  config: fastify.config,
-  queueName: 'app-queue', // Mesmo nome no Bull Dashboard
-  concurrency: 5
-});
-```
-
-### **Adicionar Jobs via Fastify**
-
-```typescript
-// Registro de usuário com email automático
-const jobId = await fastify.addJob(
-  `registration-email-${user.id}-${Date.now()}`,
-  'registration-email',
-  {
-    userId: user.id,
-    userName: user.name,
-    userEmail: user.email
-  },
-  {
-    attempts: 1, // Single attempt (evita duplicatas)
-    delay: 0, // Processamento imediato
-    priority: 10 // Prioridade alta
-  }
+// Via PersistentQueueManager
+const jobId = await fastify.persistentQueueManager.addJob(
+  'email:send',
+  { userId: '123', template: 'welcome' },
+  { priority: 10, attempts: 3 }
 );
 ```
 
-### **Jobs Implementados**
+### **Jobs Disponíveis**
 
-#### **1. Registration Email Job** ✅
-
-```typescript
-// Uso no AuthController
-const emailJobId = await fastify.addJob(
-  generateJobId('registration-email'),
-  'registration-email',
-  {
-    userId: user.id,
-    userName: user.name,
-    userEmail: user.email
-  },
-  { attempts: 1 }
-);
-```
-
-**Características:**
-
-- ✅ **Auto-contido**: Não depende de serviços externos
-- ✅ **Template integrado**: Usa template `registration_success`
-- ✅ **SMTP configurado**: Funciona com Mailpit/SMTP real
-- ✅ **Error handling**: Logs estruturados e tratamento de erros
-- ✅ **Single attempt**: Evita emails duplicados
-
-#### **2. User Notification Job** 🔄 (Placeholder)
-
-```typescript
-await fastify.addJob('user-notification-123', 'user:notification', {
-  userId: '123',
-  message: 'Your order has been processed',
-  type: 'info'
-});
-```
-
-#### **3. Data Export Job** 🔄 (Placeholder)
-
-```typescript
-await fastify.addJob('data-export-456', 'data:export', {
-  exportType: 'users',
-  recordCount: 1000
-});
-```
+- `email:send` - Envio de emails
+- `user:notification` - Notificações do usuário
+- `data:export` - Exportação de dados
+- `file:process` - Processamento de arquivos
 
 ## 📊 **Monitoramento**
 
-### **Bull Dashboard** ✅
+### **Bull Dashboard**
 
 - **URL**: http://localhost:3002/ui
-- **Health Check**: http://localhost:3002/health
-- **API**: http://localhost:3002/ui/api/queues
+- **Estatísticas**: Jobs ativos, completados, falhos
+- **Retry Management**: Gerenciamento de tentativas
 
-**Métricas em Tempo Real:**
-
-- Jobs Active, Waiting, Completed, Failed, Delayed
-- Queue statistics e performance metrics
-- Job retry management
-- Real-time updates
-
-### **Application Logs**
-
-```bash
-# Jobs processados com sucesso
-INFO: Registration email job completed: registration-email-68d85d0b1ef3a564e56b5b63-1759010059011
-INFO: Job completed successfully: registration-email-68d85d0b1ef3a564e56b5b63-1759010059007
-
-# Estatísticas da queue
-INFO: Queue Plugin initialized successfully
-```
-
-### **Queue Statistics**
+### **Estatísticas MongoDB**
 
 ```typescript
-// Via QueueManager
-const stats = await fastify.queueManager.getStats();
-console.log({
-  waiting: stats.waiting,
-  active: stats.active,
-  completed: stats.completed,
-  failed: stats.failed
-});
+const stats = await fastify.persistentQueueManager.getJobStats();
+// { pending: 5, processing: 2, completed: 100, failed: 1 }
 ```
 
-## 🔧 **Implementação Técnica**
+## 🔧 **Funcionalidades**
 
-### **QueueManager (queue.ts)**
+### **Persistência Dupla**
 
-```typescript
-export class QueueManager {
-  private queue: Queue;
-  private worker: Worker;
-  private queueEvents: QueueEvents;
-  private redisConnection: Redis;
+- **MongoDB**: Armazenamento permanente de jobs
+- **Redis/BullMQ**: Processing de alta performance
+- **Sincronização**: Automática entre sistemas
 
-  // BullMQ components with Redis DB 1
-  constructor(queueName: string, concurrency: number = 5, logger?: Logger) {
-    this.redisConnection = new Redis({
-      host: process.env.QUEUE_REDIS_HOST || 'redis',
-      port: parseInt(process.env.QUEUE_REDIS_PORT || '6379'),
-      db: parseInt(process.env.QUEUE_REDIS_DB || '1'),
-      maxRetriesPerRequest: null // Required by BullMQ
-    });
-  }
-}
-```
+### **Dead Letter Queue**
 
-### **Plugin Integration (plugin.ts)**
+- **Falhas**: Jobs que falharam múltiplas vezes
+- **Análise**: Tracking de motivos de falha
+- **Reprocessamento**: Possibilidade de retry manual
 
-```typescript
-async function queuePlugin(fastify: FastifyInstance, options: QueuePluginOptions) {
-  // Initialize Queue Manager
-  const queueManager = await createQueueManager(
-    options.queueName || 'default-queue',
-    options.concurrency || 5,
-    logger
-  );
+### **Batch Processing**
 
-  // Register handlers from handlers.ts
-  Object.entries(QUEUE_HANDLERS).forEach(([jobType, handler]) => {
-    queueManager.registerHandler(jobType, async (data: any) => {
-      return await handler(data, logger);
-    });
-  });
+- **Lotes**: Processamento em grupos de 10 jobs
+- **Timeout**: 30s por batch
+- **Eficiência**: Reduz overhead de I/O
 
-  // Decorate Fastify instance
-  fastify.decorate('queueManager', queueManager);
-  fastify.decorate('addJob', async (...args) => {
-    /*...*/
-  });
-}
-```
+### **Resiliência**
 
-### **Handler Adapters (handlers.ts)**
+- **Redis Failure**: Fallback para processamento local
+- **Cleanup**: Limpeza automática de jobs antigos
+- **Retry**: Exponential backoff configurável
 
-```typescript
-// Specialized handlers para BullMQ
-export const QUEUE_HANDLERS: Record<string, QueueJobHandler> = {
-  'registration-email': bullmqRegistrationEmailHandler,
-  'user:notification': bullmqUserNotificationHandler,
-  'data:export': bullmqDataExportHandler
-};
+## 🎯 **Fluxo de Processamento**
 
-// BullMQ adapter para job especializado
-export async function bullmqRegistrationEmailHandler(
-  data: RegistrationEmailData,
-  logger?: FastifyBaseLogger
-): Promise<any> {
-  const jobId = `registration-email-${data.userId}-${Date.now()}`;
+1. **Job Creation**: Persiste no MongoDB → Envia para Redis
+2. **Batch Processing**: Carrega lotes do MongoDB
+3. **BullMQ Processing**: Processa via Redis workers
+4. **Status Update**: Atualiza MongoDB com resultado
+5. **Error Handling**: Jobs falhos → Dead Letter Queue
 
-  const result = await handleRegistrationEmailJob(data, jobId, logger, {
-    attempt: 1,
-    maxAttempts: 1,
-    queuedAt: new Date(),
-    processingAt: new Date()
-  });
+## 🔄 **Lifecycle Management**
 
-  return result;
-}
-```
-
-## 🚦 **Performance e Confiabilidade**
-
-### **Configurações de Produção**
-
-- **Concurrency**: 5 workers simultâneos
-- **Redis DB 1**: Separado do cache (DB 0)
-- **Single Attempts**: Evita duplicação de emails
-- **Exponential Backoff**: Para jobs que suportam retry
-- **Event Listeners**: Logging completo de lifecycle
-
-### **Estatísticas Reais**
-
-- **Email Processing**: ~83ms tempo médio
-- **Queue Throughput**: Milhares de jobs/segundo
-- **Reliability**: Jobs persistidos no Redis
-- **Monitoring**: Dashboard em tempo real
-
-## 🔮 **Próximos Passos**
-
-### **Jobs Planejados**
-
-- [ ] **User Notification Job**: Push, SMS, in-app notifications
-- [ ] **File Processing Job**: Image resize, document conversion
-- [ ] **Data Export Job**: CSV, JSON, Excel exports
-- [ ] **Cache Warming Job**: Pré-aquecimento de dados críticos
-- [ ] **Cleanup Jobs**: Limpeza automática de arquivos temporários
-
-### **Melhorias Técnicas**
-
-- [ ] **Job Scheduling**: Cron-like scheduling para jobs recorrentes
-- [ ] **Job Chaining**: Pipeline de jobs dependentes
-- [ ] **Priority Queues**: Múltiplas filas por prioridade
-- [ ] **Job Batching**: Processamento em lotes para eficiência
-- [ ] **Metrics Integration**: Prometheus/Grafana dashboards
+- **Startup**: Inicialização automática de batch processing
+- **Shutdown**: Graceful shutdown com cleanup
+- **Health Check**: Monitoramento de conexões
+- **Auto Recovery**: Recuperação automática de falhas Redis

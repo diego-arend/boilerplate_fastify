@@ -43,8 +43,7 @@ export default async function swaggerPlugin(fastify: FastifyInstance, opts: Fast
       ],
       tags: [
         { name: 'Auth', description: 'Authentication endpoints' },
-        { name: 'Health', description: 'Health check endpoints' },
-        { name: 'Test', description: 'Test endpoints' }
+        { name: 'Health', description: 'Health check endpoints' }
       ],
       components: {
         securitySchemes: {
