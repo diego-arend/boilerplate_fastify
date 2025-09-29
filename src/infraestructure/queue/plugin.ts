@@ -22,11 +22,13 @@ interface QueuePluginOptions extends FastifyPluginOptions {
   batchSize?: number;
   processingInterval?: number;
   enablePersistence?: boolean;
+  workerMode?: boolean; // 🆕 Flag para modo worker
 }
 
 async function queuePlugin(fastify: FastifyInstance, options: QueuePluginOptions): Promise<void> {
   const logger = defaultLogger.child({ plugin: 'queue' });
   const enablePersistence = options.enablePersistence !== false; // Default to true
+  const workerMode = options.workerMode || process.env.WORKER_MODE === 'true'; // 🆕 Detectar modo worker
 
   try {
     // Initialize QueueCache first
@@ -46,111 +48,78 @@ async function queuePlugin(fastify: FastifyInstance, options: QueuePluginOptions
 
     logger.info('QueueCache initialized and ready for BullMQ integration');
 
-    // Initialize Queue Manager with QueueCache integration
-    const queueManager = await createQueueManager(
-      options.queueName || 'app-queue',
-      options.concurrency || 5,
-      logger
-    );
+    if (workerMode) {
+      // 🆕 MODO WORKER: Apenas processar jobs, não inicializar persistent manager
+      logger.info('Running in WORKER MODE - only processing jobs');
 
-    // Register handlers from handlers.ts
-    Object.entries(QUEUE_HANDLERS).forEach(([jobType, handler]) => {
-      queueManager.registerHandler(jobType, async (data: any) => {
-        return await handler(data, logger);
-      });
-    });
-
-    if (enablePersistence) {
-      // Initialize Persistent Queue Manager
-      const persistentQueueManager = new PersistentQueueManager(
-        queueManager,
-        options.batchSize || 50,
+      const queueManager = await createQueueManager(
+        options.queueName || 'app-queue',
+        options.concurrency || 5,
         logger
       );
 
-      // Start batch processing
-      await persistentQueueManager.startBatchProcessing(options.processingInterval || 5000);
+      // Register handlers from handlers.ts
+      Object.entries(QUEUE_HANDLERS).forEach(([jobType, handler]) => {
+        queueManager.registerHandler(jobType, async (data: any) => {
+          return await handler(data, logger);
+        });
+      });
 
-      // Decorate Fastify instance with persistent queue manager
-      fastify.decorate('persistentQueueManager', persistentQueueManager);
+      // Decorate apenas com queueManager
       fastify.decorate('queueManager', queueManager);
       fastify.decorate('queueCache', queueCache);
 
-      // Add persistent job method
-      fastify.decorate(
-        'addPersistentJob',
-        async (
-          type: string,
-          data: any,
-          jobOptions?: {
-            priority?: number;
-            attempts?: number;
-            delay?: number;
-            scheduledFor?: Date;
-          }
-        ) => {
-          return await persistentQueueManager.addJob(type, data, jobOptions);
-        }
-      );
+      logger.info('Queue Plugin initialized in WORKER MODE');
 
-      // Add direct queue method (for non-persistent jobs)
-      fastify.decorate(
-        'addJob',
-        async (
-          jobId: string,
-          type: string,
-          data: any,
-          jobOptions?: {
-            priority?: number;
-            attempts?: number;
-            delay?: number;
-            scheduledFor?: Date;
-          }
-        ) => {
-          return await queueManager.addJob(jobId, type, data, jobOptions);
-        }
-      );
-
-      logger.info('Queue Plugin initialized successfully with persistence enabled');
-
-      // Graceful shutdown for persistent queue
+      // Graceful shutdown para worker
       fastify.addHook('onClose', async () => {
-        logger.info('Shutting down Persistent Queue...');
-        await persistentQueueManager.stopBatchProcessing();
+        logger.info('Shutting down Worker Queue...');
         await queueManager.stop();
         await queueCache.disconnect();
       });
-    } else {
-      // Non-persistent mode (original behavior)
-      fastify.decorate('queueManager', queueManager);
-      fastify.decorate('queueCache', queueCache);
 
-      fastify.decorate(
-        'addJob',
-        async (
-          jobId: string,
-          type: string,
-          data: any,
-          jobOptions?: {
-            priority?: number;
-            attempts?: number;
-            delay?: number;
-            scheduledFor?: Date;
-          }
-        ) => {
-          return await queueManager.addJob(jobId, type, data, jobOptions);
-        }
-      );
-
-      logger.info('Queue Plugin initialized successfully without persistence');
-
-      // Graceful shutdown for regular queue
-      fastify.addHook('onClose', async () => {
-        logger.info('Shutting down Queue...');
-        await queueManager.stop();
-        await queueCache.disconnect();
-      });
+      return; // 🆕 Early return para worker mode
     }
+
+    // 🔄 MODO API: Apenas publisher (código existente modificado)
+    logger.info('Running in API MODE - only publishing jobs');
+
+    // Initialize Persistent Queue Manager APENAS para publishing
+    const persistentQueueManager = new PersistentQueueManager(
+      null, // 🆕 Sem QueueManager no modo API
+      options.batchSize || 50,
+      logger
+    );
+
+    // Decorate Fastify instance apenas com publisher
+    fastify.decorate('persistentQueueManager', persistentQueueManager);
+    fastify.decorate('queueCache', queueCache);
+
+    // Add job method (unified for API mode)
+    fastify.decorate(
+      'addJob',
+      async (
+        type: string,
+        data: any,
+        jobOptions?: {
+          priority?: number;
+          attempts?: number;
+          delay?: number;
+          scheduledFor?: Date;
+        }
+      ) => {
+        return await persistentQueueManager.addJob(type, data, jobOptions);
+      }
+    );
+
+    logger.info('Queue Plugin initialized in API MODE (publisher-only)');
+
+    // Graceful shutdown for API mode
+    fastify.addHook('onClose', async () => {
+      logger.info('Shutting down API Queue...');
+      await persistentQueueManager.stopBatchProcessing();
+      await queueCache.disconnect();
+    });
   } catch (error) {
     logger.error(`Failed to initialize Queue Plugin: ${error}`);
     throw error;

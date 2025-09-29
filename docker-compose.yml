@@ -4,13 +4,13 @@ services:
   app:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.api
     container_name: boilerplate_app
     restart: unless-stopped
     ports:
       - "3001:3001"
     env_file:
-      - .env.production
+      - .env.api.production
     depends_on:
       - mongodb
       - redis
@@ -30,6 +30,36 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+
+  # 🆕 NOVO SERVIÇO: Worker Container
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    restart: unless-stopped
+    env_file:
+      - .env.worker.production
+    depends_on:
+      - mongodb
+      - redis
+    networks:
+      - boilerplate_network
+    deploy:
+      replicas: 1 # 🆕 1 replica por padrão
+      resources:
+        limits:
+          cpus: "0.8"
+          memory: 768M
+        reservations:
+          cpus: "0.3"
+          memory: 256M
+    healthcheck:
+      test:
+        ["CMD", "node", "-e", "console.log('Worker health'); process.exit(0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
 
   mongodb:
     image: mongo:latest

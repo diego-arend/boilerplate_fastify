@@ -1,4 +1,21 @@
-# Development Dockerfile with hot reload
+# =======================================================================
+# Development Dockerfile - Shared Base for API and Worker Containers
+# =======================================================================
+#
+# This Dockerfile serves as the foundation for both API and Worker containers
+# in development environment with hot reload capabilities.
+#
+# Usage in docker-compose.dev.yml:
+# - API Container: Uses default CMD ["pnpm", "run", "dev"]
+# - Worker Container: Overrides with command: ["pnpm", "run", "worker:dev"]
+#
+# Features:
+# - Hot reload with tsx --watch
+# - Volume mounting for real-time code changes
+# - Dev dependencies included
+# - Health check support
+# =======================================================================
+
 FROM node:22-alpine
 
 # Install pnpm globally

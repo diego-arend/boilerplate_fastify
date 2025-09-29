@@ -1,6 +1,55 @@
 # Boilerplate Fastify
 
-Enterprise-grade boilerplate for Fastify applications with TypeScript, MongoDB, Redis, and comprehensive infrastructure modules.
+Enterprise-grade boilerplate for Fastify applications with TypeScript, MongoDB, Redis, and comprehensi*Development tools are automatically started with `docker-compose.dev.yml`*
+
+## 🐳 Docker Configuration
+
+### Dockerfile Architecture
+
+The project uses a strategic Docker setup optimized for both development and production environments:
+
+#### **Dockerfile.api** - Production API Container
+
+- **Purpose**: Optimized production build for API server
+- **Target**: Web API serving with minimal footprint
+- **Usage**: `docker-compose.yml` (production)
+- **Features**: Multi-stage build, security optimizations, minimal dependencies
+
+#### **Dockerfile.dev** - Shared Development Base
+
+- **Purpose**: Universal development container for both API and Worker
+- **Target**: Development environment with hot-reload and debugging
+- **Usage**: `docker-compose.dev.yml` for both `app` and `worker-dev` services
+- **Command Override**: Differentiated by startup commands:
+  - API: `pnpm run dev` (serves HTTP endpoints)
+  - Worker: `pnpm run worker:dev` (processes background jobs)
+- **Features**: TypeScript compilation, file watching, development tooling
+
+#### **Dockerfile.worker** - Production Worker Container
+
+- **Purpose**: Optimized production build for background job processing
+- **Target**: Queue processing with efficient resource usage
+- **Usage**: `docker-compose.yml` (production)
+- **Features**: Dedicated worker processes, queue-focused optimizations
+
+### Docker-Compose Strategy
+
+```bash
+# Development (shared Dockerfile.dev)
+docker-compose -f docker-compose.dev.yml up
+
+# Production (dedicated Dockerfiles)
+docker-compose up --build
+```
+
+**Key Benefits:**
+
+- **Development Efficiency**: Single `Dockerfile.dev` reduces maintenance overhead
+- **Production Optimization**: Specialized containers for API vs Worker workloads
+- **Resource Scaling**: Independent scaling of web serving vs job processing
+- **Deployment Flexibility**: Separate concerns allow targeted deployments
+
+## 📚 Module Documentationinfrastructure modules.
 
 ## 🏗️ Architecture Overview
 
@@ -53,6 +102,22 @@ src/
 │   └── health/             # Health check endpoints
 ├── lib/                    # Shared utilities and helpers
 └── http-docs/              # HTTP test files and examples
+```
+
+```text
+┌─────────────────────┐ ┌─────────────────────┐ ┌─────────────────┐
+│ API Container       │ │ Worker Container    │ │ Shared Services │
+│                     │ │                     │ │                 │
+│ ┌─────────────────┐ │ │ ┌─────────────────┐ │ │ ┌─────────┐     │
+│ │ Fastify Server  │ │ │ │ Standalone      │ │ │ │ Redis   │     │
+│ │ + Queue Plugin  │ │ │ │ QueueManager    │ │ │ │ (db0+1) │     │
+│ │ (Publisher)     │ │ │ │ (Consumer)      │ │ │ └─────────┘     │
+│ └─────────────────┘ │ │ └─────────────────┘ │ │                 │
+│ ┌─────────────────┐ │ │ ┌─────────────────┐ │ │ ┌─────────┐     │
+│ │ MongoFactory    │ │ │ │ MongoFactory    │ │ │ │ MongoDB │     │
+│ │ CacheFactory    │ │ │ │ CacheFactory    │ │ │ │         │     │
+│ └─────────────────┘ │ │ └─────────────────┘ │ │ └─────────┘     │
+└─────────────────────┘ └─────────────────────┘ └─────────────────┘
 ```
 
 ## 🏃‍♂️ Quick Start
@@ -118,42 +183,8 @@ Each infrastructure module has comprehensive documentation with implementation d
 - **[Cache System](src/infraestructure/cache/README.md)** - Redis-based automatic caching with TTL, user-scoped keys, and graceful fallback
 - **[MongoDB Integration](src/infraestructure/mongo/README.md)** - Connection management, repository pattern, atomic transactions, and database operations
 - **[Queue System](src/infraestructure/queue/README.md)** - Enterprise-grade job processing with Dead Letter Queue and resilient manager
+- **[Worker System](src/infraestructure/workers/README.md)** - Standalone worker containers for background job processing with independent scaling
 - **[Server Configuration](src/infraestructure/server/README.md)** - Fastify setup, plugins, and middleware configuration
-
-### Business Modules
-
-- **[Authentication](src/modules/auth/README.md)** - JWT authentication with RBAC, user management, and security features
-
-### Shared Libraries
-
-- **[Response Handler](src/lib/response/README.md)** - Standardized API responses with consistent error handling
-
-## 🔧 Environment Configuration
-
-### Required Environment Variables
-
-```bash
-# Server
-PORT=3001
-NODE_ENV=development|production
-JWT_SECRET=your-jwt-secret-key
-
-# MongoDB
-MONGO_URI=mongodb://admin:password@mongodb:27017/boilerplate?authSource=admin
-
-# Redis (Cache & Queue)
-REDIS_HOST=redis
-REDIS_PORT=6379
-REDIS_PASSWORD=
-REDIS_DB=0
-
-# Email Configuration (Development with Mailpit)
-SMTP_HOST=mailpit
-SMTP_PORT=1025
-SMTP_SECURE=false
-EMAIL_FROM=noreply@example.com
-# Note: SMTP_USER and SMTP_PASS not required for Mailpit
-```
 
 ## 🛠️ Development Commands
 
@@ -182,7 +213,6 @@ docker-compose logs -f app                           # View app logs
 The application includes comprehensive health checks:
 
 - **Application Health**: `GET /health` - Overall application status
-- **Service Health**: Individual checks for MongoDB, Redis, and queue system
 - **Docker Health Checks**: Automatic container monitoring
 - **Graceful Shutdown**: Proper cleanup of connections and resources
 

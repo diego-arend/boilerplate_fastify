@@ -1,6 +1,6 @@
 import type { IAuthRepository } from '../repository/auth.repository.js';
 import { AuthRepository } from '../repository/auth.repository.js';
-import { UserRepository } from '../../../infraestructure/repositories/index.js';
+import { UserRepositoryFactory } from '../../../entities/user/index.js';
 import { CacheServiceFactory } from '../../../infraestructure/cache/index.js';
 
 /**
@@ -12,9 +12,8 @@ export class AuthRepositoryFactory {
    * Create AuthRepository instance with injected dependencies (no cache)
    * Uses the new hybrid repository pattern
    */
-  static createAuthRepository(): IAuthRepository {
-    // TODO: Fix interface compatibility between user repositories
-    const userRepository = new UserRepository() as any;
+  static async createAuthRepository(): Promise<IAuthRepository> {
+    const userRepository = await UserRepositoryFactory.createUserRepository();
     return new AuthRepository(userRepository);
   }
 
@@ -22,8 +21,8 @@ export class AuthRepositoryFactory {
    * Create AuthRepository instance with cache support (Database 0 - Cache Client)
    * Uses multi-client Redis architecture for authentication data caching
    */
-  static createAuthRepositoryWithCache(): IAuthRepository {
-    const userRepository = new UserRepository() as any;
+  static async createAuthRepositoryWithCache(): Promise<IAuthRepository> {
+    const userRepository = await UserRepositoryFactory.createUserRepository();
 
     // Use Cache Client (Database 0) for authentication data
     const cacheService = CacheServiceFactory.getDataCache();
@@ -47,8 +46,8 @@ export class AuthRepositoryFactory {
    * Create AuthRepository with memory cache for development/testing
    * Uses in-memory cache instead of Redis for isolated testing
    */
-  static createAuthRepositoryWithMemoryCache(): IAuthRepository {
-    const userRepository = new UserRepository() as any;
+  static async createAuthRepositoryWithMemoryCache(): Promise<IAuthRepository> {
+    const userRepository = await UserRepositoryFactory.createUserRepository();
     const memoryCacheService = CacheServiceFactory.createMemoryCacheService();
 
     return new AuthRepository(userRepository, memoryCacheService);
@@ -58,8 +57,8 @@ export class AuthRepositoryFactory {
    * Create AuthRepository with session cache support (Database 0 - 24h TTL)
    * Optimized for long-duration authentication sessions
    */
-  static createAuthRepositoryWithSessionCache(): IAuthRepository {
-    const userRepository = new UserRepository() as any;
+  static async createAuthRepositoryWithSessionCache(): Promise<IAuthRepository> {
+    const userRepository = await UserRepositoryFactory.createUserRepository();
 
     // Use Session Cache (Database 0, 24h TTL) for long-duration auth sessions
     const sessionCacheService = CacheServiceFactory.getDataCache();

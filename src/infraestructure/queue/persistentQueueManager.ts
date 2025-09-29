@@ -8,7 +8,7 @@
 import { defaultLogger } from '../../lib/logger/index.js';
 import type { Logger } from 'pino';
 import { QueueManager } from './queue.js';
-import { JobBatchRepository, type JobBatch } from './repositories/jobBatch.repository.js';
+import { JobBatchRepository, type JobBatch } from '../../entities/job/index.js';
 import type { IJob } from '../../entities/job/index.js';
 import { generateJobId } from './plugin.js';
 
@@ -29,7 +29,7 @@ export interface ProcessingStats {
 }
 
 export class PersistentQueueManager {
-  private queueManager: QueueManager;
+  private queueManager: QueueManager | null; // 🆕 Pode ser null no modo API
   private jobRepository: JobBatchRepository;
   private logger: Logger;
   private batchSize: number;
@@ -43,7 +43,7 @@ export class PersistentQueueManager {
     batchSize: 50
   };
 
-  constructor(queueManager: QueueManager, batchSize: number = 50, logger?: Logger) {
+  constructor(queueManager: QueueManager | null, batchSize: number = 50, logger?: Logger) {
     this.queueManager = queueManager;
     this.jobRepository = new JobBatchRepository();
     this.logger = logger || defaultLogger.child({ component: 'PersistentQueueManager' });
@@ -88,8 +88,14 @@ export class PersistentQueueManager {
 
   /**
    * Start batch processing
+   * 🚫 DESABILITADO EM API MODE - Workers fazem isso
    */
   async startBatchProcessing(intervalMs: number = 5000): Promise<void> {
+    if (!this.queueManager) {
+      this.logger.info('Batch processing disabled in API mode - workers handle this');
+      return;
+    }
+
     if (this.processingInterval) {
       this.logger.warn('Batch processing already started');
       return;
@@ -123,8 +129,13 @@ export class PersistentQueueManager {
 
   /**
    * Process next batch of jobs
+   * 🚫 DESABILITADO EM API MODE - Workers fazem isso
    */
   private async processBatch(): Promise<void> {
+    if (!this.queueManager) {
+      return; // Sem processamento no modo API
+    }
+
     try {
       // Check if we have capacity for more batches
       if (this.activeBatches.size >= 5) {
@@ -163,8 +174,14 @@ export class PersistentQueueManager {
 
   /**
    * Process individual job
+   * 🚫 DESABILITADO EM API MODE - Workers fazem isso
    */
   private async processJob(batchId: string, job: IJob): Promise<void> {
+    if (!this.queueManager) {
+      this.logger.warn('Job processing disabled in API mode - workers handle this');
+      return;
+    }
+
     try {
       // Add job to Redis/BullMQ for processing
       const redisJobId = await this.queueManager.addJob(job.jobId, job.type, job.data, {

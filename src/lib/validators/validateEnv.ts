@@ -14,6 +14,19 @@ const envSchema = z
     NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
     PORT: z.coerce.number().min(1).max(65535).default(3000),
 
+    // Worker Mode Configuration
+    WORKER_MODE: z
+      .string()
+      .optional()
+      .transform(val => val === 'true')
+      .default(false),
+
+    // Worker Configuration (used when WORKER_MODE=true)
+    WORKER_CONCURRENCY: z.coerce.number().min(1).max(50).default(5),
+    WORKER_BATCH_SIZE: z.coerce.number().min(1).max(1000).default(50),
+    WORKER_PROCESSING_INTERVAL: z.coerce.number().min(1000).max(60000).default(5000),
+    QUEUE_NAME: z.string().min(1).default('app-queue'),
+
     // JWT Authentication
     JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters long'),
 
