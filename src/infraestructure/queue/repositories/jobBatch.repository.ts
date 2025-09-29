@@ -5,14 +5,14 @@
  * Handles batch loading, processing tracking, and failure management
  */
 
-import { defaultLogger } from '../../lib/logger/index.js';
-import { BaseRepository } from '../../infraestructure/mongo/baseRepository.js';
-import { JobModel, type IJob } from './jobEntity.js';
+import { defaultLogger } from '../../../lib/logger/index.js';
+import { BaseRepository } from '../../mongo/baseRepository.js';
+import { JobModel, type IJob } from '../../../entities/job/index.js';
 import {
   DeadLetterQueue,
   type IDeadLetterQueue,
   DLQReason
-} from '../deadLetterQueue/deadLetterQueueEntity.js';
+} from '../../../entities/deadLetterQueue/deadLetterQueueEntity.js';
 import type { ClientSession } from 'mongoose';
 
 export interface JobBatch {

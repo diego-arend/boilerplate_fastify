@@ -1,9 +1,9 @@
-import type { IBaseRepository } from '../../infraestructure/mongo/index.js';
-import { JobModel, type IJob } from './jobEntity.js';
-import { JobRepository, type IJobRepository } from './jobRepository.js';
-import { BaseRepository } from '../../infraestructure/mongo/index.js';
-import type { IMongoConnectionManager } from '../../infraestructure/mongo/connectionManager.interface.js';
-import { MongoConnectionManagerFactory } from '../../infraestructure/mongo/connectionManager.factory.js';
+import type { IBaseRepository } from '../../mongo/index.js';
+import { JobModel, type IJob } from '../../../entities/job/index.js';
+import { JobRepository, type IJobRepository } from './job.repository.js';
+import { BaseRepository } from '../../mongo/index.js';
+import type { IMongoConnectionManager } from '../../mongo/connectionManager.interface.js';
+import { MongoConnectionManagerFactory } from '../../mongo/connectionManager.factory.js';
 
 /**
  * Job Repository Factory
@@ -33,6 +33,6 @@ export class JobRepositoryFactory {
     const baseRepository: IBaseRepository<IJob> = new BaseRepository(JobModel, connectionManager);
 
     // Return repository instance
-    return new (await import('./jobRepository.js')).JobRepository(baseRepository);
+    return new JobRepository(baseRepository);
   }
 }

@@ -1,79 +1,73 @@
-# Email Infrastructure Documentation
+# Email Infrastructure
 
-Este documento descreve o sistema de email integrado ao boilerplate Fastify, incluindo configuração, uso e exemplos práticos.
+Sistema de email integrado ao Fastify usando **Nodemailer** e templates modulares, com suporte a envio direto e via job queue.
 
-## 📧 Visão Geral
-
-O sistema de email utiliza **Nodemailer** para envio de emails através de **configuração SMTP pura**, integrado com o sistema de jobs em background para processamento assíncrono e confiável.
-
-## 🏗️ Arquitetura
+## Estrutura
 
 ```
 src/infraestructure/email/
-├── email.plugin.ts      # Plugin principal do Fastify
-├── index.ts            # Exportações do módulo
-├── templates/          # Sistema de templates
-│   ├── types.ts       # Interfaces base
-│   ├── welcome.ts     # Template de boas-vindas
-│   ├── passwordReset.ts # Template de reset de senha
-│   └── ...           # Outros templates
-└── README.md           # Esta documentação
-
-src/infraestructure/queue/jobs/business/
-└── emailSend.job.ts    # Job handler para envio de emails
+├── email.plugin.ts      # Plugin principal Fastify
+├── index.ts             # Exportações do módulo
+├── templates/           # Templates de email
+└── README.md
 ```
 
-## ⚙️ Configuração
+## Configuração
 
-### 1. Variáveis de Ambiente
+Adicione ao `.env`:
 
-Adicione as seguintes variáveis ao seu arquivo `.env`:
-
-```bash
-# Configuração SMTP (obrigatória em produção)
+```env
 SMTP_HOST=smtp.example.com
 SMTP_PORT=587
 SMTP_SECURE=false
-SMTP_USER=your-smtp-username
-SMTP_PASS=your-smtp-password
+SMTP_USER=usuario
+SMTP_PASS=senha
 EMAIL_FROM=noreply@example.com
-
-# Configurações opcionais para alta performance
-EMAIL_POOL=true
-EMAIL_MAX_CONNECTIONS=5
-EMAIL_MAX_MESSAGES=100
 ```
 
-**Exemplos de provedores SMTP populares:**
+## Uso Básico
 
-```bash
-# Gmail (requer App Password)
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_SECURE=false
+```typescript
+// Envio direto
+await fastify.emailService.sendMail({
+  to: 'user@example.com',
+  subject: 'Bem-vindo!',
+  html: '<h1>Olá!</h1>',
+  text: 'Olá!'
+});
 
-# Outlook/Hotmail
-SMTP_HOST=smtp-mail.outlook.com
-SMTP_PORT=587
-SMTP_SECURE=false
-
-# Yahoo Mail
-SMTP_HOST=smtp.mail.yahoo.com
-SMTP_PORT=587
-SMTP_SECURE=false
-
-# SendGrid
-SMTP_HOST=smtp.sendgrid.net
-SMTP_PORT=587
-SMTP_SECURE=false
-SMTP_USER=apikey
-SMTP_PASS=your-sendgrid-api-key
-
-# Mailgun
-SMTP_HOST=smtp.mailgun.org
-SMTP_PORT=587
-SMTP_SECURE=false
+// Envio via job (recomendado)
+await queueManager.addJob('email-send', {
+  to: 'user@example.com',
+  template: 'WELCOME',
+  variables: { userName: 'João', loginUrl: 'https://app.com/login' }
+});
 ```
+
+## Templates Disponíveis
+
+- Welcome
+- Registration Success
+- Password Reset
+- Order Confirmation
+- Invoice
+- Newsletter
+- System Alert
+- Custom
+
+## Funcionalidades
+
+- Anexos, CC/BCC, prioridade, agendamento, rastreamento
+- Validação automática de variáveis e ambiente
+- Rate limiting configurável
+- Logs detalhados e métricas de envio
+
+## Vantagens
+
+- SMTP obrigatório (produção e dev)
+- Templates prontos e customizáveis
+- Integração total com jobs e monitoramento
+- Segurança e validação automática
 
 ### 2. Validação de Ambiente
 

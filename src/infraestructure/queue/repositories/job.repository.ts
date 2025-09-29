@@ -1,13 +1,13 @@
 import bcrypt from 'bcryptjs';
 import type { FilterQuery, ClientSession } from 'mongoose';
-import type { IJob } from './jobEntity.js';
-import { JobModel, JobValidations } from './jobEntity.js';
+import type { IJob } from '../../../entities/job/index.js';
+import { JobModel, JobValidations } from '../../../entities/job/index.js';
 import type {
   IBaseRepository,
   RepositoryOptions,
   PaginationOptions,
   PaginationResult
-} from '../../infraestructure/mongo/index.js';
+} from '../../mongo/index.js';
 
 /**
  * Interface for Job Repository operations

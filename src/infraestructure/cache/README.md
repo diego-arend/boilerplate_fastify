@@ -128,9 +128,6 @@ await dataCache.set('user:123', userData, { ttl: 3600 });```typescript
 
 const user = await dataCache.get<UserType>('user:123');import { getMultiRedisConnectionManager } from '../infraestructure/cache/index.js';
 
-await dataCache.del('user:123');import { config } from '../lib/validateEnv.js';
-
-
 
 // Operações avançadas// Inicializar ambos os clientes Redis automaticamente
 
@@ -161,10 +158,6 @@ const stats = dataCache.getStats();```
 ```typescriptimport { CacheServiceFactory } from '../infraestructure/cache/index.js';
 
 import { getQueueCache } from './infraestructure/cache';import { config } from '../lib/validateEnv.js';
-
-
-
-const queueCache = getQueueCache();  // Cache de API (usa database 0)
 
 await queueCache.connect();const apiCache = await CacheServiceFactory.createDefaultCacheService(config);
 

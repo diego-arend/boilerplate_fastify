@@ -8,8 +8,8 @@
 import { defaultLogger } from '../../lib/logger/index.js';
 import type { Logger } from 'pino';
 import { QueueManager } from './queue.js';
-import { JobBatchRepository, type JobBatch } from '../../entities/job/jobBatchRepository.js';
-import type { IJob } from '../../entities/job/jobEntity.js';
+import { JobBatchRepository, type JobBatch } from './repositories/jobBatch.repository.js';
+import type { IJob } from '../../entities/job/index.js';
 import { generateJobId } from './plugin.js';
 
 export interface PersistentJobOptions {

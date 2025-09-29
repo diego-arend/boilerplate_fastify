@@ -1,21 +1,20 @@
 import type { IAuthRepository } from '../repository/auth.repository.js';
 import { AuthRepository } from '../repository/auth.repository.js';
-import { UserRepositoryFactory } from '../../../entities/user/userRepository.factory.js';
+import { UserRepository } from '../../../infraestructure/repositories/index.js';
 import { CacheServiceFactory } from '../../../infraestructure/cache/index.js';
-import { MongoConnectionManagerFactory } from '../../../infraestructure/mongo/connectionManager.factory.js';
-import { config } from '../../../lib/validators/validateEnv.js';
 
 /**
  * Factory class for creating Authentication-related repositories with dependency injection
- * This ensures proper separation of concerns and testability
+ * Uses the new hybrid DDD pattern with interfaces in entities and implementations in infrastructure
  */
 export class AuthRepositoryFactory {
   /**
    * Create AuthRepository instance with injected dependencies (no cache)
+   * Uses the new hybrid repository pattern
    */
-  static async createAuthRepository(): Promise<IAuthRepository> {
-    const connectionManager = await MongoConnectionManagerFactory.create();
-    const userRepository = await UserRepositoryFactory.createUserRepository(connectionManager);
+  static createAuthRepository(): IAuthRepository {
+    // TODO: Fix interface compatibility between user repositories
+    const userRepository = new UserRepository() as any;
     return new AuthRepository(userRepository);
   }
 
@@ -23,9 +22,8 @@ export class AuthRepositoryFactory {
    * Create AuthRepository instance with cache support (Database 0 - Cache Client)
    * Uses multi-client Redis architecture for authentication data caching
    */
-  static async createAuthRepositoryWithCache(): Promise<IAuthRepository> {
-    const connectionManager = await MongoConnectionManagerFactory.create();
-    const userRepository = await UserRepositoryFactory.createUserRepository(connectionManager);
+  static createAuthRepositoryWithCache(): IAuthRepository {
+    const userRepository = new UserRepository() as any;
 
     // Use Cache Client (Database 0) for authentication data
     const cacheService = CacheServiceFactory.getDataCache();
@@ -49,9 +47,8 @@ export class AuthRepositoryFactory {
    * Create AuthRepository with memory cache for development/testing
    * Uses in-memory cache instead of Redis for isolated testing
    */
-  static async createAuthRepositoryWithMemoryCache(): Promise<IAuthRepository> {
-    const connectionManager = await MongoConnectionManagerFactory.create();
-    const userRepository = await UserRepositoryFactory.createUserRepository(connectionManager);
+  static createAuthRepositoryWithMemoryCache(): IAuthRepository {
+    const userRepository = new UserRepository() as any;
     const memoryCacheService = CacheServiceFactory.createMemoryCacheService();
 
     return new AuthRepository(userRepository, memoryCacheService);
@@ -61,9 +58,8 @@ export class AuthRepositoryFactory {
    * Create AuthRepository with session cache support (Database 0 - 24h TTL)
    * Optimized for long-duration authentication sessions
    */
-  static async createAuthRepositoryWithSessionCache(): Promise<IAuthRepository> {
-    const connectionManager = await MongoConnectionManagerFactory.create();
-    const userRepository = await UserRepositoryFactory.createUserRepository(connectionManager);
+  static createAuthRepositoryWithSessionCache(): IAuthRepository {
+    const userRepository = new UserRepository() as any;
 
     // Use Session Cache (Database 0, 24h TTL) for long-duration auth sessions
     const sessionCacheService = CacheServiceFactory.getDataCache();
