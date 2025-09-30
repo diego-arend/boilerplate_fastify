@@ -1,377 +1,284 @@
-# Worker Container Separation
+# Worker Module - Background Job Processing
 
-## Implementação Completa ✅
+Sistema de workers separados para processamento assíncrono de jobs com **MongoDB → Redis → BullMQ** flow.
 
-O sistema foi separado em dois containers independentes:
+## 🏗️ **Architecture**
 
-### 📦 **Container API** (Publisher)
-
-- **Responsabilidade**: Receber requisições HTTP e publicar jobs na fila
-- **Modo**: `WORKER_MODE=false` (padrão)
-- **Componentes**: Fastify server + PersistentQueueManager (apenas publishing)
-
-### 🏭 **Container Worker** (Consumer)
-
-- **Responsabilidade**: Processar jobs da fila Redis/BullMQ
-- **Modo**: `WORKER_MODE=true`
-- **Componentes**: StandaloneWorker + QueueManager + JobHandlers
-
----
-
-## 🚀 **Como Usar**
-
-### **Desenvolvimento**
-
-```bash
-# Iniciar todos os serviços (API + 1 Worker + Dependencies)
-pnpm run docker:dev
-
-# Worker local (sem Docker)
-pnpm run worker:dev
-
-# Parar ambiente de desenvolvimento
-pnpm run docker:dev:down
-```
-
-### **Produção**
-
-```bash
-# Iniciar produção com 1 worker (padrão)
-pnpm run docker:prod
-
-# Parar ambiente de produção
-pnpm run docker:prod:down
-
-# Build manual dos containers
-pnpm run docker:build         # API container
-pnpm run docker:build:worker  # Worker container
-```
-
-### **Escalando Workers Manualmente**
-
-Para ajustar o número de workers, edite diretamente os arquivos docker-compose:
-
-```yaml
-# docker-compose.yml (produção)
-worker:
-  deploy:
-    replicas: 3 # Altere para o número desejado
-
-# docker-compose.dev.yml (desenvolvimento)
-worker-dev:
-  deploy:
-    replicas: 2 # Altere para o número desejado
-```
-
-### **Monitoramento e Controle**
-
-```bash
-# Logs da API
-pnpm run docker:logs
-
-# Logs dos Workers
-pnpm run docker:logs:worker
-
-# Logs de todos os serviços
-pnpm run docker:logs:all
-
-# Status dos containers
-pnpm run docker:ps
-
-# Restart específico
-pnpm run docker:restart:api      # Apenas API
-pnpm run docker:restart:workers  # Apenas Workers
-pnpm run docker:restart          # Todos os serviços
-```
-
----
-
-## 🏗️ **Arquitetura Implementada**
-
-### **Publisher-Consumer Pattern**
+### **Container Separation**
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Fastify API   │    │   Redis Queue   │    │  Worker Nodes   │
-│                 │    │                 │    │                 │
-│ ┌─────────────┐ │    │ ┌─────────────┐ │    │ ┌─────────────┐ │
-│ │PersistentQM │ ├────┤ │    BullMQ   │ ├────┤ │QueueManager │ │
-│ │(Publisher)  │ │    │ │   (Queue)   │ │    │ │(Consumer)   │ │
-│ └─────────────┘ │    │ └─────────────┘ │    │ └─────────────┘ │
+│   API Container │    │   Redis Queue   │    │ Worker Container│
+│  (Publisher)    │───▶│    (BullMQ)     │───▶│   (Consumer)    │
+│ WORKER_MODE=false│    │                 │    │ WORKER_MODE=true│
 └─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
 
-### **Componentes Criados**
+### **Files Structure**
 
-### **Implementation Files**
+```
+src/infraestructure/workers/
+├── worker.ts      # 🏭 StandaloneWorker class
+├── index.ts       # 🚀 Worker entry point
+└── README.md      # 📖 This documentation
+```
 
-#### **src/infraestructure/workers/worker.ts**
+## ⚙️ **Environment Variables**
+
+### **Critical Parameters**
+
+```env
+# Container Mode
+WORKER_MODE=true               # Enable worker mode
+
+# Batch Control (Performance Critical)
+BATCH_SIZE_JOBS=50             # MongoDB → Redis batch size
+WORKER_SIZE_JOBS=10            # BullMQ worker concurrency
+WORKER_PROCESSING_INTERVAL=5000 # Batch loading interval (ms)
+
+# Connection
+QUEUE_NAME=app-queue
+MONGO_URI=mongodb://mongo:27017/app
+QUEUE_REDIS_HOST=redis
+QUEUE_REDIS_DB=1
+```
+
+### **Environment Files**
+
+```
+.env.worker.development    # Development settings
+.env.worker.production     # Production settings
+```
+
+## 🚀 **Usage**
+
+### **Development**
+
+```bash
+# Start full environment
+pnpm run docker:dev
+
+# Worker logs
+docker logs boilerplate_fastify-worker-dev-1 -f
+
+# Worker health check
+curl http://localhost:3003/health
+```
+
+### **Production**
+
+```bash
+# Start production
+pnpm run docker:prod
+
+# Scale workers
+docker-compose up --scale worker=3
+
+# Monitor workers
+docker stats
+```
+
+### **Standalone Worker**
+
+```bash
+# Local development
+WORKER_MODE=true pnpm run worker:dev
+
+# Direct execution
+node dist/infraestructure/workers/index.js
+```
+
+## 🔧 **Configuration**
+
+### **Performance Tuning**
+
+#### **Development Settings**
+
+```env
+BATCH_SIZE_JOBS=25     # Smaller batches for debugging
+WORKER_SIZE_JOBS=5     # Limited workers for resources
+WORKER_PROCESSING_INTERVAL=3000  # Faster for testing
+```
+
+#### **Production Settings**
+
+```env
+BATCH_SIZE_JOBS=100    # Larger batches for throughput
+WORKER_SIZE_JOBS=20    # More workers for parallelization
+WORKER_PROCESSING_INTERVAL=5000  # Optimized interval
+```
+
+### **Resource Limits**
+
+```yaml
+# docker-compose.yml
+worker:
+  deploy:
+    resources:
+      limits:
+        cpus: '0.8'
+        memory: 768M
+      reservations:
+        cpus: '0.3'
+        memory: 256M
+```
+
+## 🎯 **Worker Flow**
+
+### **Processing Cycle**
+
+1. **Batch Loading**: MongoDB → Redis (every `WORKER_PROCESSING_INTERVAL`)
+2. **Job Processing**: Redis → BullMQ Workers (concurrent: `WORKER_SIZE_JOBS`)
+3. **Status Update**: Results → MongoDB
+4. **Error Handling**: Failed jobs → Dead Letter Queue
+
+### **StandaloneWorker Class**
 
 ```typescript
 class StandaloneWorker {
-  - mongoManager: MongoConnectionManagerFactory
-  - queueCache: QueueCache (Redis db1)
-  - queueManager: QueueManager
-  - handlers: QUEUE_HANDLERS integration
+  // Core methods for developers
+  async run(); // Start worker process
+  async stop(); // Graceful shutdown
+  async getStats(); // Performance metrics
+  async healthCheck(); // Container health
+
+  // Internal methods
+  private loadBatchToRedis(); // MongoDB → Redis loading
+  private registerJobHandlers(); // BullMQ job registration
 }
 ```
 
-#### **src/infraestructure/workers/index.ts**
+## 📊 **Monitoring**
 
-- Entry point para worker container
-- Validation de environment variables
-- Graceful shutdown handling
-- Health check endpoint
-
-#### **Dockerfile.worker**
-
-- Container otimizado para worker
-- Health check via HTTP endpoint
-- Production-ready configuration
-
----
-
-## 🔧 **Configuração**
-
-### **Environment Variables**
-
-As configurações são carregadas dos arquivos de environment:
-
-#### **API Container (.env / .env.production):**
+### **Health Check**
 
 ```bash
-WORKER_MODE=false           # API mode (publisher only)
-WORKER_CONCURRENCY=5        # (unused in API mode)
-WORKER_BATCH_SIZE=50        # (unused in API mode)
-WORKER_PROCESSING_INTERVAL=5000  # (unused in API mode)
-QUEUE_NAME=app-queue        # Queue name for publishing
+# Worker health endpoint
+curl http://localhost:3003/health
+# Returns: { status: "ok", uptime: 3600, ... }
 ```
 
-#### **Worker Container (.env.worker.development / .env.worker.production):**
+### **Performance Metrics**
+
+```typescript
+const stats = await worker.getStats();
+// Returns:
+// {
+//   worker: { config, isRunning, batchLoading },
+//   jobs: { pending, processing, completed, failed },
+//   queue: { waiting, active, completed, failed },
+//   connections: { mongo: true, redis: true }
+// }
+```
+
+### **Bull Dashboard**
+
+- **URL**: http://localhost:3002/ui
+- **Features**: Real-time monitoring, job management, retry controls
+
+## 🔄 **Job Processing**
+
+### **Supported Job Types**
+
+Workers automatically process all registered job types:
+
+- `email:send` - Email sending
+- `user:notification` - User notifications
+- `data:export` - Data exports
+- `file:process` - File processing
+- `cache:warm` - Cache warming
+
+### **Error Handling**
+
+- **Automatic Retry**: Exponential backoff with configurable attempts
+- **Failure Callbacks**: Automatic MongoDB status updates
+- **Dead Letter Queue**: Failed jobs tracking and analysis
+
+## � **Scaling**
+
+### **Horizontal Scaling**
 
 ```bash
-WORKER_MODE=true            # Worker mode (consumer only)
-WORKER_CONCURRENCY=5        # Number of concurrent jobs
-WORKER_BATCH_SIZE=50        # Batch size for processing
-WORKER_PROCESSING_INTERVAL=5000  # Processing interval (ms)
-QUEUE_NAME=app-queue        # Queue name for consuming
+# Scale workers at runtime
+docker-compose up --scale worker=5
 
-# Database
-MONGODB_URI=mongodb://mongo:27017/app
-
-# Redis
-REDIS_HOST=redis
-REDIS_PORT=6379
-QUEUE_REDIS_HOST=redis
-QUEUE_REDIS_PORT=6379
-QUEUE_REDIS_DB=1
-
-# Worker Health Check
-PORT=3003                   # Health check endpoint port
+# Update compose file for permanent scaling
+# Edit docker-compose.yml:
+worker:
+  deploy:
+    replicas: 3
 ```
 
-### **Arquivos de Environment**
+### **Performance Optimization**
 
-A configuração foi reorganizada para uma estrutura mais clara e específica:
+```env
+# High throughput setup
+BATCH_SIZE_JOBS=200
+WORKER_SIZE_JOBS=50
 
-```
-.env.api.development      # API development container
-.env.api.production       # API production container
-.env.worker.development   # Worker development container
-.env.worker.production    # Worker production container
-.env.example             # Template com todas as variáveis
-```
-
-### **Mapeamento Docker Compose:**
-
-````yaml
-# docker-compose.yml (Produção)
-app:    env_file: .env.api.production
-worker: env_file: .env.worker.production
-
-# docker-compose.dev.yml (Desenvolvimento)
-app:        env_file: .env.api.development
-worker-dev: env_file: .env.worker.development
-```### **Validação Automática**
-
-Todas as variáveis são validadas automaticamente pelo `validateEnv.ts`:
-
-- **WORKER_MODE**: boolean (true/false)
-- **WORKER_CONCURRENCY**: number (1-50, default: 5)
-- **WORKER_BATCH_SIZE**: number (1-1000, default: 50)
-- **WORKER_PROCESSING_INTERVAL**: number (1000-60000ms, default: 5000)
-- **QUEUE_NAME**: string (min 1 char, default: 'app-queue')
-
-### **Docker Compose Services**
-
-#### **docker-compose.yml** (Produção)
-
-```yaml
-services:
-  app: # API container (WORKER_MODE=false)
-  worker: # Worker container
-    replicas: 1 # 1 worker por padrão
-    resources:
-      limits: { cpus: '0.8', memory: 768M }
-      reservations: { cpus: '0.3', memory: 256M }
-````
-
-#### **docker-compose.dev.yml** (Desenvolvimento)
-
-```yaml
-services:
-  app: # API development
-  worker-dev: # Worker development
-    replicas: 1 # 1 worker por padrão
+# Memory constrained setup
+BATCH_SIZE_JOBS=25
+WORKER_SIZE_JOBS=5
 ```
 
-### **Escalabilidade Manual**
-
-Para ajustar workers conforme a necessidade, edite diretamente:
-
-```bash
-# Editar número de replicas
-vim docker-compose.yml        # Produção
-vim docker-compose.dev.yml    # Desenvolvimento
-
-# Ou usar docker-compose scale (runtime)
-docker-compose up --scale worker=3      # 3 workers em produção
-docker-compose -f docker-compose.dev.yml up --scale worker-dev=2  # 2 workers em dev
-```
-
----
-
-## 📊 **Benefícios da Separação**
-
-### **Escalabilidade Independente**
-
-- Escalar workers sem afetar API
-- Escalar API sem afetar workers
-- Resource allocation otimizado
-
-### **Isolamento de Responsabilidades**
-
-- API: HTTP handling + job publishing
-- Worker: Job processing + business logic
-- Failure isolation entre componentes
-
-### **Performance**
-
-- API responsivo (sem blocking jobs)
-- Workers dedicados para processamento
-- Paralelização horizontal
-
-### **Deployment**
-
-- Deploy independente de API e workers
-- Rolling updates sem downtime
-- A/B testing em workers
-
----
-
-## 🧪 **Testing**
+## 🧪 **Development**
 
 ### **Local Testing**
 
 ```bash
-# Test compilation
+# Test worker compilation
 pnpm run build
 
-# Test worker standalone
-node scripts/test-worker.js
+# Test worker startup
+WORKER_MODE=true NODE_ENV=development node dist/infraestructure/workers/index.js
 
-# Test API mode
-WORKER_MODE=false pnpm run dev
-
-# Test worker mode
-WORKER_MODE=true pnpm run worker:dev
+# Integration test
+pnpm run docker:dev
 ```
 
-### **Integration Testing**
+### **Debugging**
 
 ```bash
-# Full environment test
-pnpm run docker:dev
+# Worker container access
+docker-compose exec worker bash
 
-# Verify services
-curl http://localhost:3001/health
-curl http://localhost:3003/health  # Worker health
+# Check worker logs
+docker-compose logs worker -f
+
+# Monitor resources
+docker-compose top worker
 ```
-
----
-
-## 🎯 **Próximos Passos**
-
-### **Monitoring & Observability**
-
-- [ ] Metrics collection (Prometheus)
-- [ ] Distributed tracing
-- [ ] Custom dashboards
-
-### **Advanced Scaling**
-
-- [ ] Kubernetes deployment
-- [ ] Auto-scaling based on queue size
-- [ ] Multi-region workers
-
-### **Enhanced Features**
-
-- [ ] Job priorities
-- [ ] Dead letter queue processing
-- [ ] Worker specialization por job type
-
----
 
 ## 🔍 **Troubleshooting**
 
 ### **Common Issues**
 
-1. **Worker não conecta ao Redis**
-
-   ```bash
-   # Check Redis connection
-   docker-compose logs redis
-   ```
-
-2. **Jobs não são processados**
-
-   ```bash
-   # Check worker logs
-   pnpm run docker:logs:worker
-   ```
-
-3. **API não publica jobs**
-   ```bash
-   # Verify WORKER_MODE=false
-   docker-compose logs app
-   ```
-
-### **Debug Commands**
+**Worker not processing jobs:**
 
 ```bash
-# Enter container
-docker-compose exec worker bash
+# Check Redis connection
+docker-compose logs redis
 
-# Check processes
-docker-compose ps
-
-# Resource usage
-docker-compose top
+# Verify worker mode
+echo $WORKER_MODE  # Should be 'true'
 ```
 
----
+**High memory usage:**
 
-## ✅ **Status da Implementação**
+```bash
+# Reduce batch size
+BATCH_SIZE_JOBS=25
 
-- [x] StandaloneWorker class implementation
-- [x] Worker entry point with health check
-- [x] Dockerfile.worker configuration
-- [x] Queue plugin mode separation
-- [x] Docker Compose orchestration
-- [x] Package.json scripts
-- [x] Environment variable setup
-- [x] Graceful shutdown handling
-- [x] Error handling and logging
-- [x] Development and production modes
+# Reduce worker concurrency
+WORKER_SIZE_JOBS=5
+```
 
-**🎉 Worker separation implementation is complete and ready for use!**
+**Jobs piling up:**
+
+```bash
+# Increase worker concurrency
+WORKER_SIZE_JOBS=20
+
+# Scale worker containers
+docker-compose up --scale worker=3
+```

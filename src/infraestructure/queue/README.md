@@ -1,125 +1,151 @@
-# Queu```
+# Queue Module - MongoDB + Redis + BullMQ
 
-src/infraestructure/queue/
-├── persistentQueueManager.ts # 🎯 Coordenador principal - MongoDB + Redis
-├── plugin.ts # 🔌 Plugin Fastify com inicialização
-├── queue.ts # ⚡ BullMQ manager (Redis)
-├── handlers.ts # 🔄 Job handlers registry
-├── jobs/ # 📋 Implementações de jobs
-│ ├── business/ # 💼 Jobs de negócio
-│ └── maintenance/ # 🔧 Jobs de manutenção
-└── README.md
-
-```ture - Persistent Job Processing
-
-Sistema de processamento de jobs com **BullMQ v5.58.7** + **MongoDB** para persistência e **Redis** para performance, com Dead Letter Queue e batch processing.
+Sistema de filas com **BullMQ v5.58.7** para processamento assíncrono, **MongoDB** para persistência e **Redis** para performance.
 
 ## 🏗️ **Arquitetura**
 
 ```
-
 src/infraestructure/queue/
-├── persistentQueueManager.ts # 🎯 Coordenador principal - MongoDB + Redis
-├── plugin.ts # 🔌 Plugin Fastify com inicialização
-├── queue.manager.ts # ⚡ BullMQ manager (Redis)
-├── resilient.queue.manager.ts # 🛡️ Resiliente com fallback Redis
-├── dlq.manager.ts # � Dead Letter Queue manager
-├── jobs/ # 📋 Implementações de jobs
-│ ├── business/ # 💼 Jobs de negócio
-│ └── maintenance/ # 🔧 Jobs de manutenção
-└── README.md
+├── persistentQueueManager.ts  # 🎯 MongoDB + Redis integration
+├── queue.ts                   # ⚡ BullMQ wrapper
+├── plugin.ts                  # � Fastify plugin
+├── handlers.ts                # 🔄 Job handlers registry
+└── jobs/                      # 📋 Job implementations
+    ├── business/              # 💼 Business jobs
+    └── maintenance/           # 🔧 System jobs
+```
 
-````
+## ⚙️ **Environment Variables**
 
-## ⚙️ **Configuração**
-
-### **Environment Variables**
 ```env
-# Redis (Queue + Cache)
+# Batch Control (Critical for performance)
+BATCH_SIZE_JOBS=50             # MongoDB → Redis batch size
+WORKER_SIZE_JOBS=10            # BullMQ worker concurrency
+
+# Queue Configuration
+QUEUE_NAME=app-queue
+WORKER_PROCESSING_INTERVAL=5000
+
+# Redis Configuration
 QUEUE_REDIS_HOST=redis
 QUEUE_REDIS_PORT=6379
 QUEUE_REDIS_DB=1
+```
 
-# MongoDB (Persistência)
-MONGODB_URI=mongodb://mongo:27017/boilerplate
+## 🚀 **Usage**
 
-# Processing
-BATCH_SIZE=10
-BATCH_TIMEOUT=30000
-````
-
-## 🚀 **Uso**
-
-### **Adicionar Jobs**
+### **Adding Jobs (API Mode)**
 
 ```typescript
-// Via PersistentQueueManager
-const jobId = await fastify.persistentQueueManager.addJob(
+// In route handlers
+await fastify.addJob(
   'email:send',
-  { userId: '123', template: 'welcome' },
-  { priority: 10, attempts: 3 }
+  {
+    userId: '123',
+    template: 'welcome',
+    data: { name: 'John' }
+  },
+  {
+    priority: 10,
+    attempts: 3,
+    delay: 5000
+  }
 );
 ```
 
-### **Jobs Disponíveis**
+### **Processing Jobs (Worker Mode)**
 
-- `email:send` - Envio de emails
-- `user:notification` - Notificações do usuário
-- `data:export` - Exportação de dados
-- `file:process` - Processamento de arquivos
+Jobs are automatically processed by workers using the registered handlers in `jobs/` directory.
 
-## 📊 **Monitoramento**
+### **Available Job Types**
+
+- `email:send` - Email sending
+- `user:notification` - User notifications
+- `data:export` - Data export operations
+- `file:process` - File processing
+- `cache:warm` - Cache warming
+
+## 📊 **Monitoring**
 
 ### **Bull Dashboard**
 
 - **URL**: http://localhost:3002/ui
-- **Estatísticas**: Jobs ativos, completados, falhos
-- **Retry Management**: Gerenciamento de tentativas
+- **Features**: Real-time queue monitoring, job management, retry controls
 
-### **Estatísticas MongoDB**
+### **API Statistics**
 
 ```typescript
 const stats = await fastify.persistentQueueManager.getJobStats();
-// { pending: 5, processing: 2, completed: 100, failed: 1 }
+// Returns: { pending, processing, completed, failed, dlq }
 ```
 
-## 🔧 **Funcionalidades**
+## 🔧 **Key Features**
 
-### **Persistência Dupla**
+### **Dual Persistence**
 
-- **MongoDB**: Armazenamento permanente de jobs
-- **Redis/BullMQ**: Processing de alta performance
-- **Sincronização**: Automática entre sistemas
+- **MongoDB**: Permanent job storage with batch management
+- **Redis/BullMQ**: High-performance job processing
+- **Auto-sync**: Automatic status synchronization
 
-### **Dead Letter Queue**
+### **Batch Processing Flow**
 
-- **Falhas**: Jobs que falharam múltiplas vezes
-- **Análise**: Tracking de motivos de falha
-- **Reprocessamento**: Possibilidade de retry manual
+1. **Job Creation**: Stored in MongoDB
+2. **Batch Loading**: MongoDB → Redis (configurable batch size)
+3. **BullMQ Processing**: Redis → Worker execution
+4. **Status Update**: Results back to MongoDB
 
-### **Batch Processing**
+### **Error Handling**
 
-- **Lotes**: Processamento em grupos de 10 jobs
-- **Timeout**: 30s por batch
-- **Eficiência**: Reduz overhead de I/O
+- **Retry Logic**: Exponential backoff
+- **Dead Letter Queue**: Failed jobs tracking
+- **Failure Callbacks**: Automatic MongoDB status updates
 
-### **Resiliência**
+## 🎯 **Performance Tuning**
 
-- **Redis Failure**: Fallback para processamento local
-- **Cleanup**: Limpeza automática de jobs antigos
-- **Retry**: Exponential backoff configurável
+### **Development**
 
-## 🎯 **Fluxo de Processamento**
+```env
+BATCH_SIZE_JOBS=25    # Smaller batches for debugging
+WORKER_SIZE_JOBS=5    # Limited workers for resources
+```
 
-1. **Job Creation**: Persiste no MongoDB → Envia para Redis
-2. **Batch Processing**: Carrega lotes do MongoDB
-3. **BullMQ Processing**: Processa via Redis workers
-4. **Status Update**: Atualiza MongoDB com resultado
-5. **Error Handling**: Jobs falhos → Dead Letter Queue
+### **Production**
 
-## 🔄 **Lifecycle Management**
+```env
+BATCH_SIZE_JOBS=100   # Larger batches for throughput
+WORKER_SIZE_JOBS=20   # More workers for parallelization
+```
 
-- **Startup**: Inicialização automática de batch processing
-- **Shutdown**: Graceful shutdown com cleanup
-- **Health Check**: Monitoramento de conexões
-- **Auto Recovery**: Recuperação automática de falhas Redis
+## 🔄 **Job Implementation**
+
+### **Creating New Jobs**
+
+1. **Add handler in `jobs/business/`**:
+
+```typescript
+export const myNewJob: JobHandler = async (data, jobId, logger) => {
+  // Your job logic here
+  logger.info(`Processing job ${jobId}`, data);
+  return { success: true };
+};
+```
+
+2. **Register in `jobs/index.ts`**:
+
+```typescript
+export const JOB_HANDLERS = {
+  'my:new:job': myNewJob
+  // ... other handlers
+};
+```
+
+### **Job Handler Interface**
+
+```typescript
+type JobHandler = (
+  data: any, // Job payload
+  jobId: string, // Unique job ID
+  logger: Logger, // Pino logger instance
+  options: JobOptions // Retry and timeout options
+) => Promise<any>;
+```

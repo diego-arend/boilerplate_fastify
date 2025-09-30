@@ -414,7 +414,7 @@ jobSchema.index({ processedAt: -1 }, { sparse: true }); // Processed jobs
 
 // Pre-save data sanitization and validation
 jobSchema.pre('save', function (next) {
-  // Ensure jobId is generated if not provided
+  // Ensure jobId is generated ONLY if not provided
   if (!this.jobId && this.type) {
     this.jobId = JobValidations.generateJobId(this.type);
   }
@@ -424,7 +424,12 @@ jobSchema.pre('save', function (next) {
     this.type = this.type.trim().toLowerCase();
   }
 
-  // Validate job status transitions
+  // Skip status validation for new documents
+  if (this.isNew) {
+    return next();
+  }
+
+  // Validate job status transitions (only for existing documents)
   if (this.isModified('status')) {
     const validTransitions: Record<string, string[]> = {
       pending: ['processing', 'cancelled'],

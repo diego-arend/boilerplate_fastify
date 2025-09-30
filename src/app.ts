@@ -33,10 +33,10 @@ export default async function app(fastify: FastifyInstance, opts: FastifyPluginO
   // Register queue plugin AFTER both MongoDB and cache for job processing
   await fastify.register(queuePlugin, {
     config: fastify.config,
-    queueName: 'app-queue',
-    concurrency: 5,
-    batchSize: 50,
-    processingInterval: 5000,
+    queueName: process.env.QUEUE_NAME || 'app-queue',
+    concurrency: parseInt(process.env.WORKER_CONCURRENCY || '5'),
+    batchSize: parseInt(process.env.BATCH_SIZE_JOBS || '50'),
+    processingInterval: parseInt(process.env.WORKER_PROCESSING_INTERVAL || '5000'),
     enablePersistence: true // Enable persistent job processing
   });
 

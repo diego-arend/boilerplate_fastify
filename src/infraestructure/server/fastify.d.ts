@@ -3,7 +3,8 @@ import type mongoose from 'mongoose';
 import type { config } from '../../lib/validators/validateEnv.ts';
 import type { IMongoConnectionManager } from '../mongo/connectionManager.interface.js';
 import type { ITransactionManager } from '../mongo/transactionManager.interface.js';
-import type { QueueManager } from '../queue/queue.js';
+import type { QueueManager } from '../queue/queue.manager.js';
+import type { PersistentQueueManager } from '../queue/persistentQueueManager.js';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -11,6 +12,7 @@ declare module 'fastify' {
     mongoConnectionManager: IMongoConnectionManager;
     transactionManager: ITransactionManager;
     queueManager: QueueManager;
+    persistentQueueManager: PersistentQueueManager;
     addJob: (
       jobId: string,
       type: string,

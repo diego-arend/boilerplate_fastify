@@ -8,6 +8,7 @@ import {
   handleRegistrationEmailJob,
   type RegistrationEmailData
 } from './jobs/business/registrationEmailJob.js';
+import { defaultLogger } from '../../lib/logger/index.js';
 
 export interface QueueJobHandler {
   (data: any, logger?: FastifyBaseLogger): Promise<any>;
@@ -20,17 +21,18 @@ export async function bullmqRegistrationEmailHandler(
   data: RegistrationEmailData,
   logger?: FastifyBaseLogger
 ): Promise<any> {
-  const jobLogger =
-    logger ||
-    ({
-      info: console.log,
-      error: console.error,
-      warn: console.warn,
-      debug: console.log
-    } as FastifyBaseLogger);
+  const jobLogger = logger || defaultLogger.child({ component: 'registration-email-handler' });
 
   // Generate unique job ID for BullMQ context
   const jobId = `registration-email-${data.userId}-${Date.now()}`;
+
+  jobLogger.info({
+    message: 'Starting registration email handler for job',
+    jobId,
+    userId: data.userId,
+    userEmail: data.userEmail,
+    userName: data.userName
+  });
 
   try {
     const result = await handleRegistrationEmailJob(data, jobId, jobLogger, {
@@ -41,7 +43,12 @@ export async function bullmqRegistrationEmailHandler(
     });
 
     if (result.success) {
-      jobLogger.info(`Registration email job completed: ${jobId}`);
+      jobLogger.info({
+        message: 'Registration email job completed successfully',
+        jobId,
+        messageId: result.messageId,
+        processingTime: result.processingTime
+      });
       return {
         jobId: result.jobId,
         messageId: result.messageId,
@@ -49,10 +56,22 @@ export async function bullmqRegistrationEmailHandler(
         processingTime: result.processingTime
       };
     } else {
+      jobLogger.error({
+        message: 'Registration email job failed',
+        jobId,
+        error: result.error,
+        processingTime: result.processingTime
+      });
       throw new Error(result.error || 'Registration email job failed');
     }
   } catch (error) {
-    jobLogger.error(`Registration email job failed: ${jobId} - ${error}`);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    jobLogger.error({
+      message: 'Registration email job handler failed',
+      jobId,
+      error: errorMessage,
+      stack: error instanceof Error ? error.stack : undefined
+    });
     throw error;
   }
 }
@@ -64,14 +83,13 @@ export async function bullmqUserNotificationHandler(
   data: any,
   logger?: FastifyBaseLogger
 ): Promise<any> {
-  const jobLogger =
-    logger ||
-    ({
-      info: console.log,
-      error: console.error
-    } as FastifyBaseLogger);
+  const jobLogger = logger || defaultLogger.child({ component: 'user-notification-handler' });
 
-  jobLogger.info('Processing user notification job', data);
+  jobLogger.info({
+    message: 'Processing user notification job',
+    userId: data.userId,
+    type: data.type
+  });
 
   // Simulate processing - replace with actual notification logic
   await new Promise(resolve => setTimeout(resolve, 500));
@@ -88,14 +106,13 @@ export async function bullmqUserNotificationHandler(
  * Data export handler (specialized placeholder)
  */
 export async function bullmqDataExportHandler(data: any, logger?: FastifyBaseLogger): Promise<any> {
-  const jobLogger =
-    logger ||
-    ({
-      info: console.log,
-      error: console.error
-    } as FastifyBaseLogger);
+  const jobLogger = logger || defaultLogger.child({ component: 'data-export-handler' });
 
-  jobLogger.info('Processing data export job', data);
+  jobLogger.info({
+    message: 'Processing data export job',
+    exportType: data.exportType,
+    recordCount: data.recordCount
+  });
 
   // Simulate processing - replace with actual export logic
   await new Promise(resolve => setTimeout(resolve, 2000));

@@ -71,7 +71,7 @@ export class AuthService {
   async registerUser(
     data: RegisterRequest,
     requestId: string,
-    queueManager?: QueueManager
+    persistentQueueManager?: any // Changed to PersistentQueueManager
   ): Promise<AuthResult> {
     const serviceLogger = this.logger.child({ requestId, operation: 'register' });
 
@@ -108,14 +108,16 @@ export class AuthService {
       );
 
       // Schedule registration email (non-blocking)
-      this.scheduleRegistrationEmail(newUser, serviceLogger, queueManager).catch(error => {
-        serviceLogger.warn({
-          message: 'Failed to schedule registration email',
-          error: error instanceof Error ? error.message : String(error),
-          userId: newUser._id,
-          userEmail: newUser.email
-        });
-      });
+      this.scheduleRegistrationEmail(newUser, serviceLogger, persistentQueueManager).catch(
+        error => {
+          serviceLogger.warn({
+            message: 'Failed to schedule registration email',
+            error: error instanceof Error ? error.message : String(error),
+            userId: newUser._id,
+            userEmail: newUser.email
+          });
+        }
+      );
 
       // Log successful registration
       if (process.env.NODE_ENV === 'development') {
@@ -359,11 +361,11 @@ export class AuthService {
   private async scheduleRegistrationEmail(
     user: any,
     logger: FastifyBaseLogger,
-    queueManager?: QueueManager
+    persistentQueueManager?: any // Changed to PersistentQueueManager
   ): Promise<void> {
-    if (!queueManager) {
+    if (!persistentQueueManager) {
       logger.error({
-        message: 'Queue Manager not available for email sending',
+        message: 'Persistent Queue Manager not available for email sending',
         userId: user._id,
         userEmail: user.email
       });
@@ -377,13 +379,9 @@ export class AuthService {
         userEmail: user.email
       };
 
-      // Generate unique job ID
-      const jobId = `registration-email-${user._id}-${Date.now()}`;
-
-      // Add registration email job to Queue
-      const resultJobId = await queueManager.addJob(
-        jobId,
-        'registration:email',
+      // Add registration email job via PersistentQueueManager (MongoDB first)
+      const jobId = await persistentQueueManager.addJob(
+        'registration:email', // type first for PersistentQueueManager
         registrationEmailData,
         {
           priority: 1, // High priority for registration emails
@@ -394,8 +392,8 @@ export class AuthService {
       // Log email job creation (development only)
       if (process.env.NODE_ENV === 'development') {
         logger.info({
-          message: 'Registration email job created with Queue Manager',
-          jobId: resultJobId,
+          message: 'Registration email job created with Persistent Queue Manager',
+          jobId: jobId,
           userId: user._id,
           userEmail: user.email,
           jobType: 'registration:email'
@@ -404,7 +402,7 @@ export class AuthService {
     } catch (error) {
       // This is a non-blocking operation, so we only log the error
       logger.warn({
-        message: 'Failed to create registration email job with Queue Manager',
+        message: 'Failed to create registration email job with Persistent Queue Manager',
         error: error instanceof Error ? error.message : String(error),
         userId: user._id,
         userEmail: user.email,

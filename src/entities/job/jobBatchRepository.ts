@@ -13,7 +13,6 @@ import {
   type IDeadLetterQueue,
   DLQReason
 } from '../deadLetterQueue/deadLetterQueueEntity.js';
-import type { ClientSession } from 'mongoose';
 
 export interface JobBatch {
   batchId: string;
@@ -108,45 +107,35 @@ export class JobBatchRepository extends BaseRepository<IJob> {
       // Generate batch ID
       const batchId = `batch_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-      // Mark jobs as batched
-      const session = await JobModel.startSession();
+      // Mark jobs as batched - using simple operations for all environments
+      const jobIds = jobs.map(job => job._id);
 
-      try {
-        await session.withTransaction(async () => {
-          const jobIds = jobs.map(job => job._id);
+      await JobModel.updateMany(
+        { _id: { $in: jobIds }, status: JobStatus.PENDING },
+        {
+          $set: {
+            status: JobStatus.BATCHED,
+            batchId: batchId,
+            updatedAt: new Date()
+          }
+        }
+      );
 
-          await JobModel.updateMany(
-            { _id: { $in: jobIds }, status: JobStatus.PENDING },
-            {
-              $set: {
-                status: JobStatus.BATCHED,
-                batchId: batchId,
-                updatedAt: new Date()
-              }
-            },
-            { session }
-          );
-        });
+      this.logger.debug(`Updated ${jobIds.length} jobs to batched status`);
 
-        // Refresh jobs with updated status
-        const batchedJobs = await JobModel.find({ batchId });
+      // Refresh jobs with updated status
+      const batchedJobs = await JobModel.find({ batchId });
 
-        const batch: JobBatch = {
-          batchId,
-          jobs: batchedJobs,
-          createdAt: new Date(),
-          status: 'pending'
-        };
+      const batch: JobBatch = {
+        batchId,
+        jobs: batchedJobs,
+        createdAt: new Date(),
+        status: 'pending'
+      };
 
-        this.logger.info(`Loaded job batch: ${batchId} with ${jobs.length} jobs`);
+      this.logger.info(`Loaded job batch: ${batchId} with ${jobs.length} jobs`);
 
-        return batch;
-      } catch (error) {
-        await session.abortTransaction();
-        throw error;
-      } finally {
-        await session.endSession();
-      }
+      return batch;
     } catch (error) {
       this.logger.error(`Failed to load job batch: ${error}`);
       throw error;
@@ -200,55 +189,57 @@ export class JobBatchRepository extends BaseRepository<IJob> {
    * Mark job as failed and move to Dead Letter Queue if max attempts reached
    */
   async markJobAsFailed(jobId: string, error: string, errorStack?: string): Promise<void> {
-    const session = await JobModel.startSession();
-
     try {
-      await session.withTransaction(async () => {
-        const job = await JobModel.findOne({ jobId }).session(session);
-
-        if (!job) {
-          throw new Error(`Job not found: ${jobId}`);
-        }
-
-        // Increment attempts
-        job.attempts += 1;
-
-        // Check if max attempts reached
-        if (job.attempts >= job.maxAttempts) {
-          // Move to Dead Letter Queue
-          await this.moveToDeadLetterQueue(job, error, errorStack, session);
-
-          // Remove from jobs collection
-          await JobModel.findByIdAndDelete(job._id).session(session);
-
-          this.logger.warn(`Job moved to DLQ after max attempts: ${jobId}`);
-        } else {
-          // Update job with failure info and reset to pending for retry
-          await JobModel.findByIdAndUpdate(
-            job._id,
-            {
-              $set: {
-                status: JobStatus.PENDING,
-                attempts: job.attempts,
-                updatedAt: new Date(),
-                batchId: null,
-                redisJobId: null,
-                processingStartedAt: null
-              }
-            },
-            { session }
-          );
-
-          this.logger.info(
-            `Job failed but will retry: ${jobId} (attempt ${job.attempts}/${job.maxAttempts})`
-          );
-        }
-      });
+      // Use simple operations for all environments
+      await this.processJobFailure(jobId, error, errorStack);
     } catch (error) {
       this.logger.error(`Failed to mark job as failed: ${jobId} - ${error}`);
       throw error;
-    } finally {
-      await session.endSession();
+    }
+  }
+
+  /**
+   * Process job failure logic
+   */
+  private async processJobFailure(
+    jobId: string,
+    error: string,
+    errorStack?: string
+  ): Promise<void> {
+    const job = await JobModel.findOne({ jobId });
+
+    if (!job) {
+      throw new Error(`Job not found: ${jobId}`);
+    }
+
+    // Increment attempts
+    job.attempts += 1;
+
+    // Check if max attempts reached
+    if (job.attempts >= job.maxAttempts) {
+      // Move to Dead Letter Queue
+      await this.moveToDeadLetterQueue(job, error, errorStack);
+
+      // Remove from jobs collection
+      await JobModel.findByIdAndDelete(job._id);
+
+      this.logger.warn(`Job moved to DLQ after max attempts: ${jobId}`);
+    } else {
+      // Update job with failure info and reset to pending for retry
+      await JobModel.findByIdAndUpdate(job._id, {
+        $set: {
+          status: JobStatus.PENDING,
+          attempts: job.attempts,
+          updatedAt: new Date(),
+          batchId: null,
+          redisJobId: null,
+          processingStartedAt: null
+        }
+      });
+
+      this.logger.info(
+        `Job failed but will retry: ${jobId} (attempt ${job.attempts}/${job.maxAttempts})`
+      );
     }
   }
 
@@ -258,8 +249,7 @@ export class JobBatchRepository extends BaseRepository<IJob> {
   private async moveToDeadLetterQueue(
     job: IJob,
     error: string,
-    errorStack?: string,
-    session?: ClientSession
+    errorStack?: string
   ): Promise<void> {
     try {
       const dlqEntry = new DeadLetterQueue({
@@ -286,11 +276,7 @@ export class JobBatchRepository extends BaseRepository<IJob> {
         processingHistory: []
       });
 
-      if (session) {
-        await dlqEntry.save({ session });
-      } else {
-        await dlqEntry.save();
-      }
+      await dlqEntry.save();
 
       this.logger.info(`Job moved to Dead Letter Queue: ${job.jobId}`);
     } catch (error) {

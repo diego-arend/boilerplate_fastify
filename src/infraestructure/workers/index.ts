@@ -24,7 +24,8 @@ const logger = defaultLogger.child({ component: 'WorkerMain' });
 const workerConfig: WorkerConfig = {
   queueName: process.env.QUEUE_NAME || 'app-queue',
   concurrency: parseInt(process.env.WORKER_CONCURRENCY || '5'),
-  batchSize: parseInt(process.env.WORKER_BATCH_SIZE || '50'),
+  batchSizeJobs: parseInt(process.env.BATCH_SIZE_JOBS || '50'),
+  workerSizeJobs: parseInt(process.env.WORKER_SIZE_JOBS || '10'),
   processingInterval: parseInt(process.env.WORKER_PROCESSING_INTERVAL || '5000')
 };
 
@@ -36,10 +37,10 @@ async function startWorker(): Promise<void> {
     console.log(`📊 Worker Config:`, workerConfig);
 
     worker = new StandaloneWorker(workerConfig, logger);
-    await worker.initialize();
+    await worker.run();
 
     console.log('✅ Worker started successfully');
-    logger.info('Worker is now processing jobs from MongoDB batches');
+    logger.info('Worker is now processing jobs with MongoDB→Redis→BullMQ flow');
 
     // Log worker stats periodically
     setInterval(async () => {

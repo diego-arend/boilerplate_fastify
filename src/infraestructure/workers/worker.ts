@@ -1,8 +1,5 @@
 /**
- * Standalone Worker I  private connectionManager!: IMongoConnectionManager;
-  private queueCache!: QueueCache;
-  private queueManager!: PersistentQueueManager;
-  private jobBatchRepository!: JobBatchRepository;mentation
+ * Standalone Worker Implementation
  *
  * Worker independente que processa jobs usando os módulos existentes:
  * - MongoConnectionManagerFactory para MongoDB
@@ -12,6 +9,7 @@
 
 import { MongoConnectionManagerFactory } from '../mongo/index.js';
 import { getQueueCache, type QueueCache } from '../cache/index.js';
+import { QueueManager } from '../queue/queue.js';
 import { JOB_HANDLERS, type JobHandler } from '../queue/jobs/index.js';
 import { JobBatchRepository, type JobBatch } from '../../entities/job/index.js';
 import { type IJob } from '../../entities/job/index.js';
@@ -21,14 +19,16 @@ import type { IMongoConnectionManager } from '../mongo/index.js';
 
 export interface WorkerConfig {
   queueName: string;
-  concurrency: number;
-  batchSize: number;
-  processingInterval: number;
+  batchSizeJobs: number; // MongoDB → Redis batch size (BATCH_SIZE_JOBS)
+  workerSizeJobs: number; // BullMQ worker concurrency (WORKER_SIZE_JOBS)
+  concurrency: number; // Kept for backward compatibility, use workerSizeJobs instead
+  processingInterval: number; // Batch loading interval in milliseconds
 }
 
 export class StandaloneWorker {
   private mongoConnection!: IMongoConnectionManager;
   private queueCache!: QueueCache;
+  private queueManager!: QueueManager;
   private jobRepository: JobBatchRepository;
   private logger: Logger;
   private config: WorkerConfig;
@@ -53,10 +53,16 @@ export class StandaloneWorker {
       // Conectar ao QueueCache (Redis)
       this.queueCache = getQueueCache();
 
-      this.logger.info('Worker initialized successfully');
+      // Initialize QueueManager for proper Redis integration
+      this.queueManager = new QueueManager(
+        'worker-jobs',
+        this.config.workerSizeJobs, // Use workerSizeJobs for BullMQ concurrency
+        this.queueCache,
+        this.logger
+      );
+      await this.queueManager.initialize();
 
-      // Iniciar processamento de jobs
-      this.startBatchProcessing();
+      this.logger.info('StandaloneWorker initialized with queue integration');
     } catch (error) {
       this.logger.error(
         `Worker initialization failed: ${error instanceof Error ? error.message : String(error)}`
@@ -66,101 +72,134 @@ export class StandaloneWorker {
   }
 
   /**
-   * Iniciar processamento de batches do MongoDB
+   * Start the corrected worker flow: MongoDB → Redis → BullMQ
    */
-  private async startBatchProcessing(): Promise<void> {
+  async run(): Promise<void> {
+    try {
+      await this.initialize();
+
+      // Register job handlers with QueueManager
+      this.registerJobHandlers();
+
+      // Start the loading process: MongoDB → Redis
+      await this.startBatchLoading();
+
+      // Start BullMQ worker processing: Redis → Processing
+      await this.queueManager.start();
+
+      this.logger.info('StandaloneWorker started with corrected MongoDB→Redis→BullMQ flow');
+    } catch (error) {
+      this.logger.error(`Failed to start worker: ${error}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Register job handlers with QueueManager for BullMQ processing
+   */
+  private registerJobHandlers(): void {
+    for (const [jobType, handler] of Object.entries(JOB_HANDLERS)) {
+      this.queueManager.registerHandler(jobType, async (data: any) => {
+        try {
+          // Execute the job handler
+          const result = await handler(data.jobData, data.jobId, this.logger, {
+            attempts: data.maxAttempts || 3
+          });
+
+          // Mark job as completed in MongoDB
+          await this.jobRepository.markJobAsCompleted(data.jobId);
+
+          return result;
+        } catch (error) {
+          // Mark job as failed in MongoDB
+          await this.jobRepository.markJobAsFailed(
+            data.jobId,
+            error instanceof Error ? error.message : String(error)
+          );
+          throw error;
+        }
+      });
+    }
+
+    this.logger.info(
+      `Registered ${Object.keys(JOB_HANDLERS).length} job handlers with QueueManager`
+    );
+  }
+
+  /**
+   * Start loading batches from MongoDB to Redis queue
+   */
+  private async startBatchLoading(): Promise<void> {
     if (this.processingInterval) {
-      this.logger.warn('Batch processing already started');
+      this.logger.warn('Batch loading already started');
       return;
     }
 
-    this.logger.info(`Starting batch processing with ${this.config.batchSize} jobs per batch`);
+    this.logger.info(
+      `Starting batch loading: ${this.config.batchSizeJobs} jobs per MongoDB batch, ` +
+        `${this.config.workerSizeJobs} BullMQ worker concurrency`
+    );
 
     this.processingInterval = setInterval(async () => {
       if (this.isShuttingDown) return;
 
       try {
-        await this.processBatch();
+        await this.loadBatchToRedis();
       } catch (error) {
-        this.logger.error(`Batch processing error: ${error}`);
+        this.logger.error(`Batch loading error: ${error}`);
       }
     }, this.config.processingInterval);
   }
 
   /**
-   * Processar próximo batch de jobs do MongoDB
+   * Load next batch from MongoDB to Redis queue for BullMQ processing
    */
-  private async processBatch(): Promise<void> {
+  private async loadBatchToRedis(): Promise<void> {
     try {
-      // Carregar próximo batch do MongoDB
-      const batch = await this.jobRepository.loadNextBatch(this.config.batchSize);
+      // Load next batch from MongoDB
+      const batch = await this.jobRepository.loadNextBatch(this.config.batchSizeJobs);
       if (!batch || batch.jobs.length === 0) {
-        return; // Sem jobs para processar
+        return; // No jobs to process
       }
 
-      this.logger.info(`Processing batch: ${batch.batchId} with ${batch.jobs.length} jobs`);
+      this.logger.info(`Loading batch to Redis: ${batch.batchId} with ${batch.jobs.length} jobs`);
 
-      // Processar cada job no batch via BullMQ
-      const processingPromises = batch.jobs.map(job => this.processJob(job));
-      await Promise.allSettled(processingPromises);
+      // Add each job to Redis queue via QueueManager
+      const addingPromises = batch.jobs.map(job =>
+        this.queueManager.addJob(job.jobId, job.type, {
+          jobId: job.jobId,
+          jobData: job.data,
+          maxAttempts: job.maxAttempts || 3
+        })
+      );
 
-      this.logger.info(`Completed batch: ${batch.batchId}`);
+      await Promise.allSettled(addingPromises);
+
+      this.logger.info(`Loaded batch to Redis: ${batch.batchId}`);
     } catch (error) {
-      this.logger.error(`Failed to process batch: ${error}`);
+      this.logger.error(`Failed to load batch to Redis: ${error}`);
     }
   }
 
   /**
-   * Processar job individual diretamente
-   */
-  private async processJob(job: IJob): Promise<void> {
-    try {
-      // Obter handler para o tipo de job
-      const handler = JOB_HANDLERS[job.type] as JobHandler;
-      if (!handler) {
-        throw new Error(`No handler found for job type: ${job.type}`);
-      }
-
-      // Processar job diretamente
-      await handler(job.data, job.jobId, this.logger, { attempts: job.maxAttempts || 3 });
-
-      // Marcar job como concluído no MongoDB
-      await this.jobRepository.markJobAsCompleted(job.jobId);
-
-      this.logger.info(`Job completed: ${job.jobId} (type: ${job.type})`);
-    } catch (error) {
-      this.logger.error(
-        `Job failed: ${job.jobId} - ${error instanceof Error ? error.message : String(error)}`
-      );
-
-      // Marcar job como falhado no MongoDB
-      await this.jobRepository.markJobAsFailed(
-        job.jobId,
-        error instanceof Error ? error.message : String(error)
-      );
-    }
-  }
-
-  /**
-   * Parar worker gracefully
+   * Stop worker gracefully
    */
   async stop(): Promise<void> {
     this.logger.info('Stopping Standalone Worker...');
     this.isShuttingDown = true;
 
-    // Parar processamento de batches
+    // Stop batch loading interval
     if (this.processingInterval) {
       clearInterval(this.processingInterval);
       this.processingInterval = null;
     }
 
-    // Desconectar QueueCache
-    if (this.queueCache) {
-      // QueueCache não tem método disconnect, usar método interno do Redis
-      // await this.queueCache.disconnect();
+    // Stop QueueManager and BullMQ worker
+    if (this.queueManager) {
+      await this.queueManager.stop();
     }
 
-    // Desconectar MongoDB
+    // Disconnect MongoDB
     if (this.mongoConnection) {
       await this.mongoConnection.disconnect();
     }
@@ -169,32 +208,34 @@ export class StandaloneWorker {
   }
 
   /**
-   * Obter estatísticas do worker
+   * Get worker statistics including queue status
    */
   async getStats(): Promise<any> {
     const jobStats = await this.jobRepository.getBatchStats();
+    const queueStats = await this.queueManager.getStats();
 
     return {
       worker: {
         config: this.config,
         isRunning: !this.isShuttingDown,
-        batchProcessing: !!this.processingInterval
+        batchLoading: !!this.processingInterval
       },
       jobs: jobStats,
+      queue: queueStats,
       connections: {
         mongo: this.mongoConnection?.isConnected() || false,
-        redis: true // QueueCache não tem método isConnected público
+        redis: true // QueueCache manages Redis connections
       }
     };
   }
 
   /**
-   * Health check para container
+   * Health check for container
    */
   async healthCheck(): Promise<boolean> {
     try {
       const mongoConnected = this.mongoConnection?.isConnected() || false;
-      const redisConnected = true; // QueueCache não tem método isConnected público
+      const redisConnected = true; // QueueCache doesn't have public isConnected method
       const workerRunning = !this.isShuttingDown;
 
       return mongoConnected && redisConnected && workerRunning;

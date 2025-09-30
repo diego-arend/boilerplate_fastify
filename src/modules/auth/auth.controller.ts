@@ -79,7 +79,7 @@ export default async function authController(fastify: FastifyInstance) {
         const result = await authService.registerUser(
           { name, email, password },
           requestId,
-          fastify.queueManager
+          fastify.persistentQueueManager // 🔄 Use persistent queue for MongoDB→Redis→BullMQ flow
         );
 
         if (result.success && result.user && result.token) {

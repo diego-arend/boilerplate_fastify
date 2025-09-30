@@ -81,17 +81,52 @@ async function queuePlugin(fastify: FastifyInstance, options: QueuePluginOptions
       return; // 🆕 Early return para worker mode
     }
 
-    // 🔄 MODO API: Apenas publisher (código existente modificado)
-    logger.info('Running in API MODE - only publishing jobs');
+    // 🔄 MODO API: Apenas publisher (sem worker/processamento)
+    logger.info('Running in API MODE - publisher-only, no job processing');
 
-    // Initialize Persistent Queue Manager APENAS para publishing
+    // Create only Queue instance for publishing (no Worker)
+    const { Queue } = await import('bullmq');
+    const queueConnection = await queueCache.createBullMQClient();
+
+    const publisherQueue = new Queue(options.queueName || 'app-queue', {
+      connection: queueConnection
+    });
+
+    // Initialize Persistent Queue Manager apenas para publishing
     const persistentQueueManager = new PersistentQueueManager(
-      null, // 🆕 Sem QueueManager no modo API
+      null, // 🔄 Sem QueueManager no modo API (só publisher)
       options.batchSize || 50,
       logger
     );
 
-    // Decorate Fastify instance apenas com publisher
+    // Create simplified queueManager for API mode (publishing only)
+    const apiQueueManager = {
+      addJob: async (jobId: string, type: string, data: any, options?: any) => {
+        logger.info(`Publishing job to queue: ${jobId} (type: ${type})`);
+        await publisherQueue.add(type, data, {
+          jobId,
+          attempts: options?.attempts || 3,
+          priority: options?.priority || 0,
+          delay: options?.delay || 0
+        });
+        return jobId;
+      },
+      getStats: async () => {
+        const waiting = await publisherQueue.getWaiting();
+        const active = await publisherQueue.getActive();
+        const completed = await publisherQueue.getCompleted();
+        const failed = await publisherQueue.getFailed();
+        return {
+          waiting: waiting.length,
+          active: active.length,
+          completed: completed.length,
+          failed: failed.length
+        };
+      }
+    };
+
+    // Decorate Fastify instance with API-only components
+    fastify.decorate('queueManager', apiQueueManager as any); // 🆕 Simplified for API mode
     fastify.decorate('persistentQueueManager', persistentQueueManager);
     fastify.decorate('queueCache', queueCache);
 
@@ -117,6 +152,7 @@ async function queuePlugin(fastify: FastifyInstance, options: QueuePluginOptions
     // Graceful shutdown for API mode
     fastify.addHook('onClose', async () => {
       logger.info('Shutting down API Queue...');
+      await publisherQueue.close(); // 🔄 Fechar apenas a queue de publishing
       await persistentQueueManager.stopBatchProcessing();
       await queueCache.disconnect();
     });
@@ -136,7 +172,9 @@ export default fp(queuePlugin, {
 export function generateJobId(type: string): string {
   const timestamp = Date.now();
   const random = Math.random().toString(36).substr(2, 9);
-  return `${type}-${timestamp}-${random}`;
+  // Replace ':' with '-' to match JobIdSchema validation
+  const cleanType = type.replace(/:/g, '-');
+  return `${cleanType}-${timestamp}-${random}`;
 }
 
 export const options = {
