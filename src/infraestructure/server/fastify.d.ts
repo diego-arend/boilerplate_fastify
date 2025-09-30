@@ -5,6 +5,8 @@ import type { IMongoConnectionManager } from '../mongo/connectionManager.interfa
 import type { ITransactionManager } from '../mongo/transactionManager.interface.js';
 import type { QueueManager } from '../queue/queue.manager.js';
 import type { PersistentQueueManager } from '../queue/persistentQueueManager.js';
+import type { IBucketConnectionManager } from '../bucket/bucketConnectionManager.interface.js';
+import type { BucketService } from '../bucket/bucket.service.js';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -13,6 +15,8 @@ declare module 'fastify' {
     transactionManager: ITransactionManager;
     queueManager: QueueManager;
     persistentQueueManager: PersistentQueueManager;
+    bucketConnectionManager: IBucketConnectionManager;
+    bucketService: BucketService;
     addJob: (
       jobId: string,
       type: string,

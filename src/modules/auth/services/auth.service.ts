@@ -102,7 +102,7 @@ export class AuthService {
 
       // Generate JWT token
       const token = jwt.sign(
-        { id: newUser._id, name: newUser.name, role: newUser.role },
+        { id: String(newUser._id), name: newUser.name, role: newUser.role },
         this.jwtSecret,
         { expiresIn: '24h' }
       );
@@ -222,9 +222,11 @@ export class AuthService {
       const user = loginResult.user;
 
       // Generate JWT token
-      const token = jwt.sign({ id: user._id, name: user.name, role: user.role }, this.jwtSecret, {
-        expiresIn: '24h'
-      });
+      const token = jwt.sign(
+        { id: String(user._id), name: user.name, role: user.role },
+        this.jwtSecret,
+        { expiresIn: '24h' }
+      );
 
       // Update last login timestamp
       await this.authRepository.updateLastLogin(String(user._id));

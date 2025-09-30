@@ -1,13 +1,12 @@
 import type { FastifyInstance, FastifyPluginOptions } from 'fastify';
-import authPlugin from './modules/auth/auth.plugin.js';
-import healthPlugin from './modules/health/health.plugin.js';
+import apiPlugin from './infraestructure/server/api.plugin.js';
 import cachePlugin from './infraestructure/cache/cache.plugin.js';
 import mongodbPlugin from './infraestructure/mongo/mongodb.plugin.js';
 import queuePlugin from './infraestructure/queue/plugin.js';
 import emailPlugin from './infraestructure/email/email.plugin.js';
+import bucketPlugin from './infraestructure/bucket/bucket.plugin.js';
 import rateLimitPlugin from './infraestructure/server/rateLimit.plugin.js';
 import corsPlugin from './infraestructure/server/cors.plugin.js';
-import { registerModule } from './infraestructure/server/modules.js';
 import { errorHandler, notFoundHandler } from './lib/response/index.js';
 import fastifySwagger from '@fastify/swagger';
 import fastifySwaggerUi from '@fastify/swagger-ui';
@@ -29,6 +28,11 @@ export default async function app(fastify: FastifyInstance, opts: FastifyPluginO
 
   // Register email plugin AFTER cache for email services
   await fastify.register(emailPlugin);
+
+  // Register bucket plugin AFTER cache for file storage services
+  await fastify.register(bucketPlugin, {
+    autoConnect: true // Auto-connect using environment configuration
+  });
 
   // Register queue plugin AFTER both MongoDB and cache for job processing
   await fastify.register(queuePlugin, {
@@ -87,8 +91,7 @@ export default async function app(fastify: FastifyInstance, opts: FastifyPluginO
 
   // Register modules AFTER all infrastructure plugins are loaded
   // This ensures bullQueue, cache, etc. are available in controllers
-  await registerModule(fastify, healthPlugin, '', 'health');
-  await registerModule(fastify, authPlugin, '/auth', 'auth');
+  await fastify.register(apiPlugin, { prefix: '/api' });
 }
 
 export const options = {

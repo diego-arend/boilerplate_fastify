@@ -5,7 +5,7 @@ import { defaultLogger } from '../../../lib/logger/index.js';
 import type { ICacheService } from '../../../infraestructure/cache/index.js';
 
 export interface AuthenticatedUser {
-  id: number;
+  id: string;
   name: string;
   role: string;
 }

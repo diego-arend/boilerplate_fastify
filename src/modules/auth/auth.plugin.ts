@@ -222,14 +222,14 @@ async function authPluginFunction(fastify: FastifyInstance, opts: FastifyPluginO
     });
   }
 
-  // Register auth routes
-  await authController(fastify);
+  // Register auth routes with prefix
+  await fastify.register(authController, { prefix: '/auth' });
 
   // Log final plugin setup completion (development only)
   if (process.env.NODE_ENV === 'development') {
     logger.info({
       message: 'Authentication plugin setup completed',
-      routes: ['POST /register', 'POST /login', 'GET /me'],
+      routes: ['POST /auth/register', 'POST /auth/login'],
       hasJwtStrategy: !!jwtStrategy,
       hasAuthCommand: !!authCommand,
       hasAuthCache: !!cacheService
