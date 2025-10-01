@@ -10,7 +10,7 @@ serverAdapter.setBasePath('/ui');
 // Create BullMQ Queue instance with same configuration as the app
 const appQueue = new Queue('app-queue', {
   connection: {
-    host: process.env.REDIS_HOST || 'redis',
+    host: 'redis',
     port: 6379,
     db: 1, // Same DB as used in QueueManager
     maxRetriesPerRequest: null

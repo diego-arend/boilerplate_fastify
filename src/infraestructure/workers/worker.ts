@@ -55,7 +55,7 @@ export class StandaloneWorker {
 
       // Initialize QueueManager for proper Redis integration
       this.queueManager = new QueueManager(
-        'worker-jobs',
+        this.config.queueName,
         this.config.workerSizeJobs, // Use workerSizeJobs for BullMQ concurrency
         this.queueCache,
         this.logger

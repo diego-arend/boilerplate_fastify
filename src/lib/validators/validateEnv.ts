@@ -150,7 +150,7 @@ if (!parsed.success) {
 
 export const config = Object.freeze(parsed.data);
 
-export function validateEnv(requiredVars: string[]) {
+function validateEnv(requiredVars: string[]) {
   const missing = requiredVars.filter(key => !process.env[key]);
 
   if (missing.length > 0) {
