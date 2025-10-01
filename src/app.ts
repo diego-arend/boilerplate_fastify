@@ -7,6 +7,7 @@ import emailPlugin from './infraestructure/email/email.plugin.js';
 import bucketPlugin from './infraestructure/bucket/bucket.plugin.js';
 import rateLimitPlugin from './infraestructure/server/rateLimit.plugin.js';
 import corsPlugin from './infraestructure/server/cors.plugin.js';
+import multipartPlugin from './infraestructure/server/multipart.plugin.js';
 import { errorHandler, notFoundHandler } from './lib/response/index.js';
 import fastifySwagger from '@fastify/swagger';
 import fastifySwaggerUi from '@fastify/swagger-ui';
@@ -21,8 +22,9 @@ export default async function app(fastify: FastifyInstance, opts: FastifyPluginO
 
   // Register cache plugin SECOND to be available for all routes
   await fastify.register(cachePlugin, {
-    defaultTTL: 300, // 5 minutes
+    defaultTTL: fastify.config.CACHE_DEFAULT_TTL, // Use environment variable
     enableAutoCache: true,
+    // Skip cache for: health check, auth routes (dynamic), docs (static)
     skipRoutes: ['/health', '/auth/login', '/auth/register', '/docs']
   });
 
@@ -37,10 +39,10 @@ export default async function app(fastify: FastifyInstance, opts: FastifyPluginO
   // Register queue plugin AFTER both MongoDB and cache for job processing
   await fastify.register(queuePlugin, {
     config: fastify.config,
-    queueName: process.env.QUEUE_NAME || 'app-queue',
-    concurrency: parseInt(process.env.WORKER_CONCURRENCY || '5'),
-    batchSize: parseInt(process.env.BATCH_SIZE_JOBS || '50'),
-    processingInterval: parseInt(process.env.WORKER_PROCESSING_INTERVAL || '5000'),
+    queueName: fastify.config.QUEUE_NAME,
+    concurrency: fastify.config.WORKER_CONCURRENCY,
+    batchSize: fastify.config.BATCH_SIZE_JOBS,
+    processingInterval: fastify.config.WORKER_PROCESSING_INTERVAL,
     enablePersistence: true // Enable persistent job processing
   });
 
@@ -51,10 +53,12 @@ export default async function app(fastify: FastifyInstance, opts: FastifyPluginO
     // credentials: true
   });
 
+  // Register multipart plugin for file uploads
+  await fastify.register(multipartPlugin);
+
   // Register rate limiting plugin AFTER CORS but BEFORE routes
   await fastify.register(rateLimitPlugin, {
-    max: 100, // requests per minute
-    timeWindow: 60000, // 1 minute
+    // Skip rate limit for: health check (monitoring), docs (static content)
     skipRoutes: ['/health', '/docs', '/docs/*'],
     enableGlobal: true,
     useRedis: true // Use Redis if available

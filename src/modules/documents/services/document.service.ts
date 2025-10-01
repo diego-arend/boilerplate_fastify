@@ -1,13 +1,15 @@
 /**
- * Document Service - Simplified
+ * Document Service - Following project patterns like AuthService
  */
 
 import crypto from 'node:crypto';
 import path from 'node:path';
 import { defaultLogger } from '../../../lib/logger/index.js';
 import type { Logger } from 'pino';
-import type { FastifyInstance } from 'fastify';
-import { DocumentRepository } from '../../../entities/document/index.js';
+import {
+  DocumentRepositoryFactory,
+  type IDocumentRepository
+} from '../../../entities/document/index.js';
 import type { IDocument } from '../../../entities/document/index.js';
 
 export interface UploadFileOptions {
@@ -19,24 +21,51 @@ export interface UploadFileOptions {
 }
 
 export class DocumentService {
-  private repository: DocumentRepository;
+  private repository!: IDocumentRepository;
   private logger: Logger;
-  private fastify: FastifyInstance;
+  private repositoryInitialized = false;
 
-  constructor(fastify: FastifyInstance, logger?: Logger) {
-    this.fastify = fastify;
-    this.repository = new DocumentRepository();
+  constructor(logger?: Logger, repository?: IDocumentRepository) {
     this.logger = logger || defaultLogger.child({ component: 'DocumentService' });
+
+    if (repository) {
+      this.repository = repository;
+      this.repositoryInitialized = true;
+    }
+  }
+
+  /**
+   * Initialize service - must be called before using any service methods
+   */
+  async initialize(): Promise<void> {
+    if (!this.repositoryInitialized) {
+      try {
+        this.repository = await DocumentRepositoryFactory.createDocumentRepository();
+        this.repositoryInitialized = true;
+        this.logger.info('DocumentRepository initialized successfully');
+      } catch (error) {
+        this.logger.error({ error }, 'Failed to initialize DocumentRepository');
+        throw error;
+      }
+    }
   }
 
   /**
    * Upload CSV file to bucket
+   * Note: bucketService will be injected through the controller call
    */
-  async uploadFile(options: UploadFileOptions): Promise<IDocument> {
+  async uploadFile(options: UploadFileOptions, bucketService: any): Promise<IDocument> {
+    if (!this.repositoryInitialized) {
+      throw new Error('Service not initialized. Call initialize() first.');
+    }
+
     const { file, originalName, mimeType, uploadedBy, bucket = 'documents' } = options;
 
-    // Validate CSV mime type
-    if (!mimeType.includes('csv') && !originalName.toLowerCase().endsWith('.csv')) {
+    // Validate CSV mime type with safe checks
+    const safeMimeType = mimeType || '';
+    const safeOriginalName = originalName || '';
+
+    if (!safeMimeType.includes('csv') && !safeOriginalName.toLowerCase().endsWith('.csv')) {
       throw new Error('Only CSV files are allowed');
     }
 
@@ -47,8 +76,8 @@ export class DocumentService {
     const filename = `${timestamp}-${randomString}${fileExtension}`;
     const bucketKey = `${uploadedBy}/${filename}`;
 
-    // Create document record
-    const document = await this.repository.create({
+    // Create document record using the interface method
+    const document = await this.repository.createDocument({
       filename,
       originalName,
       fileSize: file.length,
@@ -59,7 +88,7 @@ export class DocumentService {
 
     try {
       // Upload to bucket
-      await this.fastify.bucketService.uploadFile({
+      await bucketService.uploadFile({
         bucket,
         key: bucketKey,
         body: file,
@@ -67,7 +96,7 @@ export class DocumentService {
       });
 
       // Generate presigned URL
-      const presignedUrl = await this.fastify.bucketService.getPresignedUrl({
+      const presignedUrl = await bucketService.getPresignedUrl({
         bucket,
         key: bucketKey,
         expiresIn: 3600 // 1 hour
@@ -92,9 +121,43 @@ export class DocumentService {
   }
 
   /**
-   * Generate new presigned URL
+   * List documents for a user with pagination
    */
-  async generatePresignedUrl(documentId: string, userId: string): Promise<string> {
+  async listDocuments(userId: string, page: number, limit: number) {
+    if (!this.repositoryInitialized) {
+      throw new Error('Service not initialized. Call initialize() first.');
+    }
+
+    const offset = (page - 1) * limit;
+
+    const { documents, total } = await this.repository.findByUserIdPaginated(userId, limit, offset);
+
+    return {
+      documents: documents.map(doc => ({
+        id: String(doc._id),
+        filename: doc.filename,
+        originalName: doc.originalName,
+        fileSize: doc.fileSize,
+        presignedUrl: doc.presignedUrl,
+        createdAt: doc.createdAt
+      })),
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
+    };
+  }
+
+  /**
+   * Get document details
+   */
+  async getDocument(documentId: string, userId: string) {
+    if (!this.repositoryInitialized) {
+      throw new Error('Service not initialized. Call initialize() first.');
+    }
+
     const document = await this.repository.findById(documentId);
     if (!document) {
       throw new Error('Document not found');
@@ -104,7 +167,35 @@ export class DocumentService {
       throw new Error('Access denied');
     }
 
-    const presignedUrl = await this.fastify.bucketService.getPresignedUrl({
+    return {
+      id: String(document._id),
+      filename: document.filename,
+      originalName: document.originalName,
+      fileSize: document.fileSize,
+      presignedUrl: document.presignedUrl,
+      presignedUrlExpiry: document.presignedUrlExpiry,
+      createdAt: document.createdAt
+    };
+  }
+
+  /**
+   * Generate new presigned URL
+   */
+  async generatePresignedUrl(documentId: string, userId: string, bucketService: any) {
+    if (!this.repositoryInitialized) {
+      throw new Error('Service not initialized. Call initialize() first.');
+    }
+
+    const document = await this.repository.findById(documentId);
+    if (!document) {
+      throw new Error('Document not found');
+    }
+
+    if (document.uploadedBy !== userId) {
+      throw new Error('Access denied');
+    }
+
+    const presignedUrl = await bucketService.getPresignedUrl({
       bucket: 'documents',
       key: document.bucketKey,
       expiresIn: 3600
@@ -117,13 +208,21 @@ export class DocumentService {
       presignedUrlExpiry: expiryDate
     });
 
-    return presignedUrl;
+    return {
+      presignedUrl,
+      expiresIn: 3600,
+      expiresAt: expiryDate
+    };
   }
 
   /**
    * Delete document
    */
-  async deleteDocument(documentId: string, userId: string): Promise<void> {
+  async deleteDocument(documentId: string, userId: string, bucketService: any): Promise<void> {
+    if (!this.repositoryInitialized) {
+      throw new Error('Service not initialized. Call initialize() first.');
+    }
+
     const document = await this.repository.findById(documentId);
     if (!document) {
       throw new Error('Document not found');
@@ -134,7 +233,7 @@ export class DocumentService {
     }
 
     // Delete from bucket
-    await this.fastify.bucketService.deleteFile('documents', document.bucketKey);
+    await bucketService.deleteFile('documents', document.bucketKey);
 
     // Delete document record
     await this.repository.deleteById(documentId);

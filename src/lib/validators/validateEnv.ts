@@ -13,6 +13,7 @@ const envSchema = z
     // Core application settings
     NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
     PORT: z.coerce.number().min(1).max(65535).default(3000),
+    HOST: z.string().min(1).default('0.0.0.0'),
 
     // Worker Mode Configuration
     WORKER_MODE: z
@@ -56,6 +57,9 @@ const envSchema = z
     CORS_ALLOW_CREDENTIALS: z.coerce.boolean().default(false).optional(),
     RATE_LIMIT_MAX: z.coerce.number().positive().default(100).optional(),
     RATE_LIMIT_WINDOW_MS: z.coerce.number().positive().default(60000).optional(), // 1 minute
+
+    // Cache Configuration
+    CACHE_DEFAULT_TTL: z.coerce.number().positive().default(300).optional(), // 5 minutes
 
     // SMTP Email Configuration
     SMTP_HOST: z.string().min(1, 'SMTP_HOST cannot be empty').optional(),

@@ -80,6 +80,10 @@ This project integrates with **Model Context Protocol (MCP) servers** for enhanc
 - **Playwright**: For web-based testing, automation, or browser interactions
 - **Best Practice**: Use MCPs for external resources, not for existing project code
 
+### **Browser Testing Guidelines**
+- **✅ Use MCP Playwright**: For all browser testing and UI interactions
+- **❌ Never Simple Browser**: Simple Browser is only for quick previews, not testing
+
 ## Documentation References
 
 For implementation patterns and guidelines, refer to component-specific READMEs:
@@ -169,21 +173,14 @@ const libraryId = await mcp_context7_resolve_library_id({
 
 ### **Playwright Testing Examples**
 ```typescript
-// E2E testing for authentication flows
-await mcp_playwright_browser_navigate({ url: 'http://localhost:3001/auth/login' });
-await mcp_playwright_browser_fill_form({
-  fields: [
-    { name: 'email', type: 'textbox', value: 'test@example.com' },
-    { name: 'password', type: 'textbox', value: 'TestPass123!' }
-  ]
-});
+// Testing interfaces - use MCP Playwright, not Simple Browser
+await mcp_playwright_browser_navigate({ url: 'http://localhost:3001/docs' });
+await mcp_playwright_browser_snapshot();
 ```
 
 ### **MCP Best Practices**
-- Use **Context7** for up-to-date library examples when implementing new features
-- Use **Playwright** for automated testing of web interfaces (Bull Dashboard, API endpoints)
-- **Prefer project documentation** over MCP for existing codebase patterns
-- **Combine MCPs** with project READMEs for comprehensive understanding
+- **Context7**: For library documentation and examples
+- **Playwright**: For all browser testing and UI interactions (not Simple Browser)
 
 ## External References
 

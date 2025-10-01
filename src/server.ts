@@ -25,7 +25,7 @@ const start = async () => {
     console.log(`📊 Environment: ${config.NODE_ENV}`);
     console.log(`🌐 Port: ${config.PORT}`);
 
-    await server.listen({ port: config.PORT, host: '0.0.0.0' });
+    await server.listen({ port: config.PORT, host: config.HOST });
 
     server.log.info(`🎉 Server successfully running on http://localhost:${config.PORT}`);
 

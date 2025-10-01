@@ -21,6 +21,10 @@ export default async function rateLimitPlugin(
   const rateLimitConfig = {
     max: opts.max || config.RATE_LIMIT_MAX || 100, // requests per timeWindow
     timeWindow: opts.timeWindow || config.RATE_LIMIT_WINDOW_MS || 60000, // 1 minute in ms
+    // Skip rate limit for routes that shouldn't be limited:
+    // - /health: monitoring endpoint for load balancers/health checks
+    // - /docs: static API documentation
+    // - /docs/*: all documentation sub-routes
     skipRoutes: opts.skipRoutes || ['/health', '/docs', '/docs/*'],
     enableGlobal: opts.enableGlobal !== false,
     useRedis: opts.useRedis !== false && !!config.REDIS_HOST

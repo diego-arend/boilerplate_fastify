@@ -99,6 +99,7 @@ src/
 ├── entities/                # Database entities and models
 ├── modules/                 # Business logic modules
 │   ├── auth/               # Authentication & RBAC → See auth/README.md
+│   ├── documents/          # Document upload and management → See documents/README.md
 │   └── health/             # Health check endpoints
 ├── lib/                    # Shared utilities and helpers
 └── http-docs/              # HTTP test files and examples
@@ -198,6 +199,10 @@ Each infrastructure module has comprehensive documentation with implementation d
 - **[Queue System](src/infraestructure/queue/README.md)** - Enterprise-grade job processing with Dead Letter Queue and resilient manager
 - **[Worker System](src/infraestructure/workers/README.md)** - Standalone worker containers for background job processing with independent scaling
 - **[Server Configuration](src/infraestructure/server/README.md)** - Fastify setup, plugins, and middleware configuration
+
+### Documents Module
+
+- **[Documents Module](src/modules/documents/README.md)** - Upload, list, and manage user documents via REST API endpoints
 
 ## 🛠️ Development Commands
 

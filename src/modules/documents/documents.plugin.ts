@@ -1,66 +1,36 @@
 import type { FastifyInstance, FastifyPluginOptions } from 'fastify';
-import { DocumentsController } from './documents.controller.js';
+import fp from 'fastify-plugin';
+import documentsController from './documents.controller.js';
+import { defaultLogger } from '../../lib/logger/index.js';
 
-/**
- * Document Management Plugin - Simplified
- */
-async function documentsPlugin(fastify: FastifyInstance, _opts: FastifyPluginOptions) {
-  fastify.log.info('Initializing documents plugin...');
+const logger = defaultLogger.child({ context: 'documents-plugin' });
 
-  const documentsController = new DocumentsController(fastify);
-  fastify.log.info('DocumentsController initialized successfully');
+async function documentsPluginFunction(fastify: FastifyInstance, opts: FastifyPluginOptions) {
+  if (process.env.NODE_ENV === 'development') {
+    logger.info({
+      message: 'Initializing documents plugin',
+      hasBucketService: !!fastify.bucketService
+    });
+  }
 
-  /**
-   * GET /documents - List user documents
-   */
-  fastify.get('/', {
-    preHandler: [fastify.authenticate],
-    handler: async (request: any, reply: any) => {
-      return documentsController.listDocuments(request, reply);
-    }
-  });
+  // Register documents routes with prefix
+  await fastify.register(documentsController, { prefix: '/documents' });
 
-  /**
-   * POST /documents/upload - Upload CSV file
-   */
-  fastify.post('/upload', {
-    preHandler: [fastify.authenticate],
-    handler: async (request: any, reply: any) => {
-      return documentsController.uploadCSV(request, reply);
-    }
-  });
-
-  /**
-   * GET /documents/:id/download - Generate download URL
-   */
-  fastify.get('/:id/download', {
-    preHandler: [fastify.authenticate],
-    handler: async (request: any, reply: any) => {
-      return documentsController.getDownloadUrl(request, reply);
-    }
-  });
-
-  /**
-   * GET /documents/:id - Get document details
-   */
-  fastify.get('/:id', {
-    preHandler: [fastify.authenticate],
-    handler: async (request: any, reply: any) => {
-      return documentsController.getDocument(request, reply);
-    }
-  });
-
-  /**
-   * DELETE /documents/:id - Delete document
-   */
-  fastify.delete('/:id', {
-    preHandler: [fastify.authenticate],
-    handler: async (request: any, reply: any) => {
-      return documentsController.deleteDocument(request, reply);
-    }
-  });
-
-  fastify.log.info('Documents plugin registered successfully');
+  if (process.env.NODE_ENV === 'development') {
+    logger.info({
+      message: 'Documents plugin setup completed',
+      routes: [
+        'POST /documents/upload',
+        'GET /documents/',
+        'GET /documents/:id',
+        'GET /documents/:id/download',
+        'DELETE /documents/:id'
+      ]
+    });
+  }
 }
 
-export default documentsPlugin;
+export default fp(documentsPluginFunction, {
+  name: 'documents',
+  dependencies: ['auth', 'bucket'] // Ensure documents loads after auth and bucket services
+});

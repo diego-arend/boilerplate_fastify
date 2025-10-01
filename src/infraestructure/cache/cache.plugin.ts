@@ -16,8 +16,12 @@ async function cachePlugin(fastify: FastifyInstance, opts: FastifyPluginOptions)
 
   // Cache configuration options
   const cacheOptions = {
-    defaultTTL: 300, // 5 minutes default
+    defaultTTL: opts.defaultTTL || 300, // Use opts or fallback to 5 minutes
     enableAutoCache: true,
+    // Skip cache for routes that are dynamic or shouldn't be cached:
+    // - /health: monitoring endpoint, always fresh
+    // - /auth/login: authentication, always fresh
+    // - /auth/register: registration, always fresh
     skipRoutes: ['/health', '/auth/login', '/auth/register'],
     ...opts
   };
