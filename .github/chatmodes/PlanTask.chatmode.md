@@ -1,6 +1,6 @@
 ---
 description: 'Specialized mode for task definition and scoping for execution by the agent or GitHub Copilot ask mode, aligned with backend development using Fastify.'
-tools: ['codebase', 'findTestFiles', 'search']
+tools: ['search/codebase', 'search']
 model: Claude Sonnet 4
 ---
 

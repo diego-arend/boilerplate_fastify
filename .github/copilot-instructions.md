@@ -182,14 +182,6 @@ await mcp_playwright_browser_snapshot();
 - **Context7**: For library documentation and examples
 - **Playwright**: For all browser testing and UI interactions (not Simple Browser)
 
-## External References
-
-- [Fastify Documentation](https://fastify.dev/docs/latest/)
-- [TypeScript Handbook](https://www.typescriptlang.org/docs/)
-- [MongoDB Documentation](https://docs.mongodb.com/)
-- [Zod Validation](https://zod.dev/)
-- [JWT Best Practices](https://tools.ietf.org/html/rfc8725)
-
 ---
 
 ## 📚 **Development Workflow**
