@@ -345,7 +345,7 @@ userSchema.pre(['findOneAndUpdate', 'updateOne', 'updateMany'], function (next) 
 // ==========================================
 
 // Password comparison method (to be implemented with bcrypt in repository)
-userSchema.methods.comparePassword = function (candidatePassword: string): Promise<boolean> {
+userSchema.methods.comparePassword = function (_candidatePassword: string): Promise<boolean> {
   // This will be implemented in the repository layer with bcrypt
   throw new Error('comparePassword must be implemented in the repository layer');
 };

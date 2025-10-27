@@ -34,7 +34,7 @@ export class JwtStrategy implements AuthStrategy {
 
   async authenticate(
     request: FastifyRequest,
-    reply: FastifyReply
+    _reply: FastifyReply
   ): Promise<AuthenticatedUser | null> {
     const requestId = request.id || Math.random().toString(36).substr(2, 9);
     const authLogger = this.logger.child({ requestId, operation: 'jwt-authenticate' });
