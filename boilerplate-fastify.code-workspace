@@ -1,0 +1,33 @@
+{
+  "folders": [
+    {
+      "name": "Boilerplate Fastify",
+      "path": "."
+    }
+  ],
+  "settings": {
+    "files.associations": {
+      "*.md": "markdown"
+    },
+    "markdown.validate.enabled": false,
+    "[markdown]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
+      "editor.codeActionsOnSave": {
+        "source.fixAll.eslint": "never"
+      },
+      "editor.wordWrap": "on"
+    },
+    "eslint.validate": [
+      "javascript",
+      "typescript"
+    ]
+  },
+  "extensions": {
+    "recommendations": [
+      "esbenp.prettier-vscode",
+      "ms-vscode.vscode-typescript-next",
+      "bradlc.vscode-tailwindcss",
+      "ms-vscode.vscode-json"
+    ]
+  }
+}

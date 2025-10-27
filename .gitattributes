@@ -1,0 +1,25 @@
+# Text files
+*.md text eol=lf
+*.txt text eol=lf
+*.json text eol=lf
+*.js text eol=lf
+*.ts text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# Disable language detection for markdown files
+*.md linguist-detectable=false
+*.md linguist-documentation
+
+# Lock files
+pnpm-lock.yaml binary
+package-lock.json binary
+yarn.lock binary
+
+# Images
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.svg text eol=lf

@@ -80,7 +80,8 @@ export default [
       'coverage/**/*',
       '*.min.js',
       '.env*',
-      'eslint.config.js'
+      'eslint.config.js',
+      '**/*.md'
     ]
   }
 ];

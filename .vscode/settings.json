@@ -13,10 +13,33 @@
   "[json]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
+  "[markdown]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.codeActionsOnSave": {
+      "source.fixAll.eslint": "never"
+    },
+    "editor.wordWrap": "on"
+  },
   "prettier.configPath": ".prettierrc",
   "eslint.validate": [
     "javascript",
     "typescript"
   ],
-  "typescript.preferences.importModuleSpecifier": "relative"
+  "typescript.preferences.importModuleSpecifier": "relative",
+  "files.associations": {
+    "*.md": "markdown"
+  },
+  "markdown.validate.enabled": false,
+  "markdown.extension.toc.levels": "1..6",
+  // Disable various linting/validation for markdown files
+  "yaml.validate": false,
+  "yaml.schemaStore.enable": false,
+  "[yaml]": {
+    "editor.insertSpaces": true,
+    "editor.tabSize": 2,
+    "editor.autoIndent": "advanced"
+  },
+  // Disable problem matchers for markdown files
+  "problems.decorations.enabled": true,
+  "problems.showCurrentInStatus": true
 }
