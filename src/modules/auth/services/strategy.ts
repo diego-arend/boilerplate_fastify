@@ -11,7 +11,7 @@ export interface AuthenticatedUser {
 }
 
 export interface AuthStrategy {
-  authenticate(request: FastifyRequest, reply: FastifyReply): Promise<AuthenticatedUser | null>;
+  authenticate(_request: FastifyRequest, _reply: FastifyReply): Promise<AuthenticatedUser | null>;
 }
 
 export class JwtStrategy implements AuthStrategy {
@@ -33,8 +33,8 @@ export class JwtStrategy implements AuthStrategy {
   }
 
   async authenticate(
-    request: FastifyRequest,
-    reply: FastifyReply
+    _request: FastifyRequest,
+    _reply: FastifyReply
   ): Promise<AuthenticatedUser | null> {
     const requestId = request.id || Math.random().toString(36).substr(2, 9);
     const authLogger = this.logger.child({ requestId, operation: 'jwt-authenticate' });

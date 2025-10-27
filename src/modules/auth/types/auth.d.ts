@@ -3,12 +3,14 @@ import type { FastifyRequest, FastifyReply } from 'fastify';
 
 declare module 'fastify' {
   interface FastifyInstance {
-    authenticate: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
-    requireRole: (role: string) => (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
-    requireAdmin: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
+    authenticate: (_request: FastifyRequest, _reply: FastifyReply) => Promise<void>;
+    requireRole: (
+      role: string
+    ) => (_request: FastifyRequest, _reply: FastifyReply) => Promise<void>;
+    requireAdmin: (_request: FastifyRequest, _reply: FastifyReply) => Promise<void>;
     requireRoles: (
       roles: string[]
-    ) => (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
+    ) => (_request: FastifyRequest, _reply: FastifyReply) => Promise<void>;
   }
 
   interface FastifyRequest {

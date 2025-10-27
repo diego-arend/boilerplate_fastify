@@ -1,6 +1,5 @@
 import { Schema, model, Document } from 'mongoose';
 import { z } from 'zod';
-import { sanitizeInput } from '../../lib/validators/index.js';
 
 // ==========================================
 // 1. INTERFACE DA ENTIDADE PARA REPOSITORY

@@ -5,7 +5,7 @@ import { defaultLogger } from '../../lib/logger/index.js';
 
 const logger = defaultLogger.child({ context: 'documents-plugin' });
 
-async function documentsPluginFunction(fastify: FastifyInstance, opts: FastifyPluginOptions) {
+async function documentsPluginFunction(fastify: FastifyInstance, _opts: FastifyPluginOptions) {
   if (process.env.NODE_ENV === 'development') {
     logger.info({
       message: 'Initializing documents plugin',

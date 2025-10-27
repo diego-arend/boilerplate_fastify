@@ -17,10 +17,7 @@
       },
       "editor.wordWrap": "on"
     },
-    "eslint.validate": [
-      "javascript",
-      "typescript"
-    ]
+    "eslint.validate": ["javascript", "typescript"]
   },
   "extensions": {
     "recommendations": [

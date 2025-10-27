@@ -100,7 +100,7 @@ export const NameSchema = z
   .min(2, 'Name too short')
   .max(100, 'Name too long')
   .transform(val => sanitizeInput(val))
-  .refine((name: string) => /^[a-zA-Z0-9\s\-_'\.]+$/.test(name), {
+  .refine((name: string) => /^[a-zA-Z0-9\s\-_'.]+$/.test(name), {
     message: 'Name contains invalid characters'
   })
   .refine((name: string) => !hasInjectionAttempt(name), {

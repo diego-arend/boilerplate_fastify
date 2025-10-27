@@ -5,8 +5,6 @@ import {
   PasswordSchema,
   NameSchema,
   ChangePasswordSchema,
-  BaseStatusSchema,
-  BaseRoleSchema,
   sanitizeInput
 } from '../../lib/validators/index.js';
 

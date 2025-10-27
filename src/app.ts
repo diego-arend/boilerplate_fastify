@@ -12,7 +12,7 @@ import { errorHandler, notFoundHandler } from './lib/response/index.js';
 import fastifySwagger from '@fastify/swagger';
 import fastifySwaggerUi from '@fastify/swagger-ui';
 
-export default async function app(fastify: FastifyInstance, opts: FastifyPluginOptions) {
+export default async function app(fastify: FastifyInstance, _opts: FastifyPluginOptions) {
   // Configure global response handling middlewares
   errorHandler(fastify);
   notFoundHandler(fastify);

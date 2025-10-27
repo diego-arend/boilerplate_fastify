@@ -6,7 +6,7 @@ import { getDataCache } from './index.js';
  * Simplified Cache plugin for Fastify using DataCache (Redis db0)
  * Provides automatic caching capabilities for GET requests
  */
-async function cachePlugin(fastify: FastifyInstance, opts: FastifyPluginOptions): Promise<void> {
+async function cachePlugin(fastify: FastifyInstance, _opts: FastifyPluginOptions): Promise<void> {
   // Initialize simplified data cache
   const cache = getDataCache();
   await cache.connect();
@@ -29,7 +29,7 @@ async function cachePlugin(fastify: FastifyInstance, opts: FastifyPluginOptions)
   /**
    * Generate cache key for request
    */
-  function generateCacheKey(request: FastifyRequest): string {
+  function generateCacheKey(_request: FastifyRequest): string {
     const { method, url } = request;
     const userId = request.authenticatedUser?.id || 'anonymous';
     return `route:${method}:${url}:user:${userId}`;
@@ -38,7 +38,7 @@ async function cachePlugin(fastify: FastifyInstance, opts: FastifyPluginOptions)
   /**
    * Check if route should be cached
    */
-  function shouldCache(request: FastifyRequest): boolean {
+  function shouldCache(_request: FastifyRequest): boolean {
     if (request.method !== 'GET') return false;
     if (cacheOptions.skipRoutes.some(route => request.url.startsWith(route))) return false;
     if (Object.keys(request.query as object).length > 0 && !request.cacheWithQuery) return false;
@@ -48,7 +48,7 @@ async function cachePlugin(fastify: FastifyInstance, opts: FastifyPluginOptions)
   /**
    * Pre-handler hook to check cache
    */
-  fastify.addHook('preHandler', async (request: FastifyRequest, reply: FastifyReply) => {
+  fastify.addHook('preHandler', async (_request: FastifyRequest, _reply: FastifyReply) => {
     if (!shouldCache(request)) return;
 
     try {
@@ -70,7 +70,7 @@ async function cachePlugin(fastify: FastifyInstance, opts: FastifyPluginOptions)
   /**
    * OnSend hook to save responses
    */
-  fastify.addHook('onSend', async (request: FastifyRequest, reply: FastifyReply, payload) => {
+  fastify.addHook('onSend', async (_request: FastifyRequest, _reply: FastifyReply, payload) => {
     if (!request.cacheKey || reply.statusCode !== 200) return payload;
 
     try {

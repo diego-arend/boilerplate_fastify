@@ -2,11 +2,10 @@ import type { FastifyInstance, FastifyPluginOptions, FastifyRequest, FastifyRepl
 import fp from 'fastify-plugin';
 import { JwtStrategy, AuthenticateCommand } from './services/index.js';
 import { CacheServiceFactory, type DataCache } from '../../infraestructure/cache/index.js';
-import { config } from '../../lib/validators/validateEnv.js';
 import authController from './auth.controller.js';
 import { defaultLogger } from '../../lib/logger/index.js';
 
-async function authPluginFunction(fastify: FastifyInstance, opts: FastifyPluginOptions) {
+async function authPluginFunction(fastify: FastifyInstance, _opts: FastifyPluginOptions) {
   const logger = defaultLogger.child({ context: 'auth-plugin' });
 
   if (process.env.NODE_ENV === 'development') {
@@ -40,7 +39,7 @@ async function authPluginFunction(fastify: FastifyInstance, opts: FastifyPluginO
   const jwtStrategy = new JwtStrategy(SECRET, cacheService);
   const authCommand = new AuthenticateCommand(jwtStrategy);
 
-  fastify.decorate('authenticate', async (request: FastifyRequest, reply: FastifyReply) => {
+  fastify.decorate('authenticate', async (_request: FastifyRequest, _reply: FastifyReply) => {
     const requestId = request.id || Math.random().toString(36).substr(2, 9);
     const authLogger = logger.child({ requestId, operation: 'authenticate' });
 
@@ -71,7 +70,7 @@ async function authPluginFunction(fastify: FastifyInstance, opts: FastifyPluginO
 
   // Role-based access control decorators
   fastify.decorate('requireRole', (requiredRole: string) => {
-    return async (request: FastifyRequest, reply: FastifyReply) => {
+    return async (_request: FastifyRequest, _reply: FastifyReply) => {
       const requestId = request.id || Math.random().toString(36).substr(2, 9);
       const roleLogger = logger.child({ requestId, operation: 'require-role', requiredRole });
 
@@ -121,7 +120,7 @@ async function authPluginFunction(fastify: FastifyInstance, opts: FastifyPluginO
   });
 
   // Admin-only access decorator
-  fastify.decorate('requireAdmin', async (request: FastifyRequest, reply: FastifyReply) => {
+  fastify.decorate('requireAdmin', async (_request: FastifyRequest, _reply: FastifyReply) => {
     const requestId = request.id || Math.random().toString(36).substr(2, 9);
     const adminLogger = logger.child({ requestId, operation: 'require-admin' });
 
@@ -167,7 +166,7 @@ async function authPluginFunction(fastify: FastifyInstance, opts: FastifyPluginO
 
   // Multi-role access decorator
   fastify.decorate('requireRoles', (allowedRoles: string[]) => {
-    return async (request: FastifyRequest, reply: FastifyReply) => {
+    return async (_request: FastifyRequest, _reply: FastifyReply) => {
       const requestId = request.id || Math.random().toString(36).substr(2, 9);
       const rolesLogger = logger.child({ requestId, operation: 'require-roles', allowedRoles });
 

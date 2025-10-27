@@ -1,4 +1,3 @@
-import bcrypt from 'bcryptjs';
 import type { FilterQuery, ClientSession } from 'mongoose';
 import type { IJob } from './index.js';
 import { JobModel, JobValidations } from './index.js';
