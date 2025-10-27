@@ -3,7 +3,7 @@ import type { AuthStrategy, AuthenticatedUser } from './strategy.js';
 import { defaultLogger } from '../../../lib/logger/index.js';
 
 export interface AuthCommand {
-  execute(_request: FastifyRequest, _reply: FastifyReply): Promise<AuthenticatedUser | null>;
+  execute(request: FastifyRequest, reply: FastifyReply): Promise<AuthenticatedUser | null>;
 }
 
 export class AuthenticateCommand implements AuthCommand {
@@ -20,7 +20,7 @@ export class AuthenticateCommand implements AuthCommand {
     }
   }
 
-  async execute(_request: FastifyRequest, _reply: FastifyReply): Promise<AuthenticatedUser | null> {
+  async execute(request: FastifyRequest, reply: FastifyReply): Promise<AuthenticatedUser | null> {
     const requestId = request.id || Math.random().toString(36).substr(2, 9);
     const operationLogger = this.logger.child({ requestId, operation: 'execute-auth' });
 

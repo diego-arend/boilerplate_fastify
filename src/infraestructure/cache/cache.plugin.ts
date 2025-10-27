@@ -16,31 +16,33 @@ async function cachePlugin(fastify: FastifyInstance, _opts: FastifyPluginOptions
 
   // Cache configuration options
   const cacheOptions = {
-    defaultTTL: opts.defaultTTL || 300, // Use opts or fallback to 5 minutes
+    defaultTTL: _opts.defaultTTL || 300, // Use _opts or fallback to 5 minutes
     enableAutoCache: true,
     // Skip cache for routes that are dynamic or shouldn't be cached:
     // - /health: monitoring endpoint, always fresh
     // - /auth/login: authentication, always fresh
     // - /auth/register: registration, always fresh
     skipRoutes: ['/health', '/auth/login', '/auth/register'],
-    ...opts
+    ..._opts
   };
 
   /**
    * Generate cache key for request
    */
-  function generateCacheKey(_request: FastifyRequest): string {
+  function generateCacheKey(request: FastifyRequest): string {
     const { method, url } = request;
     const userId = request.authenticatedUser?.id || 'anonymous';
-    return `route:${method}:${url}:user:${userId}`;
+    return `cache:${method}:${url}:${userId}`;
   }
 
   /**
-   * Check if route should be cached
+   * Check if request should be cached
    */
-  function shouldCache(_request: FastifyRequest): boolean {
+  function shouldCache(request: FastifyRequest): boolean {
     if (request.method !== 'GET') return false;
-    if (cacheOptions.skipRoutes.some(route => request.url.startsWith(route))) return false;
+    if (cacheOptions.skipRoutes.some((route: string) => request.url.startsWith(route))) {
+      return false;
+    }
     if (Object.keys(request.query as object).length > 0 && !request.cacheWithQuery) return false;
     return cacheOptions.enableAutoCache;
   }
@@ -48,7 +50,7 @@ async function cachePlugin(fastify: FastifyInstance, _opts: FastifyPluginOptions
   /**
    * Pre-handler hook to check cache
    */
-  fastify.addHook('preHandler', async (_request: FastifyRequest, _reply: FastifyReply) => {
+  fastify.addHook('preHandler', async (request: FastifyRequest, reply: FastifyReply) => {
     if (!shouldCache(request)) return;
 
     try {
@@ -70,7 +72,7 @@ async function cachePlugin(fastify: FastifyInstance, _opts: FastifyPluginOptions
   /**
    * OnSend hook to save responses
    */
-  fastify.addHook('onSend', async (_request: FastifyRequest, _reply: FastifyReply, payload) => {
+  fastify.addHook('onSend', async (request: FastifyRequest, reply: FastifyReply, payload) => {
     if (!request.cacheKey || reply.statusCode !== 200) return payload;
 
     try {
@@ -82,9 +84,7 @@ async function cachePlugin(fastify: FastifyInstance, _opts: FastifyPluginOptions
     }
 
     return payload;
-  });
-
-  // Utility methods
+  }); // Utility methods
   fastify.decorate('setCacheForRoute', (key: string, data: any, ttl?: number) => {
     return cache.set(key, data, { ttl: ttl || cacheOptions.defaultTTL });
   });

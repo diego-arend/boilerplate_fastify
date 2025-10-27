@@ -33,10 +33,10 @@ export class ApiResponseHandler {
   }
 
   /**
-   * Success response (200-299)
+   * Success response with custom status code
    */
   static success(
-    _reply: FastifyReply,
+    reply: FastifyReply,
     message: string = 'Operation completed successfully',
     data?: any,
     code: number = 200
@@ -49,7 +49,7 @@ export class ApiResponseHandler {
    * Successful creation response (201)
    */
   static created(
-    _reply: FastifyReply,
+    reply: FastifyReply,
     message: string = 'Resource created successfully',
     data?: any
   ) {
@@ -59,7 +59,7 @@ export class ApiResponseHandler {
   /**
    * No content response (204)
    */
-  static noContent(_reply: FastifyReply, message: string = 'Operation completed successfully') {
+  static noContent(reply: FastifyReply, message: string = 'Operation completed successfully') {
     const response = this.createResponse(true, 204, message);
     return reply.code(204).send(response);
   }
@@ -67,7 +67,7 @@ export class ApiResponseHandler {
   /**
    * Validation error (400)
    */
-  static validationError(_reply: FastifyReply, message: string = 'Invalid data', details?: any) {
+  static validationError(reply: FastifyReply, message: string = 'Invalid data', details?: any) {
     const response = this.createResponse(false, 400, message, details, 'VALIDATION_ERROR');
     return reply.code(400).send(response);
   }
@@ -75,7 +75,7 @@ export class ApiResponseHandler {
   /**
    * Authentication error (401)
    */
-  static authError(_reply: FastifyReply, message: string = 'Unauthorized', details?: any) {
+  static authError(reply: FastifyReply, message: string = 'Unauthorized', details?: any) {
     const response = this.createResponse(false, 401, message, details, 'AUTHENTICATION_ERROR');
     return reply.code(401).send(response);
   }
@@ -83,7 +83,7 @@ export class ApiResponseHandler {
   /**
    * Authorization/forbidden error (403)
    */
-  static forbidden(_reply: FastifyReply, message: string = 'Access denied', details?: any) {
+  static forbidden(reply: FastifyReply, message: string = 'Access denied', details?: any) {
     const response = this.createResponse(false, 403, message, details, 'FORBIDDEN_ERROR');
     return reply.code(403).send(response);
   }
@@ -91,7 +91,7 @@ export class ApiResponseHandler {
   /**
    * Resource not found (404)
    */
-  static notFound(_reply: FastifyReply, message: string = 'Resource not found', details?: any) {
+  static notFound(reply: FastifyReply, message: string = 'Resource not found', details?: any) {
     const response = this.createResponse(false, 404, message, details, 'NOT_FOUND_ERROR');
     return reply.code(404).send(response);
   }
@@ -99,7 +99,7 @@ export class ApiResponseHandler {
   /**
    * Conflict (409) - e.g., email already exists
    */
-  static conflict(_reply: FastifyReply, message: string = 'Data conflict', details?: any) {
+  static conflict(reply: FastifyReply, message: string = 'Data conflict', details?: any) {
     const response = this.createResponse(false, 409, message, details, 'CONFLICT_ERROR');
     return reply.code(409).send(response);
   }
@@ -108,7 +108,7 @@ export class ApiResponseHandler {
    * Internal server error (500)
    * Logs the error internally but does not expose sensitive details
    */
-  static internalError(_reply: FastifyReply, error?: Error | string, logError: boolean = true) {
+  static internalError(reply: FastifyReply, error?: Error | string, logError: boolean = true) {
     if (logError && error) {
       const errorMessage = error instanceof Error ? error.message : error;
       console.error('Erro interno:', errorMessage);
@@ -132,7 +132,7 @@ export class ApiResponseHandler {
    * Service unavailable (503)
    */
   static serviceUnavailable(
-    _reply: FastifyReply,
+    reply: FastifyReply,
     message: string = 'Service temporarily unavailable'
   ) {
     const response = this.createResponse(false, 503, message, undefined, 'SERVICE_UNAVAILABLE');
@@ -143,7 +143,7 @@ export class ApiResponseHandler {
    * Custom response
    */
   static custom(
-    _reply: FastifyReply,
+    reply: FastifyReply,
     success: boolean,
     code: number,
     message: string,
@@ -158,7 +158,7 @@ export class ApiResponseHandler {
    * Paginated response
    */
   static paginated(
-    _reply: FastifyReply,
+    reply: FastifyReply,
     data: any[],
     total: number,
     page: number,

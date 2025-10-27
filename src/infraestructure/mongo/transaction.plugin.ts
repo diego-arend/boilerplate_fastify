@@ -68,7 +68,7 @@ async function transactionPlugin(
   });
 
   // Hook que executa antes de processar a requisição
-  fastify.addHook('onRequest', async (_request: FastifyRequest, _reply: FastifyReply) => {
+  fastify.addHook('onRequest', async (request: FastifyRequest, reply: FastifyReply) => {
     const routeConfig = getRouteTransactionConfig(request);
 
     // Verifica se deve usar transação para esta rota
@@ -121,7 +121,7 @@ async function transactionPlugin(
   });
 
   // Hook executado após processamento bem-sucedido
-  fastify.addHook('onResponse', async (_request: FastifyRequest, _reply: FastifyReply) => {
+  fastify.addHook('onResponse', async (request: FastifyRequest, reply: FastifyReply) => {
     if (request.mongoSession) {
       const routeConfig = getRouteTransactionConfig(request);
 
@@ -200,45 +200,42 @@ async function transactionPlugin(
   });
 
   // Hook executado em caso de erro
-  fastify.addHook(
-    'onError',
-    async (_request: FastifyRequest, _reply: FastifyReply, error: Error) => {
-      if (request.mongoSession) {
-        try {
-          const transactionManager = fastify.transactionManager;
-          if (transactionManager) {
-            await transactionManager.rollbackTransaction(request.mongoSession);
-          }
+  fastify.addHook('onError', async (request: FastifyRequest, reply: FastifyReply, error: Error) => {
+    if (request.mongoSession) {
+      try {
+        const transactionManager = fastify.transactionManager;
+        if (transactionManager) {
+          await transactionManager.rollbackTransaction(request.mongoSession);
+        }
 
-          if (enableLogging) {
-            fastify.log.info(
-              {
-                transactionId: request.transactionId,
-                method: request.method,
-                url: request.url,
-                error: error.message
-              },
-              'Transaction rolled back due to error'
-            );
-          }
-        } catch (rollbackError) {
-          fastify.log.error(
+        if (enableLogging) {
+          fastify.log.info(
             {
               transactionId: request.transactionId,
-              rollbackError:
-                rollbackError instanceof Error ? rollbackError.message : String(rollbackError),
-              originalError: error.message
+              method: request.method,
+              url: request.url,
+              error: error.message
             },
-            'Failed to rollback transaction after error'
+            'Transaction rolled back due to error'
           );
-        } finally {
-          // Limpa a sessão do request
-          request.mongoSession = undefined;
-          request.transactionId = undefined;
         }
+      } catch (rollbackError) {
+        fastify.log.error(
+          {
+            transactionId: request.transactionId,
+            rollbackError:
+              rollbackError instanceof Error ? rollbackError.message : String(rollbackError),
+            originalError: error.message
+          },
+          'Failed to rollback transaction after error'
+        );
+      } finally {
+        // Limpa a sessão do request
+        request.mongoSession = undefined;
+        request.transactionId = undefined;
       }
     }
-  );
+  });
 
   // Hook para tratar erros de validação
   if (abortOnValidationError) {
@@ -252,7 +249,7 @@ async function transactionPlugin(
 /**
  * Obtém configuração de transação da rota
  */
-function getRouteTransactionConfig(_request: FastifyRequest): RouteTransactionConfig | undefined {
+function getRouteTransactionConfig(request: FastifyRequest): RouteTransactionConfig | undefined {
   const context = request.routeConfig;
   return context?.[TRANSACTION_ROUTE_CONFIG] as RouteTransactionConfig;
 }
@@ -261,7 +258,7 @@ function getRouteTransactionConfig(_request: FastifyRequest): RouteTransactionCo
  * Determina se deve usar transação para a requisição atual
  */
 function shouldUseTransaction(
-  _request: FastifyRequest,
+  request: FastifyRequest,
   routeConfig?: RouteTransactionConfig,
   autoRoutes: string[] | RegExp[] = []
 ): boolean {

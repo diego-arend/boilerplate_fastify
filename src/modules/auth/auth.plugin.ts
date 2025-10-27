@@ -39,7 +39,7 @@ async function authPluginFunction(fastify: FastifyInstance, _opts: FastifyPlugin
   const jwtStrategy = new JwtStrategy(SECRET, cacheService);
   const authCommand = new AuthenticateCommand(jwtStrategy);
 
-  fastify.decorate('authenticate', async (_request: FastifyRequest, _reply: FastifyReply) => {
+  fastify.decorate('authenticate', async (request: FastifyRequest, reply: FastifyReply) => {
     const requestId = request.id || Math.random().toString(36).substr(2, 9);
     const authLogger = logger.child({ requestId, operation: 'authenticate' });
 
@@ -70,7 +70,7 @@ async function authPluginFunction(fastify: FastifyInstance, _opts: FastifyPlugin
 
   // Role-based access control decorators
   fastify.decorate('requireRole', (requiredRole: string) => {
-    return async (_request: FastifyRequest, _reply: FastifyReply) => {
+    return async (request: FastifyRequest, reply: FastifyReply) => {
       const requestId = request.id || Math.random().toString(36).substr(2, 9);
       const roleLogger = logger.child({ requestId, operation: 'require-role', requiredRole });
 
@@ -120,7 +120,7 @@ async function authPluginFunction(fastify: FastifyInstance, _opts: FastifyPlugin
   });
 
   // Admin-only access decorator
-  fastify.decorate('requireAdmin', async (_request: FastifyRequest, _reply: FastifyReply) => {
+  fastify.decorate('requireAdmin', async (request: FastifyRequest, reply: FastifyReply) => {
     const requestId = request.id || Math.random().toString(36).substr(2, 9);
     const adminLogger = logger.child({ requestId, operation: 'require-admin' });
 
@@ -166,7 +166,7 @@ async function authPluginFunction(fastify: FastifyInstance, _opts: FastifyPlugin
 
   // Multi-role access decorator
   fastify.decorate('requireRoles', (allowedRoles: string[]) => {
-    return async (_request: FastifyRequest, _reply: FastifyReply) => {
+    return async (request: FastifyRequest, reply: FastifyReply) => {
       const requestId = request.id || Math.random().toString(36).substr(2, 9);
       const rolesLogger = logger.child({ requestId, operation: 'require-roles', allowedRoles });
 
