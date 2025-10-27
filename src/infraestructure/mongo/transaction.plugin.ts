@@ -1,6 +1,5 @@
 import type { FastifyInstance, FastifyPluginOptions, FastifyRequest, FastifyReply } from 'fastify';
 import fp from 'fastify-plugin';
-import { TransactionManager } from './transactionManager.js';
 import type { TransactionOptions } from './transaction.types.js';
 import type { ClientSession } from 'mongoose';
 
@@ -68,7 +67,7 @@ async function transactionPlugin(
   });
 
   // Hook que executa antes de processar a requisição
-  fastify.addHook('onRequest', async (request: FastifyRequest, reply: FastifyReply) => {
+  fastify.addHook('onRequest', async (request: FastifyRequest, _reply: FastifyReply) => {
     const routeConfig = getRouteTransactionConfig(request);
 
     // Verifica se deve usar transação para esta rota
