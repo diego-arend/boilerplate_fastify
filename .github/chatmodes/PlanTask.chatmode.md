@@ -45,30 +45,33 @@ This chatmode transforms requests into comprehensive task plans without executio
 - **`src/infraestructure/server/README.md`** - Fastify setup and configuration
 - **`src/infraestructure/cache/README.md`** - Redis implementation and strategies
 - **`src/infraestructure/queue/README.md`** - BullMQ implementation, job processing
+- **`src/infraestructure/workers/README.md`** - Standalone worker implementation, batch processing
+- **`src/infraestructure/bucket/README.md`** - File storage with MinIO/S3 integration
 - **`src/infraestructure/email/README.md`** - SMTP configuration, template system
 - **`src/infraestructure/email/templates/README.md`** - Template engine and rendering
 
 ### 📁 **Business Modules**
 
 - **`src/modules/auth/README.md`** - Complete JWT auth system with RBAC
-- **`src/modules/health/`** - System health monitoring endpoints
+- **`src/modules/auth/services/README.md`** - Authentication services and utilities
 
 ### 📁 **Entity Documentation**
 
 - **`src/entities/README.md`** - Entity patterns, validation, repository inheritance
 - **`src/entities/user/README.md`** - User entity implementation example
+- **`src/entities/document/README.md`** - Document entity with file upload support
 
 ### 📁 **Libraries & Utilities**
 
 - **`src/lib/validators/README.md`** - Validation schemas, security patterns, Zod usage
 - **`src/lib/logger/README.md`** - Structured logging configuration
 - **`src/lib/response/README.md`** - API response standardization, error handling
-- **`src/modules/auth/services/README.md`** - Authentication services and utilities
 
 ### 📁 **Queue System Documentation**
 
 - **`src/infraestructure/queue/README.md`** - BullMQ setup, configuration, monitoring
 - **`src/infraestructure/queue/jobs/README.md`** - Job patterns, testing, examples
+- **`src/infraestructure/workers/README.md`** - Standalone worker implementation, batch processing
 - **Bull Dashboard**: http://localhost:3002/ui - Real-time queue monitoring
 
 ## Available MCP Tools & Services
@@ -206,12 +209,15 @@ This project integrates with **Model Context Protocol (MCP) servers** for enhanc
 - **New Entity**: Follow `src/entities/README.md` patterns
 - **New Module**: Reference `src/modules/auth/README.md` structure
 - **New Job**: Follow `src/infraestructure/queue/jobs/README.md` patterns
+- **New Worker**: Reference `src/infraestructure/workers/README.md` implementation
 - **Database Operations**: Use BaseRepository patterns from `src/infraestructure/mongo/README.md`
+- **File Storage**: Implement MinIO/S3 following `src/infraestructure/bucket/README.md`
 - **Authentication**: Implement RBAC following `src/modules/auth/README.md`
 - **Queue Jobs**: Create auto-contained jobs per `src/infraestructure/queue/jobs/README.md`
 - **Validation**: Reuse global validators from `src/lib/validators/README.md`
 - **Error Handling**: Follow `src/lib/response/README.md` patterns
 - **Email Templates**: Use patterns from `src/infraestructure/email/README.md`
+- **Template Rendering**: Follow `src/infraestructure/email/templates/README.md` guidelines
 
 ### 📁 **Testing & Monitoring**
 
