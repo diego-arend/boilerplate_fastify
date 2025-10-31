@@ -263,6 +263,7 @@ This boilerplate supports a **flexible hybrid database architecture**, allowing 
 ### When to Use Each Database
 
 #### **MongoDB** (Default - Always Active)
+
 - ✅ Flexible documents without fixed schema
 - ✅ Hierarchical and nested data structures
 - ✅ Rapid prototyping and schema evolution
@@ -271,6 +272,7 @@ This boilerplate supports a **flexible hybrid database architecture**, allowing 
 - **Use cases**: User profiles, logs, event data, content management
 
 #### **PostgreSQL** (Optional - Hybrid Architecture)
+
 - ✅ Complex relational data with JOINs
 - ✅ ACID transactions for critical operations
 - ✅ Advanced analytics and complex queries
@@ -309,7 +311,7 @@ PostgreSQL includes **pgvector extension** for vector similarity search:
 
 Example usage available in [PostgreSQL README](src/infraestructure/postgres/README.md).
 
-##  Security Features
+## Security Features
 
 - **JWT Authentication** with role-based access control (RBAC)
 - **Input Validation** using Zod schemas with TypeScript integration
