@@ -1,396 +1,375 @@
-# User Entity - Dependency Injection Architecture
+# User Entity - PostgreSQL Implementation
 
-## 🏗️ Overview
+> ⚠️ **IMPORTANT**: This entity uses **PostgreSQL with TypeORM** as the primary database.
 
-The User entity implements the **new dependency injection architecture** with composition over inheritance. This provides better testability, maintainability, and follows SOLID principles.
+## 🚀 Overview
+
+The User entity provides complete authentication and user management functionality with:
+
+- ✅ **ACID Transactions** for authentication operations
+- ✅ **SERIAL IDs** (4 bytes) for optimal B-tree performance
+- ✅ **Enum Constraints** at database level (`status`, `role`)
+- ✅ **Row-Level Security** ready
+- ✅ **Full-Text Search** capabilities
 
 ## Architecture
 
-### **Dependency Injection Pattern**
+### Components
 
+- **Entity**: `userEntity.postgres.ts` - TypeORM entity with decorators
+- **Repository**: `userRepository.postgres.ts` - CRUD, authentication, email verification
+- **Factory**: `userRepository.postgres.factory.ts` - DataSource injection
+- **Validations**: `userValidations.ts` - Zod schemas for validation
+
+## Database Schema
+
+```sql
+CREATE TABLE users (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  email VARCHAR(255) UNIQUE NOT NULL,
+  password VARCHAR(128) NOT NULL,
+  status ENUM('active', 'inactive', 'suspended') DEFAULT 'active',
+  role ENUM('user', 'admin') DEFAULT 'user',
+  lastLoginAt TIMESTAMP NULL,
+  loginAttempts INTEGER DEFAULT 0,
+  lockUntil TIMESTAMP NULL,
+  emailVerified BOOLEAN DEFAULT false,
+  emailVerificationToken VARCHAR(255) NULL,
+  passwordResetToken VARCHAR(255) NULL,
+  passwordResetExpires TIMESTAMP NULL,
+  createdAt TIMESTAMP DEFAULT now(),
+  updatedAt TIMESTAMP DEFAULT now()
+);
+
+-- Indexes
+CREATE UNIQUE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_users_status_role ON users(status, role);
+CREATE INDEX idx_users_created_at ON users(createdAt);
 ```
-BaseRepository<IUser> (implements IBaseRepository<IUser>)
-    ↓ (injected into)
-UserRepository (implements IUserRepository)
-    ↓ (injected into)
-AuthRepository (implements IAuthRepository)
-```
 
-**Benefits:**
+## Usage
 
-- ✅ **Zero inheritance coupling**
-- ✅ **Easy to test with mocks**
-- ✅ **Interface-based contracts**
-- ✅ **Flexible implementation swapping**
-
-## File Structure
-
-```
-user/
-├── userEntity.ts           # IUser interface, UserModel, UserValidations
-├── userRepository.ts       # UserRepository with BaseRepository injection
-├── userRepository.factory.ts # Factory for dependency injection
-└── index.ts               # Exports including IUserRepository interface
-```
-
-## Usage Examples
-
-### 1. Production Usage (Factory Pattern)
+### Repository Factory
 
 ```typescript
 import { UserRepositoryFactory } from '../entities/user/index.js';
 
-// Create UserRepository with all dependencies injected
-const userRepository = UserRepositoryFactory.createUserRepository();
+// Create repository (auto-selects PostgreSQL)
+const userRepo = await UserRepositoryFactory.createUserRepository();
 
-// Use normally - BaseRepository is injected automatically
-const user = await userRepository.createUser({
+// Explicit PostgreSQL repository
+const postgresRepo = UserRepositoryFactory.createUserRepositoryPostgres();
+```
+
+### CRUD Operations
+
+```typescript
+// Create user
+const user = await userRepo.create({
+  name: 'John Doe',
+  email: 'john@example.com',
+  password: 'SecurePassword123!'
+});
+
+// Find by ID
+const foundUser = await userRepo.findById(1);
+
+// Find by email
+const emailUser = await userRepo.findByEmail('john@example.com');
+
+// Update user
+const updated = await userRepo.update(1, { name: 'John Updated' });
+
+// Delete user
+const deleted = await userRepo.delete(1);
+
+// Pagination
+const result = await userRepo.findAll({ page: 1, limit: 10 });
+// Returns: { data, total, page, limit, totalPages }
+```
+
+### Authentication
+
+```typescript
+// Validate password (handles login attempts and account locking)
+const validUser = await userRepo.validatePassword('john@example.com', 'password123');
+
+// Update last login timestamp
+await userRepo.updateLastLogin(1);
+```
+
+### Email Verification
+
+```typescript
+// Verify email with token
+const verified = await userRepo.verifyEmail('verification-token');
+
+// Regenerate verification token
+const newToken = await userRepo.regenerateEmailVerificationToken('john@example.com');
+
+// Find user by verification token
+const user = await userRepo.findByEmailVerificationToken('token');
+```
+
+### Password Reset
+
+```typescript
+// Create password reset token
+const resetToken = await userRepo.createPasswordResetToken('john@example.com');
+
+// Reset password with token
+const resetSuccess = await userRepo.resetPassword('reset-token', 'NewPassword123!');
+
+// Find user by reset token
+const user = await userRepo.findByPasswordResetToken('token');
+```
+
+### Admin Operations
+
+```typescript
+// Update user role
+const admin = await userRepo.updateRole(1, 'admin');
+
+// Deactivate user (sets status to 'inactive')
+await userRepo.deactivateUser(1);
+
+// Activate user (sets status to 'active')
+await userRepo.activateUser(1);
+
+// Find users by role with pagination
+const admins = await userRepo.findByRole('admin', { page: 1, limit: 10 });
+```
+
+### Query Operations
+
+```typescript
+// Count users
+const totalUsers = await userRepo.count();
+const activeUsers = await userRepo.count({ status: 'active' });
+
+// Check if user exists
+const exists = await userRepo.exists({ email: 'john@example.com' });
+
+// Health check
+const isHealthy = await userRepo.healthCheck();
+```
+
+## Validation
+
+Validation schemas are provided in `userValidations.ts`:
+
+```typescript
+import { UserValidations } from '../entities/user/index.js';
+
+// Validate user creation
+const validated = UserValidations.CreateUserSchema.parse({
   name: 'John Doe',
   email: 'john@example.com',
   password: 'SecurePass123!'
 });
 
-const allUsers = await userRepository.findAllUsers();
-const userByEmail = await userRepository.findUserByEmail('john@example.com');
+// Validate user update
+const updateData = UserValidations.UpdateUserSchema.parse({
+  name: 'John Updated'
+});
+
+// Validate login
+const loginData = UserValidations.validateLogin({
+  email: 'john@example.com',
+  password: 'password123'
+});
+
+// Validate password change
+const changeData = UserValidations.validatePasswordChange({
+  currentPassword: 'old',
+  newPassword: 'new',
+  confirmPassword: 'new'
+});
+
+// Validate email
+const email = UserValidations.EmailSchema.parse('john@example.com');
+
+// Validate status
+const status = UserValidations.StatusSchema.parse('active');
+
+// Validate role
+const role = UserValidations.RoleSchema.parse('admin');
 ```
 
-### 2. Manual Injection (Custom scenarios)
+## Migrations
 
-```typescript
-import { BaseRepository, UserRepository } from '../entities/user/index.js';
-import { UserModel } from '../entities/user/userEntity.js';
-import type { IUser } from '../entities/user/index.js';
+### Environment Configuration
 
-// Create BaseRepository instance
-const baseRepository = new BaseRepository<IUser>(UserModel);
+Control migration execution via environment variables:
 
-// Inject into UserRepository
-const userRepository = new UserRepository(baseRepository);
+```bash
+# Enable migration execution
+POSTGRES_RUN_MIGRATIONS=true
 
-// Use with custom BaseRepository configuration
+# Auto-run migrations on application startup
+POSTGRES_MIGRATION_AUTO=true
 ```
 
-### 3. Testing with Mocks
+### CLI Commands
 
-```typescript
-import { UserRepositoryFactory } from '../entities/user/index.js';
-import type { IBaseRepository, IUserRepository } from '../entities/user/index.js';
+```bash
+# Generate new migration (auto-detect changes)
+pnpm migration:generate src/infraestructure/postgres/migrations/MigrationName
 
-// Create mock BaseRepository
-const mockBaseRepository: jest.Mocked<IBaseRepository<IUser>> = {
-  create: jest.fn(),
-  findById: jest.fn(),
-  findOne: jest.fn(),
-  find: jest.fn(),
-  updateById: jest.fn(),
-  deleteById: jest.fn()
-  // ... other methods
-};
+# Create empty migration
+pnpm migration:create src/infraestructure/postgres/migrations/MigrationName
 
-// Create UserRepository with mock
-const userRepository = UserRepositoryFactory.createUserRepositoryForTesting(mockBaseRepository);
+# Run pending migrations
+pnpm migration:run
 
-// Test with mocked dependencies
-mockBaseRepository.create.mockResolvedValue(mockUser);
-const result = await userRepository.createUser(userData);
+# Revert last migration
+pnpm migration:revert
+
+# Show migration status
+pnpm migration:show
+
+# Drop all schema (DANGER!)
+pnpm migration:drop
 ```
 
-## API Reference
+### Docker Commands
 
-### IUserRepository Interface
+```bash
+# Run migrations in Docker container
+pnpm docker:migration:run
 
-```typescript
-export interface IUserRepository {
-  // User-specific CRUD operations
-  createUser(userData: CreateUserData, session?: ClientSession): Promise<IUser>;
-  updateUser(
-    id: string,
-    updateData: UpdateUserData,
-    session?: ClientSession
-  ): Promise<IUser | null>;
+# Revert migrations in Docker
+pnpm docker:migration:revert
 
-  // User-specific queries
-  findUserByEmail(email: string, session?: ClientSession): Promise<IUser | null>;
-  findUserById(id: string, session?: ClientSession): Promise<IUser | null>;
-  findAllUsers(session?: ClientSession): Promise<IUser[]>;
-  findUsersByRole(role: string, session?: ClientSession): Promise<IUser[]>;
-  findActiveUsers(session?: ClientSession): Promise<IUser[]>;
-
-  // User-specific operations
-  updateLastLogin(id: string, session?: ClientSession): Promise<IUser | null>;
-  changeUserStatus(id: string, status: UserStatus, session?: ClientSession): Promise<IUser | null>;
-
-  // Validation utilities
-  existsByEmail(email: string, excludeId?: string, session?: ClientSession): Promise<boolean>;
-
-  // Pagination support
-  findUsersWithPagination(
-    filters?: any,
-    page?: number,
-    limit?: number,
-    session?: ClientSession
-  ): Promise<any>;
-}
+# Show migrations in Docker
+pnpm docker:migration:show
 ```
 
-### UserRepository Methods
+## Security Features
 
-#### Core CRUD Operations
+### Password Security
 
-- `createUser(userData, session?)` - Create new user with validation
-- `updateUser(id, updateData, session?)` - Update user with validation
-- `findUserById(id, session?)` - Find user by ID
-- `findUserByEmail(email, session?)` - Find user by email
-- `findAllUsers(session?)` - Get all users
-- `deleteUser(id, session?)` - Soft delete user
+- **Hashing**: bcryptjs with 10 salt rounds
+- **Validation**: Minimum 8 characters, complexity requirements
+- **Storage**: Passwords excluded from query results by default
 
-#### Business-Specific Operations
+### Account Protection
 
-- `findUsersByRole(role, session?)` - Filter users by role
-- `findActiveUsers(session?)` - Get only active users
-- `updateLastLogin(id, session?)` - Update login timestamp
-- `changeUserStatus(id, status, session?)` - Change user status
-- `existsByEmail(email, excludeId?, session?)` - Check email uniqueness
+- **Login Attempts**: Tracks failed login attempts
+- **Account Locking**: Locks account for 15 minutes after 5 failed attempts
+- **Token Generation**: Secure random tokens with crypto.randomBytes(32)
+- **Token Expiration**:
+  - Email verification: 24 hours (application level)
+  - Password reset: 1 hour
 
-#### Pagination & Search
+### Data Protection
 
-- `findUsersWithPagination(filters?, page?, limit?, session?)` - Paginated results
-- `searchUsers(query, session?)` - Text search in user fields
+- **Input Sanitization**: All inputs sanitized before storage
+- **SQL Injection Protection**: TypeORM parameterized queries
+- **Sensitive Fields**: Password, tokens excluded from JSON serialization
 
-## Integration with Other Modules
+## Performance Optimizations
 
-### Auth Module Integration
+### Database Indexes
+
+1. **Unique Email Index**: Fast email lookups and uniqueness enforcement
+2. **Composite Status+Role Index**: Optimized for admin dashboards
+3. **CreatedAt Index**: Efficient sorting and time-based queries
+
+### ID Strategy
+
+- **SERIAL vs UUID**: 4 bytes vs 16 bytes (75% smaller)
+- **B-tree Performance**: Sequential IDs prevent index fragmentation
+- **Write Performance**: No UUID generation overhead
+
+## Integration with Auth Module
 
 ```typescript
-// src/modules/auth/repository/auth.repository.ts
-import type { IUserRepository } from '../../../entities/user/index.js';
-
-export class AuthRepository implements IAuthRepository {
-  constructor(private userRepository: IUserRepository) {}
-
-  async findUserByEmail(email: string): Promise<IUser | null> {
-    return this.userRepository.findUserByEmail(email);
-  }
-
-  async createUser(userData: any): Promise<IUser> {
-    return this.userRepository.createUser(userData);
-  }
-}
-
-// src/modules/auth/factory/auth.factory.ts
+// Auth module uses UserRepository via factory
 import { UserRepositoryFactory } from '../../../entities/user/index.js';
 
 export class AuthRepositoryFactory {
-  static createAuthRepository(): IAuthRepository {
-    const userRepository = UserRepositoryFactory.createUserRepository();
+  static async createAuthRepository(): Promise<IAuthRepository> {
+    const userRepository = await UserRepositoryFactory.createUserRepository();
     return new AuthRepository(userRepository);
   }
 }
 ```
 
-## Validation Rules
+## API Reference
 
-The User entity includes comprehensive validation through `UserValidations`:
+### Repository Methods
 
-### Input Validation
+#### CRUD Operations
 
-- **Name**: 2-100 characters, sanitized
-- **Email**: Valid email format, unique, lowercase
-- **Password**: 8+ characters, hashed with bcrypt
-- **Role**: Enum validation (user, admin)
-- **Status**: Enum validation (active, inactive, suspended)
+- `create(userData)` - Create new user with hashed password
+- `findById(id)` - Find user by ID
+- `findByEmail(email)` - Find user by email (case-insensitive)
+- `update(id, userData)` - Update user fields
+- `delete(id)` - Delete user by ID
+- `findAll(options?)` - Get all users with pagination
 
-### Business Rules
+#### Authentication
 
-- Email must be unique across all users
-- Password is automatically hashed before storage
-- Default role is 'user' if not specified
-- Default status is 'active' for new users
+- `validatePassword(email, password)` - Validate credentials with login attempt tracking
+- `updateLastLogin(id)` - Update last login timestamp
 
-## Testing Patterns
+#### Email Verification
 
-### Unit Testing UserRepository
+- `findByEmailVerificationToken(token)` - Find user by verification token
+- `verifyEmail(token)` - Mark email as verified
+- `regenerateEmailVerificationToken(email)` - Generate new verification token
 
-```typescript
-describe('UserRepository', () => {
-  let userRepository: IUserRepository;
-  let mockBaseRepository: jest.Mocked<IBaseRepository<IUser>>;
+#### Password Reset
 
-  beforeEach(() => {
-    mockBaseRepository = createMockBaseRepository();
-    userRepository = new UserRepository(mockBaseRepository);
-  });
+- `createPasswordResetToken(email)` - Generate password reset token
+- `findByPasswordResetToken(token)` - Find user by reset token
+- `resetPassword(token, newPassword)` - Reset password with token
 
-  describe('createUser', () => {
-    it('should create user with valid data', async () => {
-      const userData = {
-        name: 'John Doe',
-        email: 'john@example.com',
-        password: 'SecurePass123!'
-      };
+#### Admin Operations
 
-      const expectedUser = { ...userData, _id: 'user-id' } as IUser;
-      mockBaseRepository.create.mockResolvedValue(expectedUser);
+- `updateRole(id, role)` - Update user role (validates promotion rules)
+- `deactivateUser(id)` - Set status to 'inactive'
+- `activateUser(id)` - Set status to 'active'
 
-      const result = await userRepository.createUser(userData);
+#### Queries
 
-      expect(mockBaseRepository.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          name: 'John Doe',
-          email: 'john@example.com',
-          // password should be hashed
-          password: expect.not.stringMatching('SecurePass123!')
-        }),
-        {}
-      );
-      expect(result).toEqual(expectedUser);
-    });
+- `count(where?)` - Count users with optional filter
+- `exists(where)` - Check if user exists
+- `findByRole(role, options?)` - Find users by role with pagination
+- `healthCheck()` - Database connection health check
 
-    it('should throw validation error for invalid data', async () => {
-      const invalidData = {
-        name: '', // Invalid: too short
-        email: 'invalid-email', // Invalid: not email format
-        password: '123' // Invalid: too short
-      };
+### Entity Fields
 
-      await expect(userRepository.createUser(invalidData)).rejects.toThrow(z.ZodError);
-    });
-  });
+| Field                    | Type      | Description                                       |
+| ------------------------ | --------- | ------------------------------------------------- |
+| `id`                     | `number`  | Auto-incrementing primary key (SERIAL)            |
+| `name`                   | `string`  | User's full name (max 100 chars)                  |
+| `email`                  | `string`  | Unique email address (max 255 chars)              |
+| `password`               | `string`  | Hashed password (bcrypt, max 128 chars)           |
+| `status`                 | `enum`    | Account status: 'active', 'inactive', 'suspended' |
+| `role`                   | `enum`    | User role: 'user', 'admin'                        |
+| `lastLoginAt`            | `Date?`   | Last successful login timestamp                   |
+| `loginAttempts`          | `number`  | Failed login attempt counter                      |
+| `lockUntil`              | `Date?`   | Account lock expiration timestamp                 |
+| `emailVerified`          | `boolean` | Email verification status                         |
+| `emailVerificationToken` | `string?` | Email verification token                          |
+| `passwordResetToken`     | `string?` | Password reset token                              |
+| `passwordResetExpires`   | `Date?`   | Password reset token expiration                   |
+| `createdAt`              | `Date`    | Record creation timestamp                         |
+| `updatedAt`              | `Date`    | Last update timestamp                             |
 
-  describe('findUserByEmail', () => {
-    it('should find user by email', async () => {
-      const email = 'john@example.com';
-      const expectedUser = { email, name: 'John' } as IUser;
+### Entity Methods
 
-      mockBaseRepository.findOne.mockResolvedValue(expectedUser);
+- `isLocked()` - Check if account is currently locked
+- `canLogin()` - Check if user can login (not locked, active status, email verified)
+- `canPromoteToAdmin()` - Check if user can be promoted to admin role
+- `toJSON()` - Serialize user (excludes sensitive fields)
 
-      const result = await userRepository.findUserByEmail(email);
+## Related Documentation
 
-      expect(mockBaseRepository.findOne).toHaveBeenCalledWith({ email }, {});
-      expect(result).toEqual(expectedUser);
-    });
-
-    it('should return null when user not found', async () => {
-      mockBaseRepository.findOne.mockResolvedValue(null);
-
-      const result = await userRepository.findUserByEmail('notfound@example.com');
-
-      expect(result).toBeNull();
-    });
-  });
-});
-```
-
-### Integration Testing
-
-```typescript
-describe('UserRepository Integration', () => {
-  let userRepository: IUserRepository;
-
-  beforeEach(() => {
-    // Use factory for integration tests
-    userRepository = UserRepositoryFactory.createUserRepository();
-  });
-
-  it('should create and find user in database', async () => {
-    const userData = {
-      name: 'Integration Test User',
-      email: 'integration@test.com',
-      password: 'TestPass123!'
-    };
-
-    // Create user
-    const createdUser = await userRepository.createUser(userData);
-    expect(createdUser._id).toBeDefined();
-
-    // Find by email
-    const foundUser = await userRepository.findUserByEmail(userData.email);
-    expect(foundUser?.email).toBe(userData.email);
-    expect(foundUser?.name).toBe(userData.name);
-
-    // Password should be hashed
-    expect(foundUser?.password).not.toBe(userData.password);
-  });
-});
-```
-
-## Migration Notes
-
-### From Old Architecture (Inheritance)
-
-If migrating from the old inheritance-based pattern:
-
-```typescript
-// OLD (Remove):
-class UserRepository extends BaseRepository<IUser> {
-  constructor() {
-    super(UserModel);
-  }
-}
-
-// NEW (Current):
-class UserRepository implements IUserRepository {
-  constructor(private baseRepository: IBaseRepository<IUser>) {}
-
-  async createUser(userData: any): Promise<IUser> {
-    return this.baseRepository.create(userData);
-  }
-}
-```
-
-### Factory Usage Migration
-
-```typescript
-// OLD (Direct instantiation):
-const userRepository = new UserRepository();
-
-// NEW (Factory pattern):
-const userRepository = UserRepositoryFactory.createUserRepository();
-```
-
-## Performance Considerations
-
-### Database Indexes
-
-The User entity includes optimized indexes:
-
-- `email` - Unique index for fast email lookups
-- `status, createdAt` - Compound index for active user queries
-- `role` - Index for role-based filtering
-
-### Caching Strategy
-
-Consider implementing caching at the repository level for frequently accessed users:
-
-```typescript
-async findUserById(id: string, session?: ClientSession): Promise<IUser | null> {
-  // Check cache first
-  const cached = await this.cache.get(`user:${id}`);
-  if (cached) return cached;
-
-  // Fallback to database
-  const user = await this.baseRepository.findById(id, { session });
-  if (user) {
-    await this.cache.set(`user:${id}`, user, { ttl: 300 }); // 5 minutes
-  }
-
-  return user;
-}
-```
-
-## Security Considerations
-
-1. **Password Hashing**: Automatically handled in `createUser` and `updateUser`
-2. **Input Sanitization**: All inputs validated with Zod schemas
-3. **Email Uniqueness**: Enforced at both validation and database level
-4. **Sensitive Data**: Password excluded from JSON serialization
-5. **Transaction Support**: All methods support MongoDB sessions for ACID operations
-
----
-
-**Related Documentation:**
-
-- [Entity Architecture Overview](../README.md)
-- [Auth Module Integration](../../modules/auth/README.md)
-- [Dependency Injection Examples](../../examples/dependency-injection-usage.md)
-- [BaseRepository API](../../infraestructure/mongo/README.md)
+- [PostgreSQL Infrastructure](../../infraestructure/postgres/README.md)
+- [Auth Module](../../modules/auth/README.md)
+- [Migrations Guide](../../infraestructure/postgres/migrations/README.md)
+- [Validation Schemas](../../lib/validators/README.md)

@@ -32,7 +32,17 @@
     "format:check": "prettier --check \"src/**/*.{ts,js,json,md}\"",
     "format:all": "prettier --write \"**/*.{ts,js,json,md,yml,yaml}\" --ignore-path .prettierignore",
     "code:check": "pnpm format:check && pnpm lint:check",
-    "code:fix": "pnpm format && pnpm lint:fix"
+    "code:fix": "pnpm format && pnpm lint:fix",
+    "typeorm": "typeorm-ts-node-esm -d src/infraestructure/postgres/data-source.ts",
+    "migration:generate": "pnpm typeorm migration:generate",
+    "migration:create": "pnpm typeorm migration:create",
+    "migration:run": "pnpm typeorm migration:run",
+    "migration:revert": "pnpm typeorm migration:revert",
+    "migration:show": "pnpm typeorm migration:show",
+    "migration:drop": "pnpm typeorm schema:drop",
+    "docker:migration:run": "docker exec boilerplate_app_dev pnpm migration:run",
+    "docker:migration:revert": "docker exec boilerplate_app_dev pnpm migration:revert",
+    "docker:migration:show": "docker exec boilerplate_app_dev pnpm migration:show"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.899.0",
@@ -76,6 +86,7 @@
     "eslint-plugin-security": "^3.0.1",
     "eslint-plugin-unicorn": "^61.0.2",
     "prettier": "^3.6.2",
+    "ts-node": "^10.9.2",
     "tsx": "^4.19.1",
     "typescript": "^5.9.2"
   }

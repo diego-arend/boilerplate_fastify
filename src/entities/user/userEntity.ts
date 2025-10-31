@@ -1,3 +1,10 @@
+/**
+ * @deprecated MongoDB User Entity is DEPRECATED. Use PostgreSQL implementation instead.
+ * This file will be removed in a future version.
+ *
+ * Migration Path: Use `User` from `./userEntity.postgres.ts`
+ */
+
 import { Schema, model, Document } from 'mongoose';
 import { z } from 'zod';
 import {

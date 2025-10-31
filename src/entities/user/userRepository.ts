@@ -1,6 +1,13 @@
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
-import type { FilterQuery, ClientSession } from 'mongoose';
+/**
+ * @deprecated MongoDB User Repository is DEPRECATED. Use PostgreSQL implementation instead.
+ * This file will be removed in a future version.
+ *
+ * Migration Path: Use `UserRepositoryPostgres` from `./userRepository.postgres.ts`
+ */
+
+import type { ClientSession } from 'mongoose';
 import type { IUser } from './userEntity.js';
 import { UserModel, UserValidations } from './userEntity.js';
 import type {

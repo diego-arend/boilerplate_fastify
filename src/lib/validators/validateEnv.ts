@@ -51,6 +51,10 @@ const envSchema = z
     POSTGRES_CONNECTION_TIMEOUT: z.coerce.number().positive().optional(),
     POSTGRES_IDLE_TIMEOUT: z.coerce.number().positive().optional(),
 
+    // PostgreSQL Migration Control
+    POSTGRES_RUN_MIGRATIONS: z.coerce.boolean().default(false).optional(),
+    POSTGRES_MIGRATION_AUTO: z.coerce.boolean().default(false).optional(),
+
     // Redis Cache Configuration - Primary (API Cache)
     REDIS_HOST: z.string().min(1, 'REDIS_HOST cannot be empty').default('localhost'),
     REDIS_PORT: z.coerce.number().min(1).max(65535).default(6379),
