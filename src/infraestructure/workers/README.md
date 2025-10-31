@@ -14,6 +14,30 @@ Sistema de workers separados para processamento assíncrono de jobs com **MongoD
 └─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
 
+```
+┌─────────────────────────────────────────────────────┐
+│                 StandaloneWorker                     │
+├─────────────────────────────────────────────────────┤
+│                                                      │
+│  1️⃣ MongoDB (JobBatchRepository)                    │
+│      ↓ loadNextBatch()                              │
+│      ↓ Busca jobs pendentes                         │
+│                                                      │
+│  2️⃣ Redis Queue (QueueManager)                      │
+│      ↓ addJob() para cada job                       │
+│      ↓ Adiciona jobs no BullMQ                      │
+│                                                      │
+│  3️⃣ BullMQ Worker Processing                        │
+│      ↓ JOB_HANDLERS[jobType](data, jobId, ...)     │
+│      ↓ Processa job com handler especializado       │
+│                                                      │
+│  4️⃣ MongoDB Update                                  │
+│      ↓ markJobAsCompleted() ou markJobAsFailed()   │
+│      ✅ Atualiza status final                       │
+│                                                      │
+└─────────────────────────────────────────────────────┘
+```
+
 ### **Files Structure**
 
 ```

@@ -10,9 +10,8 @@
 import { MongoConnectionManagerFactory } from '../mongo/index.js';
 import { getQueueCache, type QueueCache } from '../cache/index.js';
 import { QueueManager } from '../queue/queue.js';
-import { JOB_HANDLERS, type JobHandler } from '../queue/jobs/index.js';
-import { JobBatchRepository, type JobBatch } from '../../entities/job/index.js';
-import { type IJob } from '../../entities/job/index.js';
+import { JOB_HANDLERS } from '../queue/jobs/index.js';
+import { JobBatchRepository } from '../../entities/job/index.js';
 import { defaultLogger } from '../../lib/logger/index.js';
 import type { Logger } from 'pino';
 import type { IMongoConnectionManager } from '../mongo/index.js';
@@ -53,11 +52,11 @@ export class StandaloneWorker {
       // Conectar ao QueueCache (Redis)
       this.queueCache = getQueueCache();
 
-      // Initialize QueueManager for proper Redis integration
+      // Initialize QueueManager with proper parameter order: (queueName, concurrency, queueCache, logger)
       this.queueManager = new QueueManager(
         this.config.queueName,
         this.config.workerSizeJobs, // Use workerSizeJobs for BullMQ concurrency
-        this.queueCache,
+        this.queueCache, // Pass QueueCache instance
         this.logger
       );
       await this.queueManager.initialize();
@@ -101,10 +100,19 @@ export class StandaloneWorker {
     for (const [jobType, handler] of Object.entries(JOB_HANDLERS)) {
       this.queueManager.registerHandler(jobType, async (data: any) => {
         try {
-          // Execute the job handler
-          const result = await handler(data.jobData, data.jobId, this.logger, {
-            attempts: data.maxAttempts || 3
-          });
+          // Execute the job handler with proper signature:
+          // handler(data, jobId, logger, jobInfo)
+          const result = await handler(
+            data.jobData, // The actual job data
+            data.jobId, // Job ID from MongoDB
+            this.logger, // Logger instance
+            {
+              attempt: 1,
+              maxAttempts: data.maxAttempts || 3,
+              queuedAt: new Date(),
+              processingAt: new Date()
+            }
+          );
 
           // Mark job as completed in MongoDB
           await this.jobRepository.markJobAsCompleted(data.jobId);
