@@ -1,0 +1,37 @@
+# Dockerfile.worker.dev - Worker Development with Hot Reload
+# Otimizado para desenvolvimento com tsx watch e hot reload
+
+FROM node:22-alpine
+
+# Instalar pnpm
+RUN npm install -g pnpm@10.13.1
+
+# Criar usuário não-root para segurança (mesmo em dev)
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S worker -u 1001 -G nodejs
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files para cache de dependências
+COPY --chown=worker:nodejs package.json pnpm-lock.yaml ./
+
+# Install ALL dependencies (including dev dependencies for tsx, typescript, etc)
+RUN pnpm install --frozen-lockfile
+
+# Copy tsconfig para compilação
+COPY --chown=worker:nodejs tsconfig.json ./
+
+# Mudar para usuário não-root
+USER worker
+
+# Expor porta para health check (opcional)
+EXPOSE 3003
+
+# Health check específico para worker dev
+HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
+  CMD node -e "console.log('Worker dev health check passed'); process.exit(0)"
+
+# Comando para iniciar worker em modo watch (hot reload)
+# O código fonte será montado via volume no docker-compose
+CMD ["pnpm", "run", "worker:dev"]

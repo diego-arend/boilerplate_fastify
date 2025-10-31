@@ -37,6 +37,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.worker
+    container_name: boilerplate_worker
     restart: unless-stopped
     env_file:
       - .env.worker.production

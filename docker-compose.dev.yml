@@ -40,7 +40,8 @@ services:
   worker-dev:
     build:
       context: .
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile.worker.dev
+    container_name: boilerplate_worker_dev
     restart: unless-stopped
     env_file:
       - .env.worker.development
@@ -53,7 +54,6 @@ services:
     volumes:
       - .:/app
       - /app/node_modules
-    command: pnpm run worker:dev # 🆕 Comando específico para worker
     deploy:
       replicas: 1 # 🆕 1 replica por padrão
       resources:
