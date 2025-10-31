@@ -1,7 +1,7 @@
 import type { FastifyInstance, FastifyPluginOptions } from 'fastify';
-import healthPlugin from '../../modules/health/health.plugin.js';
-import authPlugin from '../../modules/auth/auth.plugin.js';
-import documentsPlugin from '../../modules/documents/documents.plugin.js';
+import healthPlugin from '../../modules/health/health.plugin';
+import authPlugin from '../../modules/auth/auth.plugin';
+import documentsPlugin from '../../modules/documents/documents.plugin';
 
 /**
  * API Plugin - Registra todos os módulos sob o prefixo /api

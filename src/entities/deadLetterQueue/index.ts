@@ -8,6 +8,6 @@ export {
   DLQReason,
   DLQValidations,
   type IDeadLetterQueue
-} from './deadLetterQueueEntity.js';
+} from './deadLetterQueueEntity';
 
-export type { IDeadLetterQueueRepository } from './deadLetterQueueRepository.interface.js';
+export type { IDeadLetterQueueRepository } from './deadLetterQueueRepository.interface';

@@ -9,7 +9,7 @@ import {
   BeforeInsert,
   BeforeUpdate
 } from 'typeorm';
-import { sanitizeInput } from '../../lib/validators/index.js';
+import { sanitizeInput } from '../../lib/validators/index';
 
 /**
  * User Entity for PostgreSQL with TypeORM

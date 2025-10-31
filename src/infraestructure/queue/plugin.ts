@@ -10,11 +10,11 @@
 
 import type { FastifyInstance, FastifyPluginOptions } from 'fastify';
 import fp from 'fastify-plugin';
-import { createQueueManager, QueueManager } from './queue.js';
-import { PersistentQueueManager } from './persistentQueueManager.js';
-import { defaultLogger } from '../../lib/logger/index.js';
-import { QUEUE_HANDLERS } from './handlers.js';
-import { getQueueCache } from '../cache/cache.js';
+import { createQueueManager, QueueManager as _QueueManager } from './queue';
+import { PersistentQueueManager } from './persistentQueueManager';
+import { defaultLogger } from '../../lib/logger/index';
+import { QUEUE_HANDLERS } from './handlers';
+import { getQueueCache } from '../cache/cache';
 
 interface QueuePluginOptions extends FastifyPluginOptions {
   queueName?: string;
@@ -27,7 +27,7 @@ interface QueuePluginOptions extends FastifyPluginOptions {
 
 async function queuePlugin(fastify: FastifyInstance, options: QueuePluginOptions): Promise<void> {
   const logger = defaultLogger.child({ plugin: 'queue' });
-  const enablePersistence = options.enablePersistence !== false; // Default to true
+  const _enablePersistence = options.enablePersistence !== false; // Default to true
   const workerMode = options.workerMode || process.env.WORKER_MODE === 'true'; // 🆕 Detectar modo worker
 
   try {

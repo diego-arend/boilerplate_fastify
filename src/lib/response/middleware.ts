@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { ApiResponseHandler } from './ApiResponseHandler.js';
+import { ApiResponseHandler } from './ApiResponseHandler';
 
 /**
  * Global middleware for handling uncaught errors
@@ -55,7 +55,7 @@ export function notFoundHandler(fastify: FastifyInstance) {
  * Note: This functionality can be implemented in the future
  * with more specific route-based checks
  */
-export function methodNotAllowedHandler(fastify: FastifyInstance) {
+export function methodNotAllowedHandler(_fastify: FastifyInstance) {
   // Hook can be implemented in the future for specific
   // checks of allowed methods per route
 }

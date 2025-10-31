@@ -7,14 +7,14 @@
  * - QUEUE_HANDLERS para processamento
  */
 
-import { MongoConnectionManagerFactory } from '../mongo/index.js';
-import { getQueueCache, type QueueCache } from '../cache/index.js';
-import { QueueManager } from '../queue/queue.js';
-import { JOB_HANDLERS } from '../queue/jobs/index.js';
-import { JobBatchRepository } from '../../entities/job/index.js';
-import { defaultLogger } from '../../lib/logger/index.js';
+import { MongoConnectionManagerFactory } from '../mongo/index';
+import { getQueueCache, type QueueCache } from '../cache/index';
+import { QueueManager } from '../queue/queue';
+import { JOB_HANDLERS } from '../queue/jobs/index';
+import { JobBatchRepository } from '../../entities/job/index';
+import { defaultLogger } from '../../lib/logger/index';
 import type { Logger } from 'pino';
-import type { IMongoConnectionManager } from '../mongo/index.js';
+import type { IMongoConnectionManager } from '../mongo/index';
 
 export interface WorkerConfig {
   queueName: string;

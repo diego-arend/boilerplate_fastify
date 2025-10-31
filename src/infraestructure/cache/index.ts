@@ -16,10 +16,10 @@ export {
   disconnectCaches,
   type CacheStats,
   type CacheOptions
-} from './cache.js';
+} from './cache';
 
 // Factory methods
-export { CacheServiceFactory } from './cache.factory.js';
+export { CacheServiceFactory } from './cache.factory';
 
 // Configuration types
 export {
@@ -29,7 +29,7 @@ export {
   getCacheRedisConfig,
   getQueueRedisConfig,
   buildRedisUrl
-} from './redis.types.js';
+} from './redis.types';
 
 // Cache service interface for compatibility
 export interface ICacheService {

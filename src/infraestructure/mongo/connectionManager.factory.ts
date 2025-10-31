@@ -1,7 +1,7 @@
-import { MongoConnectionManager } from './connectionManager.js';
-import type { IMongoConnectionManager } from './connectionManager.interface.js';
-import { config } from '../../lib/validators/validateEnv.js';
-import { defaultLogger } from '../../lib/logger/index.js';
+import { MongoConnectionManager } from './connectionManager';
+import type { IMongoConnectionManager } from './connectionManager.interface';
+import { config } from '../../lib/validators/validateEnv';
+import { defaultLogger } from '../../lib/logger/index';
 
 /**
  * Factory for creating MongoDB Connection Manager instances

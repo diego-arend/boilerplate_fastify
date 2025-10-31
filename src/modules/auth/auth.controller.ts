@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
-import { ApiResponseHandler } from '../../lib/response/index.js';
-import { AuthService } from './services/index.js';
-import { defaultLogger } from '../../lib/logger/index.js';
+import { ApiResponseHandler } from '../../lib/response/index';
+import { AuthService } from './services/index';
+import { defaultLogger } from '../../lib/logger/index';
 
 const logger = defaultLogger.child({ context: 'auth-controller' });
 

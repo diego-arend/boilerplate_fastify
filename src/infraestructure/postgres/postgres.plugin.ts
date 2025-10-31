@@ -1,9 +1,9 @@
 import fp from 'fastify-plugin';
 import type { FastifyInstance, FastifyPluginAsync } from 'fastify';
-import { createPostgresConnectionManagerFromEnv } from './postgresConnectionManager.factory.js';
-import type { IPostgresConnectionManager } from './postgresConnectionManager.interface.js';
-import { AppDataSource, initializeDataSource } from './data-source.js';
-import { config } from '../../lib/validators/validateEnv.js';
+import { createPostgresConnectionManagerFromEnv } from './postgresConnectionManager.factory';
+import type { IPostgresConnectionManager } from './postgresConnectionManager.interface';
+import { AppDataSource, initializeDataSource } from './data-source';
+import { config } from '../../lib/validators/validateEnv';
 
 /**
  * PostgreSQL Plugin for Fastify

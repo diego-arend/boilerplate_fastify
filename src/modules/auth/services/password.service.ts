@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import { GlobalValidators } from '../../../lib/validators/index.js';
+import { GlobalValidators } from '../../../lib/validators/index';
 
 /**
  * Password service for handling password hashing and verification

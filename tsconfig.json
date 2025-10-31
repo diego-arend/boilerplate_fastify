@@ -1,52 +1,52 @@
 {
   // Visit https://aka.ms/tsconfig to read more about this file
+  //
+  // ⚙️ Fastify + TypeScript + ESM Configuration:
+  // - Development: tsx runtime handles TypeScript directly
+  // - Production: Compiled JavaScript with Node.js runtime
+  // - Module System: ES Modules (type: "module" in package.json)
+  // - Imports: Standard TypeScript imports without .js extensions
+  //
   "compilerOptions": {
     // File Layout
     "rootDir": "./src",
     "outDir": "./dist",
 
     // Environment Settings
-    // See also https://aka.ms/tsconfig/module
-    "module": "nodenext",
-    "target": "esnext",
-    "types": ["node"],
-    // For nodejs:
-    "lib": ["esnext"],
-    // "types": ["node"],
-    // and npm install -D @types/node
+    // See https://aka.ms/tsconfig/module
+    "module": "ES2022",         // Modern ESM for Node.js
+    "target": "ES2022",         // Modern JavaScript target (required for Fastify)
+    "lib": ["ES2022"],          // Standard library for ES2022
+    "types": ["node"],          // Include Node.js type definitions
 
-    // Other Outputs
+    // Module Resolution
+    "moduleResolution": "bundler", // Best for TypeScript + ESM without forcing .js extensions
+    "resolveJsonModule": true,     // Allow importing .json files
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,       // Better CommonJS/ESM interop
+
+    // Output Configuration
     "sourceMap": true,
     "declaration": true,
     "declarationMap": true,
 
-    // Stricter Typechecking Options
+    // TypeScript Strict Mode
+    "strict": true,
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
-
-    // Style Options
-    // "noImplicitReturns": true,
-    // "noImplicitOverride": true,
-    // "noUnusedLocals": true,
-    // "noUnusedParameters": true,
-    // "noFallthroughCasesInSwitch": true,
-    // "noPropertyAccessFromIndexSignature": true,
-
-    // Recommended Options
-    "strict": true,
-    "jsx": "react-jsx",
-    "verbatimModuleSyntax": true,
+    
+    // Code Quality Options
     "isolatedModules": true,
     "noUncheckedSideEffectImports": true,
     "moduleDetection": "force",
     "skipLibCheck": true,
-    "moduleResolution": "nodenext",
-    "allowSyntheticDefaultImports": true,
-    "esModuleInterop": true,
 
     // TypeORM Decorators Support
     "experimentalDecorators": true,
-    "emitDecoratorMetadata": true
+    "emitDecoratorMetadata": true,
+
+    // JSX Configuration (if needed)
+    "jsx": "react-jsx"
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]

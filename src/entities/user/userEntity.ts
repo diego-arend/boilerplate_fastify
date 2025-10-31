@@ -13,7 +13,7 @@ import {
   NameSchema,
   ChangePasswordSchema,
   sanitizeInput
-} from '../../lib/validators/index.js';
+} from '../../lib/validators/index';
 
 // ==========================================
 // 1. INTERFACE DA ENTIDADE PARA REPOSITORY

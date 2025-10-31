@@ -1,6 +1,6 @@
 import type { ClientSession } from 'mongoose';
-import type { IDeadLetterQueue } from './deadLetterQueueEntity.js';
-import type { IBaseRepository } from '../../infraestructure/mongo/interfaces.js';
+import type { IDeadLetterQueue } from './deadLetterQueueEntity';
+import type { IBaseRepository } from '../../infraestructure/mongo/interfaces';
 
 /**
  * Dead Letter Queue Repository Interface - Domain layer

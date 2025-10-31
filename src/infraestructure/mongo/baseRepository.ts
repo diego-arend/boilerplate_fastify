@@ -1,7 +1,17 @@
 import { Model, Document } from 'mongoose';
-import type { FilterQuery, UpdateQuery, ClientSession, SaveOptions, QueryOptions } from 'mongoose';
-import type { IBaseRepository, RepositoryOptions, PaginationResult } from './interfaces.js';
-import type { IMongoConnectionManager } from './connectionManager.interface.js';
+import type {
+  FilterQuery,
+  UpdateQuery,
+  ClientSession as _ClientSession,
+  SaveOptions,
+  QueryOptions
+} from 'mongoose';
+import type {
+  IBaseRepository,
+  RepositoryOptions,
+  PaginationResult as _PaginationResult
+} from './interfaces';
+import type { IMongoConnectionManager } from './connectionManager.interface';
 
 /**
  * Generic base repository with connection dependency injection

@@ -9,8 +9,8 @@
 
 import { Queue, Worker, QueueEvents } from 'bullmq';
 import type { Logger } from 'pino';
-import { defaultLogger } from '../../lib/logger/index.js';
-import { QueueCache } from '../cache/cache.js';
+import { defaultLogger } from '../../lib/logger/index';
+import { QueueCache } from '../cache/cache';
 
 export interface JobOptions {
   priority?: number;
@@ -73,7 +73,7 @@ export class QueueManager {
       this.setupEventListeners();
 
       // Log connection info
-      const connectionInfo = this.queueCache.getConnectionInfo();
+      const _connectionInfo = this.queueCache.getConnectionInfo();
       this.logger.info(`QueueManager initialized with QueueCache connection: ${this.queueName}`);
     } catch (error) {
       this.logger.error(`Failed to initialize QueueManager: ${error}`);

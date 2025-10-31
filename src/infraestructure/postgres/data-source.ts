@@ -1,5 +1,5 @@
 import { DataSource } from 'typeorm';
-import { User } from '../../entities/user/userEntity.postgres.js';
+import { User } from '../../entities/user/userEntity.postgres';
 
 /**
  * TypeORM DataSource configuration for CLI and migrations

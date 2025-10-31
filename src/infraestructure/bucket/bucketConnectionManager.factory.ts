@@ -4,10 +4,10 @@
  * Factory for creating bucket connection manager instances
  */
 
-import { BucketConnectionManager } from './bucketConnectionManager.js';
-import type { IBucketConnectionManager } from './bucketConnectionManager.interface.js';
-import type { BucketConfig } from './bucket.types.js';
-import { defaultLogger } from '../../lib/logger/index.js';
+import { BucketConnectionManager } from './bucketConnectionManager';
+import type { IBucketConnectionManager } from './bucketConnectionManager.interface';
+import type { BucketConfig } from './bucket.types';
+import { defaultLogger } from '../../lib/logger/index';
 import type { Logger } from 'pino';
 
 export class BucketConnectionManagerFactory {

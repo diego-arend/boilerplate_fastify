@@ -1,9 +1,9 @@
 import type { FastifyInstance, FastifyPluginOptions, FastifyRequest, FastifyReply } from 'fastify';
 import fp from 'fastify-plugin';
-import { JwtStrategy, AuthenticateCommand } from './services/index.js';
-import { CacheServiceFactory, type DataCache } from '../../infraestructure/cache/index.js';
-import authController from './auth.controller.js';
-import { defaultLogger } from '../../lib/logger/index.js';
+import { JwtStrategy, AuthenticateCommand } from './services/index';
+import { CacheServiceFactory, type DataCache } from '../../infraestructure/cache/index';
+import authController from './auth.controller';
+import { defaultLogger } from '../../lib/logger/index';
 
 async function authPluginFunction(fastify: FastifyInstance, _opts: FastifyPluginOptions) {
   const logger = defaultLogger.child({ context: 'auth-plugin' });

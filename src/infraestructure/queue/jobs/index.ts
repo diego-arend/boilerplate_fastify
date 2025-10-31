@@ -5,8 +5,8 @@
 
 import {
   handleRegistrationEmailJob,
-  type RegistrationEmailData
-} from './business/registrationEmailJob.js';
+  type RegistrationEmailData as _RegistrationEmailData
+} from './business/registrationEmailJob';
 
 /**
  * Job handler interface
@@ -51,7 +51,7 @@ export function getJobHandler(jobType: string): JobHandler | null {
 }
 
 // Re-export specialized job handlers
-export { handleRegistrationEmailJob } from './business/registrationEmailJob.js';
+export { handleRegistrationEmailJob } from './business/registrationEmailJob';
 
 // Re-export types
-export type { RegistrationEmailData } from './business/registrationEmailJob.js';
+export type { RegistrationEmailData } from './business/registrationEmailJob';

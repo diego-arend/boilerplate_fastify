@@ -3,9 +3,9 @@
  */
 
 import type { FastifyInstance } from 'fastify';
-import { ApiResponseHandler } from '../../lib/response/index.js';
-import { DocumentService } from './services/document.service.js';
-import { defaultLogger } from '../../lib/logger/index.js';
+import { ApiResponseHandler } from '../../lib/response/index';
+import { DocumentService } from './services/document.service';
+import { defaultLogger } from '../../lib/logger/index';
 
 const logger = defaultLogger.child({ context: 'documents-controller' });
 

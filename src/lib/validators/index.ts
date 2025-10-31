@@ -1,7 +1,7 @@
 /**
  * Validators index - Central export for all validation utilities
  */
-export { GlobalValidators } from './globalValidators.js';
+export { GlobalValidators } from './globalValidators';
 export {
   sanitizeInput,
   hasInjectionAttempt,
@@ -22,4 +22,4 @@ export {
   CpfSchema,
   PhoneSchema,
   CepSchema
-} from './globalValidators.js';
+} from './globalValidators';

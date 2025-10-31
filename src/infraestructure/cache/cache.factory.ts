@@ -6,8 +6,8 @@
  * - QueueCache for job processing (Redis db1)
  */
 
-import { getDataCache, getQueueCache, initializeCaches, disconnectCaches } from './cache.js';
-import type { DataCache, QueueCache } from './cache.js';
+import { getDataCache, getQueueCache, initializeCaches, disconnectCaches } from './cache';
+import type { DataCache, QueueCache } from './cache';
 
 /**
  * Cache Factory with static methods

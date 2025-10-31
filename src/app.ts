@@ -1,15 +1,15 @@
 import type { FastifyInstance, FastifyPluginOptions } from 'fastify';
-import apiPlugin from './infraestructure/server/api.plugin.js';
-import cachePlugin from './infraestructure/cache/cache.plugin.js';
-import mongodbPlugin from './infraestructure/mongo/mongodb.plugin.js';
-import postgresPlugin from './infraestructure/postgres/postgres.plugin.js';
-import queuePlugin from './infraestructure/queue/plugin.js';
-import emailPlugin from './infraestructure/email/email.plugin.js';
-import bucketPlugin from './infraestructure/bucket/bucket.plugin.js';
-import rateLimitPlugin from './infraestructure/server/rateLimit.plugin.js';
-import corsPlugin from './infraestructure/server/cors.plugin.js';
-import multipartPlugin from './infraestructure/server/multipart.plugin.js';
-import { errorHandler, notFoundHandler } from './lib/response/index.js';
+import apiPlugin from './infraestructure/server/api.plugin';
+import cachePlugin from './infraestructure/cache/cache.plugin';
+import mongodbPlugin from './infraestructure/mongo/mongodb.plugin';
+import postgresPlugin from './infraestructure/postgres/postgres.plugin';
+import queuePlugin from './infraestructure/queue/plugin';
+import emailPlugin from './infraestructure/email/email.plugin';
+import bucketPlugin from './infraestructure/bucket/bucket.plugin';
+import rateLimitPlugin from './infraestructure/server/rateLimit.plugin';
+import corsPlugin from './infraestructure/server/cors.plugin';
+import multipartPlugin from './infraestructure/server/multipart.plugin';
+import { errorHandler, notFoundHandler } from './lib/response/index';
 import fastifySwagger from '@fastify/swagger';
 import fastifySwaggerUi from '@fastify/swagger-ui';
 

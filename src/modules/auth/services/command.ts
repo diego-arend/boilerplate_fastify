@@ -1,6 +1,6 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import type { AuthStrategy, AuthenticatedUser } from './strategy.js';
-import { defaultLogger } from '../../../lib/logger/index.js';
+import type { AuthStrategy, AuthenticatedUser } from './strategy';
+import { defaultLogger } from '../../../lib/logger/index';
 
 export interface AuthCommand {
   execute(request: FastifyRequest, reply: FastifyReply): Promise<AuthenticatedUser | null>;

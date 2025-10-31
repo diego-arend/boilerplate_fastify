@@ -1,7 +1,30 @@
 import type { ClientSession } from 'mongoose';
-import type { IUser } from '../../../entities/user/index.js';
-import type { IUserRepository } from '../../../entities/user/index.js';
-import type { ICacheService } from '../../../infraestructure/cache/index.js';
+import type { IUser } from '../../../entities/user/index';
+import type { ICacheService } from '../../../infraestructure/cache/index';
+
+/**
+ * Minimal User Repository Interface for Authentication
+ * Defines only the methods needed by AuthRepository
+ * Works with both MongoDB (IUserRepository) and PostgreSQL (UserRepositoryPostgres)
+ * Uses any for return types to allow both MongoDB and PostgreSQL entities
+ */
+export interface IAuthUserRepository {
+  findByEmail(
+    email: string,
+    options?: { includePassword?: boolean; session?: any }
+  ): Promise<any | null>;
+  emailExists(email: string, session?: any): Promise<boolean>;
+  createUser(
+    userData: { name: string; email: string; password: string; role?: 'user' | 'admin' },
+    session?: any
+  ): Promise<any>;
+  validateCredentials(
+    credentials: { email: string; password: string },
+    session?: any
+  ): Promise<{ isValid: boolean; user: any | null; reason?: string }>;
+  updateUser(id: string, updateData: any, session?: any): Promise<any | null>;
+  findById(id: string, session?: any): Promise<any | null>;
+}
 
 /**
  * Interface for Authentication Repository operations
@@ -41,7 +64,7 @@ export interface IAuthRepository {
  */
 export class AuthRepository implements IAuthRepository {
   constructor(
-    private userRepository: IUserRepository,
+    private userRepository: IAuthUserRepository,
     private cacheService?: ICacheService
   ) {}
 

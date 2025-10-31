@@ -1,7 +1,7 @@
 import type { FastifyInstance, FastifyPluginOptions } from 'fastify';
 import rateLimit from '@fastify/rate-limit';
-import { defaultLogger } from '../../lib/logger/index.js';
-import { config } from '../../lib/validators/validateEnv.js';
+import { defaultLogger } from '../../lib/logger/index';
+import { config } from '../../lib/validators/validateEnv';
 
 export interface RateLimitOptions extends FastifyPluginOptions {
   max?: number;

@@ -16,7 +16,7 @@
 import { DataSource, Repository, type FindOptionsWhere } from 'typeorm';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
-import { User } from './userEntity.postgres.js';
+import { User } from './userEntity.postgres';
 
 // Local types
 type UserRole = 'user' | 'admin';
@@ -71,8 +71,11 @@ export class UserRepositoryPostgres {
     return user.toJSON();
   }
 
-  async findById(id: number): Promise<Partial<User> | null> {
-    const user = await this.repository.findOne({ where: { id } });
+  async findById(id: number): Promise<Partial<User> | null>;
+  async findById(id: string): Promise<Partial<User> | null>;
+  async findById(id: number | string): Promise<Partial<User> | null> {
+    const numericId = typeof id === 'string' ? Number(id) : id;
+    const user = await this.repository.findOne({ where: { id: numericId } });
     return user ? user.toJSON() : null;
   }
 
@@ -90,6 +93,13 @@ export class UserRepositoryPostgres {
     this.repository.merge(user, userData);
     await this.repository.save(user);
     return user.toJSON();
+  }
+
+  /**
+   * Update user by string ID (for auth repository compatibility)
+   */
+  async updateUser(id: string, userData: Partial<User>): Promise<Partial<User> | null> {
+    return this.update(Number(id), userData);
   }
 
   async delete(id: number): Promise<boolean> {
@@ -347,6 +357,105 @@ export class UserRepositoryPostgres {
    * Utility Methods
    * ============================================
    */
+
+  /**
+   * Check if email exists in database
+   */
+  async emailExists(email: string): Promise<boolean> {
+    const count = await this.repository.count({
+      where: { email: email.toLowerCase() }
+    });
+    return count > 0;
+  }
+
+  /**
+   * Validate user credentials (email + password)
+   * Returns validation result with user data
+   */
+  async validateCredentials(credentials: {
+    email: string;
+    password: string;
+  }): Promise<{ isValid: boolean; user: Partial<User> | null; reason?: string }> {
+    const user = await this.repository.findOne({
+      where: { email: credentials.email.toLowerCase() },
+      select: [
+        'id',
+        'name',
+        'email',
+        'password',
+        'status',
+        'emailVerified',
+        'lockUntil',
+        'loginAttempts',
+        'role'
+      ]
+    });
+
+    if (!user) {
+      return { isValid: false, user: null, reason: 'User not found' };
+    }
+
+    if (!user.canLogin()) {
+      return { isValid: false, user: null, reason: 'Account locked or inactive' };
+    }
+
+    const isValid = await bcrypt.compare(credentials.password, user.password);
+
+    if (!isValid) {
+      // Increment login attempts
+      user.loginAttempts = (user.loginAttempts || 0) + 1;
+
+      // Lock account after 5 failed attempts for 15 minutes
+      if (user.loginAttempts >= 5) {
+        user.lockUntil = new Date(Date.now() + 15 * 60 * 1000);
+      }
+
+      await this.repository.save(user);
+      return { isValid: false, user: null, reason: 'Invalid password' };
+    }
+
+    // Reset login attempts and update last login on successful login
+    user.loginAttempts = 0;
+    user.lockUntil = null;
+    user.lastLoginAt = new Date();
+
+    await this.repository.save(user);
+
+    // Return user without password
+    const { password: _pwd, ...userWithoutPassword } = user.toJSON();
+    return { isValid: true, user: userWithoutPassword };
+  }
+
+  /**
+   * Create user with optional role (for auth repository compatibility)
+   */
+  async createUser(userData: {
+    name: string;
+    email: string;
+    password: string;
+    role?: UserRole;
+  }): Promise<Partial<User>> {
+    const hashedPassword = await bcrypt.hash(userData.password, 10);
+    const emailVerificationToken = crypto.randomBytes(32).toString('hex');
+
+    const user = this.repository.create({
+      name: userData.name,
+      email: userData.email.toLowerCase(),
+      password: hashedPassword,
+      emailVerificationToken,
+      passwordResetExpires: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24h
+      role: userData.role || 'user',
+      emailVerified: false,
+      status: 'active',
+      loginAttempts: 0
+    });
+
+    await this.repository.save(user);
+
+    // Return without password
+    const { password: _pwd, ...userWithoutPassword } = user.toJSON();
+    return userWithoutPassword;
+  }
 
   async healthCheck(): Promise<boolean> {
     try {

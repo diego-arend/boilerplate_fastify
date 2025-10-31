@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyPluginOptions, FastifyRequest, FastifyReply } from 'fastify';
 import fp from 'fastify-plugin';
-import type { TransactionOptions } from './transaction.types.js';
+import type { TransactionOptions } from './transaction.types';
 import type { ClientSession } from 'mongoose';
 
 // Extensões de tipos para adicionar session ao request

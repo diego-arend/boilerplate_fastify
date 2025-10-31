@@ -6,8 +6,8 @@
 
 import { DataSource } from 'typeorm';
 import type { QueryRunner } from 'typeorm';
-import type { IPostgresConnectionManager } from './postgresConnectionManager.interface.js';
-import type { PostgresConfig, PostgresHealthInfo, PostgresQueryResult } from './postgres.types.js';
+import type { IPostgresConnectionManager } from './postgresConnectionManager.interface';
+import type { PostgresConfig, PostgresHealthInfo, PostgresQueryResult } from './postgres.types';
 import type { Logger } from 'pino';
 
 export class PostgresConnectionManager implements IPostgresConnectionManager {

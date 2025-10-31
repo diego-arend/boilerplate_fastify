@@ -5,7 +5,7 @@
  */
 
 import type { DataSource, QueryRunner } from 'typeorm';
-import type { PostgresHealthInfo, PostgresQueryResult } from './postgres.types.js';
+import type { PostgresHealthInfo, PostgresQueryResult } from './postgres.types';
 
 export interface IPostgresConnectionManager {
   /**

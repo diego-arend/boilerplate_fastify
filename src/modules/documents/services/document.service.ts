@@ -4,13 +4,13 @@
 
 import crypto from 'node:crypto';
 import path from 'node:path';
-import { defaultLogger } from '../../../lib/logger/index.js';
+import { defaultLogger } from '../../../lib/logger/index';
 import type { Logger } from 'pino';
 import {
   DocumentRepositoryFactory,
   type IDocumentRepository
-} from '../../../entities/document/index.js';
-import type { IDocument } from '../../../entities/document/index.js';
+} from '../../../entities/document/index';
+import type { IDocument } from '../../../entities/document/index';
 
 export interface UploadFileOptions {
   file: Buffer;

@@ -1,10 +1,10 @@
 import fp from 'fastify-plugin';
-import type { FastifyInstance, FastifyPluginOptions } from 'fastify';
+import type { FastifyInstance, FastifyPluginOptions as _FastifyPluginOptions } from 'fastify';
 import type mongoose from 'mongoose';
-import { MongoConnectionManagerFactory } from './connectionManager.factory.js';
-import { TransactionManagerFactory } from './transactionManager.factory.js';
-import type { IMongoConnectionManager } from './connectionManager.interface.js';
-import type { ITransactionManager } from './transactionManager.interface.js';
+import { MongoConnectionManagerFactory } from './connectionManager.factory';
+import { TransactionManagerFactory } from './transactionManager.factory';
+import type { IMongoConnectionManager } from './connectionManager.interface';
+import type { ITransactionManager } from './transactionManager.interface';
 
 declare module 'fastify' {
   interface FastifyInstance {

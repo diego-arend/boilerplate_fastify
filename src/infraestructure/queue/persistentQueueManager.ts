@@ -5,12 +5,12 @@
  * Implements batch processing with failure recovery
  */
 
-import { defaultLogger } from '../../lib/logger/index.js';
+import { defaultLogger } from '../../lib/logger/index';
 import type { Logger } from 'pino';
-import { QueueManager } from './queue.js';
-import { JobBatchRepository, type JobBatch } from '../../entities/job/index.js';
-import type { IJob } from '../../entities/job/index.js';
-import { generateJobId } from './plugin.js';
+import { QueueManager } from './queue';
+import { JobBatchRepository, type JobBatch } from '../../entities/job/index';
+import type { IJob } from '../../entities/job/index';
+import { generateJobId } from './plugin';
 
 export interface PersistentJobOptions {
   priority?: number;
@@ -212,7 +212,7 @@ export class PersistentQueueManager {
   /**
    * Setup monitoring for job completion (would integrate with BullMQ events)
    */
-  private setupJobMonitoring(jobId: string, redisJobId: string): void {
+  private setupJobMonitoring(jobId: string, _redisJobId: string): void {
     // This would be replaced with actual BullMQ event listeners
     // For now, we'll simulate with a timeout
 

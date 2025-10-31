@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyPluginOptions, FastifyRequest, FastifyReply } from 'fastify';
 import fp from 'fastify-plugin';
-import { getDataCache } from './index.js';
+import { getDataCache } from './index';
 
 /**
  * Simplified Cache plugin for Fastify using DataCache (Redis db0)
@@ -103,7 +103,7 @@ async function cachePlugin(fastify: FastifyInstance, _opts: FastifyPluginOptions
 // Extend types
 declare module 'fastify' {
   interface FastifyInstance {
-    cache: import('./cache.js').DataCache;
+    cache: import('./cache').DataCache;
     setCacheForRoute: (key: string, data: any, ttl?: number) => Promise<boolean>;
     getCacheForRoute: (key: string) => Promise<any>;
     invalidateCache: (key: string) => Promise<boolean>;

@@ -5,10 +5,10 @@
  */
 
 import { S3Client, ListObjectsV2Command } from '@aws-sdk/client-s3';
-import { defaultLogger } from '../../lib/logger/index.js';
+import { defaultLogger } from '../../lib/logger/index';
 import type { Logger } from 'pino';
-import type { IBucketConnectionManager } from './bucketConnectionManager.interface.js';
-import type { BucketConfig, BucketConnectionStatus } from './bucket.types.js';
+import type { IBucketConnectionManager } from './bucketConnectionManager.interface';
+import type { BucketConfig, BucketConnectionStatus } from './bucket.types';
 
 export class BucketConnectionManager implements IBucketConnectionManager {
   private client: S3Client | null = null;

@@ -4,7 +4,7 @@ import {
   PasswordSchema,
   NameSchema,
   ChangePasswordSchema
-} from '../../lib/validators/index.js';
+} from '../../lib/validators/index';
 
 /**
  * User-specific validation schemas and functions

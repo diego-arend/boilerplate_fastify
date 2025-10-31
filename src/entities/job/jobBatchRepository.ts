@@ -5,14 +5,14 @@
  * Handles batch loading, processing tracking, and failure management
  */
 
-import { defaultLogger } from '../../lib/logger/index.js';
-import { BaseRepository } from '../../infraestructure/mongo/baseRepository.js';
-import { JobModel, type IJob } from './index.js';
+import { defaultLogger } from '../../lib/logger/index';
+import { BaseRepository } from '../../infraestructure/mongo/baseRepository';
+import { JobModel, type IJob } from './index';
 import {
   DeadLetterQueue,
-  type IDeadLetterQueue,
+  type IDeadLetterQueue as _IDeadLetterQueue,
   DLQReason
-} from '../deadLetterQueue/deadLetterQueueEntity.js';
+} from '../deadLetterQueue/deadLetterQueueEntity';
 
 export interface JobBatch {
   batchId: string;
@@ -169,7 +169,7 @@ export class JobBatchRepository extends BaseRepository<IJob> {
   /**
    * Mark job as completed and delete from MongoDB
    */
-  async markJobAsCompleted(jobId: string, result?: any): Promise<void> {
+  async markJobAsCompleted(jobId: string, _result?: any): Promise<void> {
     try {
       const job = await JobModel.findOneAndDelete({
         jobId,

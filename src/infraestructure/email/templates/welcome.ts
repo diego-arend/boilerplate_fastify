@@ -2,8 +2,8 @@
  * Welcome Email Template
  */
 
-import type { TemplateResult } from './types.js';
-import { BaseTemplate } from './types.js';
+import type { TemplateResult } from './types';
+import { BaseTemplate } from './types';
 
 interface WelcomeVariables {
   userName: string;

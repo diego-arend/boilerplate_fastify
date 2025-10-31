@@ -6,11 +6,11 @@
 import jwt from 'jsonwebtoken';
 import { z } from 'zod';
 import type { FastifyBaseLogger } from 'fastify';
-import type { QueueManager } from '../../../infraestructure/queue/queue.js';
-import { AuthRepositoryFactory } from '../factory/auth.factory.js';
-import { UserValidations } from '../../../entities/user/index.js';
-import { type RegistrationEmailData } from '../../../infraestructure/queue/jobs/business/registrationEmailJob.js';
-import { defaultLogger } from '../../../lib/logger/index.js';
+import type { QueueManager as _QueueManager } from '../../../infraestructure/queue/queue';
+import { AuthRepositoryFactory } from '../factory/auth.factory';
+import { UserValidations } from '../../../entities/user/index';
+import { type RegistrationEmailData } from '../../../infraestructure/queue/jobs/business/registrationEmailJob';
+import { defaultLogger } from '../../../lib/logger/index';
 
 /**
  * Auth service interfaces

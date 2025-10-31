@@ -1,1 +1,1 @@
-export { AuthRepository } from './auth.repository.js';
+export { AuthRepository } from './auth.repository';

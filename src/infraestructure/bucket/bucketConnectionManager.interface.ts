@@ -4,7 +4,7 @@
  * Interface for managing bucket connections (MinIO/S3)
  */
 
-import type { BucketConfig, BucketConnectionStatus } from './bucket.types.js';
+import type { BucketConfig, BucketConnectionStatus } from './bucket.types';
 
 export interface IBucketConnectionManager {
   /**

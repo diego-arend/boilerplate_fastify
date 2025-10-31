@@ -1,6 +1,6 @@
 import type { FilterQuery, ClientSession } from 'mongoose';
-import type { IDeadLetterQueue } from './deadLetterQueueEntity.js';
-import type { PaginationOptions, PaginationResult } from '../../infraestructure/mongo/index.js';
+import type { IDeadLetterQueue } from './deadLetterQueueEntity';
+import type { PaginationOptions, PaginationResult } from '../../infraestructure/mongo/index';
 
 /**
  * Dead Letter Queue Repository Interface - Pure domain contract

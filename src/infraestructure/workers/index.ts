@@ -6,9 +6,9 @@
  */
 
 import dotenv from 'dotenv';
-import { StandaloneWorker, type WorkerConfig } from './worker.js';
-import { validateCriticalEnvs } from '../../lib/validators/validateEnv.js';
-import { defaultLogger } from '../../lib/logger/index.js';
+import { StandaloneWorker, type WorkerConfig } from './worker';
+import { validateCriticalEnvs } from '../../lib/validators/validateEnv';
+import { defaultLogger } from '../../lib/logger/index';
 
 // Carregar variáveis de ambiente
 dotenv.config();
@@ -98,7 +98,7 @@ process.on('uncaughtException', error => {
 });
 
 // Handler para unhandled rejections
-process.on('unhandledRejection', (reason, promise) => {
+process.on('unhandledRejection', (reason, _promise) => {
   logger.error(`Unhandled rejection in worker: ${String(reason)}`);
   console.error('🚨 Unhandled rejection:', reason);
   process.exit(1);

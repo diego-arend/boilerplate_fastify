@@ -4,7 +4,7 @@ import type {
   TransactionResult,
   TransactionStats,
   TransactionalFunction
-} from './transaction.types.js';
+} from './transaction.types';
 
 /**
  * Interface for Transaction Manager with dependency injection

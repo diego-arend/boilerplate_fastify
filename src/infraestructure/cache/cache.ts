@@ -6,14 +6,14 @@
  * - QueueCache: For job batches and worker processing (Redis db1)
  */
 
-import { createClient, type RedisClientType } from 'redis';
+import { createClient, type RedisClientType as _RedisClientType } from 'redis';
 import {
   getCacheRedisConfig,
   getQueueRedisConfig,
   buildRedisUrl,
   type RedisAppConfig
-} from './redis.types.js';
-import { defaultLogger } from '../../lib/logger/index.js';
+} from './redis.types';
+import { defaultLogger } from '../../lib/logger/index';
 
 const logger = defaultLogger;
 

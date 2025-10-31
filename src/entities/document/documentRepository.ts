@@ -3,14 +3,14 @@
  */
 
 import type { ClientSession } from 'mongoose';
-import type { IDocument } from './documentEntity.js';
-import { DocumentModel } from './documentEntity.js';
+import type { IDocument } from './documentEntity';
+import { DocumentModel } from './documentEntity';
 import type {
   IBaseRepository,
   RepositoryOptions,
   PaginationOptions,
   PaginationResult
-} from '../../infraestructure/mongo/index.js';
+} from '../../infraestructure/mongo/index';
 
 /**
  * Interface for Document Repository operations
@@ -208,7 +208,7 @@ export class DocumentRepository implements IDocumentRepository {
     totalSize: number;
     byMimeType: Record<string, number>;
   }> {
-    const sessionOption = session ? { session } : {};
+    const _sessionOption = session ? { session } : {};
 
     const [total, totalSizeResult, mimeTypeStats] = await Promise.all([
       DocumentModel.countDocuments({}).session(session || null),

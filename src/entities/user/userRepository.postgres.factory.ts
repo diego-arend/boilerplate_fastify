@@ -8,8 +8,8 @@
  * ```
  */
 
-import { AppDataSource } from '../../../infraestructure/postgres/data-source.js';
-import { UserRepositoryPostgres } from './userRepository.postgres.js';
+import { AppDataSource } from '../../infraestructure/postgres/data-source';
+import { UserRepositoryPostgres } from './userRepository.postgres';
 
 /**
  * Factory function to create UserRepositoryPostgres

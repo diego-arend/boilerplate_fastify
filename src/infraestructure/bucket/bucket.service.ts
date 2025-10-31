@@ -12,10 +12,10 @@ import {
   ListObjectsV2Command
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { defaultLogger } from '../../lib/logger/index.js';
+import { defaultLogger } from '../../lib/logger/index';
 import type { Logger } from 'pino';
-import type { IBucketConnectionManager } from './bucketConnectionManager.interface.js';
-import type { UploadFileOptions, GetPresignedUrlOptions, FileInfo } from './bucket.types.js';
+import type { IBucketConnectionManager } from './bucketConnectionManager.interface';
+import type { UploadFileOptions, GetPresignedUrlOptions, FileInfo } from './bucket.types';
 
 export class BucketService {
   private connectionManager: IBucketConnectionManager;

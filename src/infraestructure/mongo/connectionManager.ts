@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
-import type { IMongoConnectionManager } from './connectionManager.interface.js';
-import type { LogContext } from '../../lib/logger/index.js';
+import type { IMongoConnectionManager } from './connectionManager.interface';
+import type { LogContext as _LogContext } from '../../lib/logger/index';
 
 /**
  * MongoDB Connection Manager with dependency injection support
@@ -12,7 +12,7 @@ export class MongoConnectionManager implements IMongoConnectionManager {
 
   constructor(
     private connectionString: string,
-    private logger: ReturnType<typeof import('../../lib/logger/index.js').defaultLogger.child>
+    private logger: ReturnType<typeof import('../../lib/logger/index').defaultLogger.child>
   ) {
     this.connection = mongoose.connection;
   }

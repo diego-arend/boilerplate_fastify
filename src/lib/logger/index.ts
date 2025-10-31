@@ -13,7 +13,7 @@ export {
   type LogContext,
   type LoggerConfig,
   type PinoLogger
-} from './logger.js';
+} from './logger';
 
 // Export default instance for convenience
-export { defaultLogger as default } from './logger.js';
+export { defaultLogger as default } from './logger';

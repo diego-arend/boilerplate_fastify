@@ -1,5 +1,5 @@
-import type { AuthenticatedUser } from '../services/strategy.js';
-import type { FastifyRequest, FastifyReply } from 'fastify';
+import type { AuthenticatedUser } from '../services/strategy';
+import type { FastifyRequest as _FastifyRequest, FastifyReply } from 'fastify';
 
 declare module 'fastify' {
   interface FastifyInstance {

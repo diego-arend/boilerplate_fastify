@@ -4,16 +4,16 @@
  * Main exports for bucket infrastructure components
  */
 
-export { BucketConnectionManager } from './bucketConnectionManager.js';
-export { BucketConnectionManagerFactory } from './bucketConnectionManager.factory.js';
-export { BucketService } from './bucket.service.js';
-export { default as bucketPlugin } from './bucket.plugin.js';
+export { BucketConnectionManager } from './bucketConnectionManager';
+export { BucketConnectionManagerFactory } from './bucketConnectionManager.factory';
+export { BucketService } from './bucket.service';
+export { default as bucketPlugin } from './bucket.plugin';
 
-export type { IBucketConnectionManager } from './bucketConnectionManager.interface.js';
+export type { IBucketConnectionManager } from './bucketConnectionManager.interface';
 export type {
   BucketConfig,
   UploadFileOptions,
   GetPresignedUrlOptions,
   FileInfo,
   BucketConnectionStatus
-} from './bucket.types.js';
+} from './bucket.types';

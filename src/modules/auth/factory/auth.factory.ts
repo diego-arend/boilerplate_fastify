@@ -1,7 +1,7 @@
-import type { IAuthRepository } from '../repository/auth.repository.js';
-import { AuthRepository } from '../repository/auth.repository.js';
-import { UserRepositoryFactory } from '../../../entities/user/index.js';
-import { CacheServiceFactory } from '../../../infraestructure/cache/index.js';
+import type { IAuthRepository } from '../repository/auth.repository';
+import { AuthRepository } from '../repository/auth.repository';
+import { UserRepositoryFactory } from '../../../entities/user/index';
+import { CacheServiceFactory } from '../../../infraestructure/cache/index';
 
 /**
  * Factory class for creating Authentication-related repositories with dependency injection

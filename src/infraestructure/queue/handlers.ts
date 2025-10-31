@@ -7,8 +7,8 @@ import type { FastifyBaseLogger } from 'fastify';
 import {
   handleRegistrationEmailJob,
   type RegistrationEmailData
-} from './jobs/business/registrationEmailJob.js';
-import { defaultLogger } from '../../lib/logger/index.js';
+} from './jobs/business/registrationEmailJob';
+import { defaultLogger } from '../../lib/logger/index';
 
 export interface QueueJobHandler {
   (data: any, logger?: FastifyBaseLogger): Promise<any>;

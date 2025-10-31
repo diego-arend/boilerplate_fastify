@@ -4,9 +4,9 @@
  * Main exports for document entity
  */
 
-export { DocumentModel } from './documentEntity.js';
-export { DocumentRepository } from './documentRepository.js';
-export { DocumentRepositoryFactory } from './documentRepository.factory.js';
+export { DocumentModel } from './documentEntity';
+export { DocumentRepository } from './documentRepository';
+export { DocumentRepositoryFactory } from './documentRepository.factory';
 
-export type { IDocument, DocumentValidationSchema } from './documentEntity.js';
-export type { IDocumentRepository } from './documentRepository.js';
+export type { IDocument, DocumentValidationSchema } from './documentEntity';
+export type { IDocumentRepository } from './documentRepository';

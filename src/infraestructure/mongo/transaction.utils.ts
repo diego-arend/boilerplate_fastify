@@ -1,9 +1,9 @@
-import type { ITransactionManager } from './transactionManager.interface.js';
+import type { ITransactionManager } from './transactionManager.interface';
 import type {
   TransactionalFunction,
   TransactionOptions,
   TransactionResult
-} from './transaction.types.js';
+} from './transaction.types';
 
 /**
  * Create a withTransaction function bound to a specific transaction manager

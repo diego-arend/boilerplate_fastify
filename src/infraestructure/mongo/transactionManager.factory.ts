@@ -1,7 +1,7 @@
-import { TransactionManager } from './transactionManager.js';
-import type { ITransactionManager } from './transactionManager.interface.js';
-import type { IMongoConnectionManager } from './connectionManager.interface.js';
-import { defaultLogger } from '../../lib/logger/index.js';
+import { TransactionManager } from './transactionManager';
+import type { ITransactionManager } from './transactionManager.interface';
+import type { IMongoConnectionManager } from './connectionManager.interface';
+import { defaultLogger } from '../../lib/logger/index';
 
 /**
  * Factory for creating Transaction Manager instances with dependency injection

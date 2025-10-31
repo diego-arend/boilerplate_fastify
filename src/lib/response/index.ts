@@ -1,2 +1,2 @@
-export { ApiResponseHandler } from './ApiResponseHandler.js';
-export * from './middleware.js';
+export { ApiResponseHandler } from './ApiResponseHandler';
+export * from './middleware';

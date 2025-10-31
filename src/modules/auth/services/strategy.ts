@@ -1,8 +1,8 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import { defaultLogger } from '../../../lib/logger/index.js';
-import type { ICacheService } from '../../../infraestructure/cache/index.js';
+import { defaultLogger } from '../../../lib/logger/index';
+import type { ICacheService } from '../../../infraestructure/cache/index';
 
 export interface AuthenticatedUser {
   id: string;

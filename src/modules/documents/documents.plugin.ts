@@ -1,7 +1,7 @@
 import type { FastifyInstance, FastifyPluginOptions } from 'fastify';
 import fp from 'fastify-plugin';
-import documentsController from './documents.controller.js';
-import { defaultLogger } from '../../lib/logger/index.js';
+import documentsController from './documents.controller';
+import { defaultLogger } from '../../lib/logger/index';
 
 const logger = defaultLogger.child({ context: 'documents-plugin' });
 

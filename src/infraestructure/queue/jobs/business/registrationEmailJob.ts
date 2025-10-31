@@ -4,7 +4,7 @@
  */
 
 import type { FastifyBaseLogger } from 'fastify';
-import { EmailService, type EmailConfig } from '../../../email/index.js';
+import { EmailService, type EmailConfig } from '../../../email/index';
 
 /**
  * Registration email job data
@@ -76,7 +76,7 @@ export async function handleRegistrationEmailJob(
     const emailService = new EmailService(emailConfig, logger);
 
     // Render registration success template
-    const { createTemplate } = await import('../../../email/templates/index.js');
+    const { createTemplate } = await import('../../../email/templates/index');
     const template = createTemplate('registration_success');
 
     if (!template) {

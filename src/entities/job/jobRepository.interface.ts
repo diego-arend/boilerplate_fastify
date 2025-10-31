@@ -1,12 +1,12 @@
-import type { FilterQuery, ClientSession } from 'mongoose';
-import type { IJob } from './jobEntity.js';
+import type { FilterQuery as _FilterQuery, ClientSession } from 'mongoose';
+import type { IJob } from './jobEntity';
 import type {
   PaginationOptions,
   PaginationResult,
-  RepositoryOptions
-} from '../../infraestructure/mongo/index.js';
-import type { IBaseRepository } from '../../infraestructure/mongo/interfaces.js';
-import { JobValidations } from './jobEntity.js';
+  RepositoryOptions as _RepositoryOptions
+} from '../../infraestructure/mongo/index';
+import type { IBaseRepository } from '../../infraestructure/mongo/interfaces';
+import { JobValidations } from './jobEntity';
 
 /**
  * Job Repository Interface - Pure domain contract

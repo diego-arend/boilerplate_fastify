@@ -1,10 +1,10 @@
-import { BaseRepository } from '../../infraestructure/mongo/index.js';
-import { UserModel } from './userEntity.js';
-import { UserRepository, type IUserRepository } from './userRepository.js';
-import type { IUser } from './userEntity.js';
-import type { IMongoConnectionManager } from '../../infraestructure/mongo/connectionManager.interface.js';
-import { MongoConnectionManagerFactory } from '../../infraestructure/mongo/connectionManager.factory.js';
-import { createUserRepositoryPostgresSync } from './userRepository.postgres.factory.js';
+import { BaseRepository } from '../../infraestructure/mongo/index';
+import { UserModel } from './userEntity';
+import { UserRepository, type IUserRepository } from './userRepository';
+import type { IUser } from './userEntity';
+import type { IMongoConnectionManager } from '../../infraestructure/mongo/connectionManager.interface';
+import { MongoConnectionManagerFactory } from '../../infraestructure/mongo/connectionManager.factory';
+import { createUserRepositoryPostgresSync } from './userRepository.postgres.factory';
 
 /**
  * User Repository Factory - PostgreSQL Primary (MongoDB Deprecated)

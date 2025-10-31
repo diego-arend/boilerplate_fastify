@@ -1,13 +1,13 @@
 import mongoose from 'mongoose';
 import type { ClientSession } from 'mongoose';
-import type { IMongoConnectionManager } from './connectionManager.interface.js';
-import type { ITransactionManager } from './transactionManager.interface.js';
+import type { IMongoConnectionManager } from './connectionManager.interface';
+import type { ITransactionManager } from './transactionManager.interface';
 import type {
   TransactionOptions,
   TransactionResult,
   TransactionStats,
   TransactionalFunction
-} from './transaction.types.js';
+} from './transaction.types';
 
 /**
  * Transaction Manager with dependency injection support
@@ -18,7 +18,7 @@ export class TransactionManager implements ITransactionManager {
 
   constructor(
     private connectionManager: IMongoConnectionManager,
-    private logger: ReturnType<typeof import('../../lib/logger/index.js').defaultLogger.child>
+    private logger: ReturnType<typeof import('../../lib/logger/index').defaultLogger.child>
   ) {}
 
   /**

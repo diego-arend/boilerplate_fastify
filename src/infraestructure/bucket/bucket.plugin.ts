@@ -6,10 +6,10 @@
 
 import type { FastifyInstance, FastifyPluginAsync } from 'fastify';
 import fp from 'fastify-plugin';
-import { BucketConnectionManagerFactory } from './bucketConnectionManager.factory.js';
-import { BucketService } from './bucket.service.js';
-import type { IBucketConnectionManager } from './bucketConnectionManager.interface.js';
-import type { BucketConfig } from './bucket.types.js';
+import { BucketConnectionManagerFactory } from './bucketConnectionManager.factory';
+import { BucketService } from './bucket.service';
+import type { IBucketConnectionManager } from './bucketConnectionManager.interface';
+import type { BucketConfig } from './bucket.types';
 
 // Declare module augmentation for Fastify
 declare module 'fastify' {

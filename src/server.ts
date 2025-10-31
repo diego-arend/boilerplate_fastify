@@ -1,8 +1,8 @@
 import dotenv from 'dotenv';
 import { fastify } from 'fastify';
-import configFastify from './infraestructure/server/fastify.config.js';
-import app from './app.js';
-import { config, validateCriticalEnvs } from './lib/validators/validateEnv.js';
+import configFastify from './infraestructure/server/fastify.config';
+import app from './app';
+import { config, validateCriticalEnvs } from './lib/validators/validateEnv';
 
 // Load environment variables first
 dotenv.config({ debug: false });

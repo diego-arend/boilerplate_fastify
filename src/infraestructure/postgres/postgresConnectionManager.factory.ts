@@ -1,8 +1,8 @@
 import type { FastifyInstance } from 'fastify';
-import { PostgresConnectionManager } from './postgresConnectionManager.js';
-import type { IPostgresConnectionManager } from './postgresConnectionManager.interface.js';
-import type { PostgresConfig } from './postgres.types.js';
-import { defaultLogger } from '../../lib/logger/index.js';
+import { PostgresConnectionManager } from './postgresConnectionManager';
+import type { IPostgresConnectionManager } from './postgresConnectionManager.interface';
+import type { PostgresConfig } from './postgres.types';
+import { defaultLogger } from '../../lib/logger/index';
 
 /**
  * Factory function to create PostgreSQL connection manager instance

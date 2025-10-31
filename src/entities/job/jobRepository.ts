@@ -1,12 +1,12 @@
 import type { FilterQuery, ClientSession } from 'mongoose';
-import type { IJob } from './index.js';
-import { JobModel, JobValidations } from './index.js';
+import type { IJob } from './index';
+import { JobModel, JobValidations } from './index';
 import type {
   IBaseRepository,
   RepositoryOptions,
   PaginationOptions,
   PaginationResult
-} from '../../infraestructure/mongo/index.js';
+} from '../../infraestructure/mongo/index';
 
 /**
  * Interface for Job Repository operations

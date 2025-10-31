@@ -1,12 +1,12 @@
 import type { FilterQuery, ClientSession } from 'mongoose';
-import type { IUser } from './userEntity.js';
+import type { IUser } from './userEntity';
 import type {
   PaginationOptions,
   PaginationResult,
-  RepositoryOptions
-} from '../../infraestructure/mongo/index.js';
-import { UserValidations } from './userEntity.js';
-import type { IBaseRepository } from '../../infraestructure/mongo/interfaces.js';
+  RepositoryOptions as _RepositoryOptions
+} from '../../infraestructure/mongo/index';
+import { UserValidations } from './userEntity';
+import type { IBaseRepository } from '../../infraestructure/mongo/interfaces';
 
 /**
  * User Repository Interface - Pure domain contract

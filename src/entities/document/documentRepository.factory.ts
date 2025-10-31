@@ -1,9 +1,9 @@
-import { BaseRepository } from '../../infraestructure/mongo/index.js';
-import { DocumentModel } from './documentEntity.js';
-import { DocumentRepository, type IDocumentRepository } from './documentRepository.js';
-import type { IDocument } from './documentEntity.js';
-import type { IMongoConnectionManager } from '../../infraestructure/mongo/connectionManager.interface.js';
-import { MongoConnectionManagerFactory } from '../../infraestructure/mongo/connectionManager.factory.js';
+import { BaseRepository } from '../../infraestructure/mongo/index';
+import { DocumentModel } from './documentEntity';
+import { DocumentRepository, type IDocumentRepository } from './documentRepository';
+import type { IDocument } from './documentEntity';
+import type { IMongoConnectionManager } from '../../infraestructure/mongo/connectionManager.interface';
+import { MongoConnectionManagerFactory } from '../../infraestructure/mongo/connectionManager.factory';
 
 /**
  * Factory class for creating Document-related repositories with proper dependency injection

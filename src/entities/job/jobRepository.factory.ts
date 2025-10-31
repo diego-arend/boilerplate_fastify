@@ -1,9 +1,9 @@
-import type { IBaseRepository } from '../../infraestructure/mongo/index.js';
-import { JobModel, type IJob } from './index.js';
-import { JobRepository, type IJobRepository } from './jobRepository.js';
-import { BaseRepository } from '../../infraestructure/mongo/index.js';
-import type { IMongoConnectionManager } from '../../infraestructure/mongo/connectionManager.interface.js';
-import { MongoConnectionManagerFactory } from '../../infraestructure/mongo/connectionManager.factory.js';
+import type { IBaseRepository } from '../../infraestructure/mongo/index';
+import { JobModel, type IJob } from './index';
+import { JobRepository, type IJobRepository } from './jobRepository';
+import { BaseRepository } from '../../infraestructure/mongo/index';
+import type { IMongoConnectionManager } from '../../infraestructure/mongo/connectionManager.interface';
+import { MongoConnectionManagerFactory } from '../../infraestructure/mongo/connectionManager.factory';
 
 /**
  * Job Repository Factory

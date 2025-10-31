@@ -4,28 +4,28 @@
  */
 
 // Base template types and interfaces
-export { BaseTemplate, type TemplateResult, type EmailTemplate } from './types.js';
+export { BaseTemplate, type TemplateResult, type EmailTemplate } from './types';
 
 // Individual template classes
-export { WelcomeTemplate } from './welcome.js';
-export { RegistrationSuccessTemplate } from './registrationSuccess.js';
-export { PasswordResetTemplate } from './passwordReset.js';
-export { OrderConfirmationTemplate } from './orderConfirmation.js';
-export { InvoiceTemplate } from './invoice.js';
-export { NewsletterTemplate } from './newsletter.js';
-export { SystemAlertTemplate, AlertSeverity } from './systemAlert.js';
-export { CustomTemplate } from './custom.js';
+export { WelcomeTemplate } from './welcome';
+export { RegistrationSuccessTemplate } from './registrationSuccess';
+export { PasswordResetTemplate } from './passwordReset';
+export { OrderConfirmationTemplate } from './orderConfirmation';
+export { InvoiceTemplate } from './invoice';
+export { NewsletterTemplate } from './newsletter';
+export { SystemAlertTemplate, AlertSeverity } from './systemAlert';
+export { CustomTemplate } from './custom';
 
 // Import classes for internal use
-import { BaseTemplate } from './types.js';
-import { WelcomeTemplate } from './welcome.js';
-import { RegistrationSuccessTemplate } from './registrationSuccess.js';
-import { PasswordResetTemplate } from './passwordReset.js';
-import { OrderConfirmationTemplate } from './orderConfirmation.js';
-import { InvoiceTemplate } from './invoice.js';
-import { NewsletterTemplate } from './newsletter.js';
-import { SystemAlertTemplate } from './systemAlert.js';
-import { CustomTemplate } from './custom.js';
+import { BaseTemplate } from './types';
+import { WelcomeTemplate } from './welcome';
+import { RegistrationSuccessTemplate } from './registrationSuccess';
+import { PasswordResetTemplate } from './passwordReset';
+import { OrderConfirmationTemplate } from './orderConfirmation';
+import { InvoiceTemplate } from './invoice';
+import { NewsletterTemplate } from './newsletter';
+import { SystemAlertTemplate } from './systemAlert';
+import { CustomTemplate } from './custom';
 
 // Template factory function for easy instantiation
 export function createTemplate(templateType: string): BaseTemplate<any> | null {

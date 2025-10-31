@@ -1,11 +1,11 @@
 // Queue infrastructure exports
-export { QueueManager, createQueueManager } from './queue.js';
-export { default as queuePlugin } from './plugin.js';
-export { QUEUE_HANDLERS, getQueueHandler } from './handlers.js';
+export { QueueManager, createQueueManager } from './queue';
+export { default as queuePlugin } from './plugin';
+export { QUEUE_HANDLERS, getQueueHandler } from './handlers';
 
 // Job Models and Repositories (from entities)
-export * from '../../entities/job/index.js';
+export * from '../../entities/job/index';
 
 // Queue types
-export type { JobOptions, JobHandler } from './queue.js';
-export type { QueueJobHandler } from './handlers.js';
+export type { JobOptions, JobHandler } from './queue';
+export type { QueueJobHandler } from './handlers';

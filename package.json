@@ -10,6 +10,7 @@
     "dev": "tsx --watch src/server.ts",
     "start": "node dist/server.js",
     "build": "tsc",
+    "build:clean": "rm -rf dist && pnpm run build",
     "worker": "node dist/infraestructure/workers/index.js",
     "worker:dev": "tsx --watch src/infraestructure/workers/index.ts",
     "docker:dev": "docker-compose -f docker-compose.dev.yml up --build",
