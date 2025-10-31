@@ -110,10 +110,33 @@ This project integrates with **Model Context Protocol (MCP) servers** for enhanc
    - **Modules**: Search for related entities in `src/entities/`
    - **Entities**: Analyze existing relationships
    - **Features**: Look for similar implementations
-3. **Consult relevant READMEs** of identified components
+3. **MANDATORY: Consult README documentation** of all components involved in the task context
+   - **Existing modules**: Always read the module's README.md to ensure project patterns are followed
+   - **Related components**: Review READMEs of entities, infrastructure, and libraries that will be used
+   - **Similar implementations**: Study READMEs of analogous modules for pattern consistency
 4. **Plan MCP Context7 queries** for up-to-date external documentation
 5. **Design Playwright testing scenarios** for testing requirements
 6. **Create comprehensive task plan** based on identified patterns
+
+### 📋 **Documentation Requirements**
+
+**For New Modules:**
+- **FIRST STEP**: Plan creation of module README.md documentation
+- Document module purpose, architecture, patterns, and usage examples
+- Include API endpoints, entity relationships, and integration points
+- Define testing strategies and monitoring requirements
+
+**For Existing Modules:**
+- **ALWAYS**: Consult module README.md before planning modifications
+- **AFTER IMPLEMENTATION**: Plan documentation updates for:
+  - New features or endpoints
+  - Changed behaviors or patterns
+  - New dependencies or integrations
+  - Updated testing requirements
+
+**Documentation Update Rule:**
+- Every task that modifies or extends a module MUST include a step to update that module's README.md
+- Documentation should be kept in sync with implementation to maintain project consistency
 
 ### 🎯 **Mandatory Questions by Type**
 
@@ -127,26 +150,31 @@ This project integrates with **Model Context Protocol (MCP) servers** for enhanc
 
 1. **Task description** - Context, objective, and user request analysis
 2. **Investigation performed** - Entities/modules/components found and gaps identified
-3. **READMEs consulted** - How existing documentation influenced the planning
-4. **MCP Context7 query plan** - Suggested queries for up-to-date external documentation
-5. **MCP Playwright testing plan** - Detailed testing and automation scenarios
-6. **Implementation steps** - Sequential, based on identified patterns (planning only)
-7. **Scope and requirements** - Technologies, patterns, security, best practices
-8. **Testing strategy** - Unit tests, integration tests, E2E tests (Playwright scenarios)
-9. **Monitoring considerations** - Logging, metrics, Bull Dashboard integration
-10. **Execution guidance** - Specific instructions for implementation agents
+3. **READMEs consulted** - How existing documentation influenced the planning (MANDATORY for all involved modules)
+4. **Documentation plan** - README creation for new modules OR update plan for existing modules
+5. **MCP Context7 query plan** - Suggested queries for up-to-date external documentation
+6. **MCP Playwright testing plan** - Detailed testing and automation scenarios
+7. **Implementation steps** - Sequential, based on identified patterns (planning only)
+8. **Scope and requirements** - Technologies, patterns, security, best practices
+9. **Testing strategy** - Unit tests, integration tests, E2E tests (Playwright scenarios)
+10. **Monitoring considerations** - Logging, metrics, Bull Dashboard integration
+11. **Documentation update steps** - Specific README.md sections to create or update
+12. **Execution guidance** - Specific instructions for implementation agents
 
 **Format**: Always in markdown, **NO CODE SNIPPETS**. Only logical implementation steps and planning should be provided.
 
 ## Task Planning Rules
 
+- **MANDATORY DOCUMENTATION CONSULTATION**: Always consult README.md of involved modules before planning
+- **DOCUMENTATION-FIRST FOR NEW MODULES**: First step must be README.md creation with module architecture
+- **DOCUMENTATION UPDATES REQUIRED**: Every implementation must include corresponding README.md updates
 - **NO CODE BLOCKS**: Never include code examples or snippets in task planning
 - **LOGICAL STEPS ONLY**: Provide clear, sequential implementation steps
 - **PATTERN REFERENCES**: Reference existing patterns and components to follow
 - **ARCHITECTURAL GUIDANCE**: Describe the structural approach without code
 - **COMPONENT IDENTIFICATION**: List what needs to be created/modified without implementation details
 - **MCP INTEGRATION**: Include Context7 queries and Playwright testing considerations
-- **COMPREHENSIVE SCOPE**: Cover development, testing, monitoring, and deployment aspects
+- **COMPREHENSIVE SCOPE**: Cover development, testing, monitoring, documentation, and deployment aspects
 
 ## Practical Example
 
@@ -163,22 +191,35 @@ This project integrates with **Model Context Protocol (MCP) servers** for enhanc
 
 **READMEs consulted**:
 
-- entities/, modules/auth/, lib/validators/, mongo/ → Architecture patterns
-- queue/jobs/, email/ → Notification system integration
-- cache/ → Performance optimization strategies
+- `src/entities/README.md` → Entity architecture and validation patterns
+- `src/modules/auth/README.md` → Module structure and RBAC implementation
+- `src/lib/validators/README.md` → Reusable validation patterns
+- `src/infraestructure/mongo/README.md` → BaseRepository inheritance
+- `src/infraestructure/queue/jobs/README.md` → Job creation patterns
+- `src/infraestructure/email/README.md` → Notification system integration
+- `src/infraestructure/cache/README.md` → Performance optimization strategies
+
+**Documentation plan**:
+
+- **Create**: `src/modules/books/README.md` (new module documentation)
+- **Create**: `src/entities/book/README.md` (book entity documentation)
+- **Update**: `src/infraestructure/queue/jobs/README.md` (add loan notification jobs)
 
 **MCP Context7 query**: ISBN validation standards, library management best practices, MongoDB indexing for search
+
 **MCP Playwright considerations**: Admin interface testing, book catalog UI validation
 
 **Steps**:
 
-1. Relationship analysis → Entity design → Book/Loan entities
-2. Create books module → Controller/Plugin/Services structure
-3. Auth integration → RBAC for librarians/users
-4. Queue jobs → Due date notifications, overdue alerts
-5. Cache strategy → Popular books, search results
-6. Testing → Unit tests, E2E with Playwright for admin features
-7. Bull Dashboard → Monitor notification jobs
+1. **Documentation First**: Create README.md for books module with architecture overview
+2. Relationship analysis → Entity design → Book/Loan entities
+3. Create books module → Controller/Plugin/Services structure following auth/ patterns
+4. Auth integration → RBAC for librarians/users
+5. Queue jobs → Due date notifications, overdue alerts (auto-contained pattern)
+6. Cache strategy → Popular books, search results
+7. Testing → Unit tests, E2E with Playwright for admin features
+8. **Update Documentation**: Add new endpoints, jobs, and patterns to module README.md
+9. Bull Dashboard → Monitor notification jobs
 
 **Scope and requirements**:
 
@@ -186,6 +227,7 @@ This project integrates with **Model Context Protocol (MCP) servers** for enhanc
 - **Patterns**: BaseRepository inheritance, auto-contained jobs, RBAC
 - **Security**: Input validation, role-based access, rate limiting
 - **Monitoring**: Structured logging, queue dashboard, performance metrics
+- **Documentation**: Complete module README with API, entities, jobs, and usage examples
 
 ## Security Standards for Entities
 
