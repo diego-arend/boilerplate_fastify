@@ -14,6 +14,7 @@ services:
     depends_on:
       - mongodb
       - redis
+      - postgres
     networks:
       - boilerplate_network
     deploy:
@@ -42,6 +43,7 @@ services:
     depends_on:
       - mongodb
       - redis
+      - postgres
     networks:
       - boilerplate_network
     deploy:
@@ -99,6 +101,28 @@ services:
       retries: 3
       start_period: 30s
 
+  # PostgreSQL with pgvector extension for vector embeddings
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: boilerplate_postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: boilerplate
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - boilerplate_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
   # MinIO S3-compatible object storage
   minio:
     image: minio/minio:latest
@@ -125,6 +149,7 @@ services:
 volumes:
   mongodb_data:
   redis_data:
+  postgres_data:
   minio_data:
 
 networks:

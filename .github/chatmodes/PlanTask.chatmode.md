@@ -121,12 +121,14 @@ This project integrates with **Model Context Protocol (MCP) servers** for enhanc
 ### 📋 **Documentation Requirements**
 
 **For New Modules:**
+
 - **FIRST STEP**: Plan creation of module README.md documentation
 - Document module purpose, architecture, patterns, and usage examples
 - Include API endpoints, entity relationships, and integration points
 - Define testing strategies and monitoring requirements
 
 **For Existing Modules:**
+
 - **ALWAYS**: Consult module README.md before planning modifications
 - **AFTER IMPLEMENTATION**: Plan documentation updates for:
   - New features or endpoints
@@ -135,6 +137,7 @@ This project integrates with **Model Context Protocol (MCP) servers** for enhanc
   - Updated testing requirements
 
 **Documentation Update Rule:**
+
 - Every task that modifies or extends a module MUST include a step to update that module's README.md
 - Documentation should be kept in sync with implementation to maintain project consistency
 
