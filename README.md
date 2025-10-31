@@ -56,11 +56,12 @@ docker-compose up --build
 This project implements a **modular, scalable architecture** designed for enterprise applications:
 
 - **API Layer**: High-performance Fastify server with TypeScript
-- **Data Layer**: MongoDB with Mongoose ODM and repository pattern
+- **Data Layer**: Hybrid database architecture with MongoDB (flexible documents) and PostgreSQL (relational data)
 - **Caching Layer**: Redis-based caching system with automatic management
 - **Queue System**: BullMQ for background job processing with worker containers
 - **Authentication**: JWT-based auth with Role-Based Access Control (RBAC)
 - **Infrastructure**: Modular components with health monitoring and error handling
+- **AI/ML Ready**: pgvector support for embeddings and similarity search
 
 ## 🚀 Technology Stack
 
@@ -69,11 +70,14 @@ This project implements a **modular, scalable architecture** designed for enterp
 - **[Fastify](https://fastify.dev/)** - High-performance web framework
 - **[TypeScript](https://www.typescriptlang.org/)** - Type-safe development
 - **[MongoDB](https://www.mongodb.com/)** - NoSQL database with Mongoose ODM
+- **[PostgreSQL](https://www.postgresql.org/)** - Relational database with TypeORM (optional, hybrid architecture)
+- **[pgvector](https://github.com/pgvector/pgvector)** - Vector similarity search for AI embeddings
 - **[Redis](https://redis.io/)** - In-memory data store for caching and queues
 
 ### Infrastructure
 
 - **[BullMQ](https://bullmq.io/)** - Background job processing and queue management
+- **[TypeORM](https://typeorm.io/)** - SQL ORM with TypeScript support for PostgreSQL
 - **[Docker](https://www.docker.com/)** - Containerization for development and production
 - **[JWT](https://jwt.io/)** - Secure authentication with role-based access
 - **[Swagger/OpenAPI](https://swagger.io/)** - Interactive API documentation (development only)
@@ -167,7 +171,8 @@ docker-compose up -d --build
 
 - **API Server**: http://localhost:3001 - Main Fastify application
 - **Queue Worker**: Background job processing container
-- **MongoDB**: localhost:27017 (admin/password)
+- **MongoDB**: localhost:27017 (admin/password) - Document database
+- **PostgreSQL**: localhost:5432 (postgres/postgres) - Relational database with pgvector
 - **Redis**: localhost:6379 (shared by cache and queue)
 
 #### Development & Testing Tools
@@ -196,6 +201,7 @@ Each infrastructure module has comprehensive documentation with implementation d
 
 - **[Cache System](src/infraestructure/cache/README.md)** - Redis-based automatic caching with TTL, user-scoped keys, and graceful fallback
 - **[MongoDB Integration](src/infraestructure/mongo/README.md)** - Connection management, repository pattern, atomic transactions, and database operations
+- **[PostgreSQL Integration](src/infraestructure/postgres/README.md)** - TypeORM with pgvector, connection pooling, transactions, and hybrid architecture support
 - **[Queue System](src/infraestructure/queue/README.md)** - Enterprise-grade job processing with Dead Letter Queue and resilient manager
 - **[Worker System](src/infraestructure/workers/README.md)** - Standalone worker containers for background job processing with independent scaling
 - **[Server Configuration](src/infraestructure/server/README.md)** - Fastify setup, plugins, and middleware configuration
@@ -250,11 +256,64 @@ The application includes comprehensive health checks:
 
 _For detailed endpoint documentation and usage examples, see the module-specific README files._
 
-## 🔐 Security Features
+## �️ Hybrid Database Architecture
+
+This boilerplate supports a **flexible hybrid database architecture**, allowing you to use the best tool for each use case:
+
+### When to Use Each Database
+
+#### **MongoDB** (Default - Always Active)
+- ✅ Flexible documents without fixed schema
+- ✅ Hierarchical and nested data structures
+- ✅ Rapid prototyping and schema evolution
+- ✅ High horizontal scalability
+- ✅ Session storage and temporary data
+- **Use cases**: User profiles, logs, event data, content management
+
+#### **PostgreSQL** (Optional - Hybrid Architecture)
+- ✅ Complex relational data with JOINs
+- ✅ ACID transactions for critical operations
+- ✅ Advanced analytics and complex queries
+- ✅ Vector similarity search with pgvector (AI/ML)
+- ✅ Full-text search capabilities
+- ✅ Structured data with strict schema
+- **Use cases**: Financial transactions, inventory, product catalogs, AI embeddings
+
+### Configuration
+
+PostgreSQL is **optional** and can be enabled by setting environment variables:
+
+```env
+# Enable PostgreSQL (optional - hybrid architecture)
+POSTGRES_HOST=postgres
+POSTGRES_PORT=5432
+POSTGRES_DATABASE=boilerplate
+POSTGRES_USERNAME=postgres
+POSTGRES_PASSWORD=postgres
+POSTGRES_SSL=false
+POSTGRES_SYNCHRONIZE=false  # Never true in production
+POSTGRES_LOGGING=true
+```
+
+**Without configuration**: System works perfectly with MongoDB only  
+**With configuration**: Both databases available with `fastify.postgres` decorator
+
+### pgvector for AI/ML
+
+PostgreSQL includes **pgvector extension** for vector similarity search:
+
+- **Embeddings storage** for OpenAI, Cohere, or custom models
+- **Semantic search** with cosine similarity
+- **Recommendation systems** based on vector proximity
+- **Image similarity** using vision model embeddings
+
+Example usage available in [PostgreSQL README](src/infraestructure/postgres/README.md).
+
+##  Security Features
 
 - **JWT Authentication** with role-based access control (RBAC)
 - **Input Validation** using Zod schemas with TypeScript integration
-- **SQL Injection Protection** through Mongoose ODM
+- **SQL Injection Protection** through Mongoose ODM and TypeORM parameterized queries
 - **XSS Prevention** with input sanitization
 - **Password Security** with bcrypt hashing
 - **Rate Limiting** and security headers in production
@@ -300,10 +359,11 @@ docker-compose down -v
 
 - **Redis Connection**: Check if Redis service is running and accessible
 - **MongoDB Connection**: Verify MongoDB service status and credentials
+- **PostgreSQL Connection**: Ensure PostgreSQL service is running (if configured)
 - **Queue Processing**: Ensure queue worker container is running
 - **Email Testing**: Use MailHog dashboard (http://localhost:8025) to verify email delivery
 - **Queue Monitoring**: Use BullMQ dashboard (http://localhost:3002/ui) to debug job processing
-- **Port Conflicts**: Make sure ports 3001, 3002, 8025, 27017, 6379 are available
+- **Port Conflicts**: Make sure ports 3001, 3002, 8025, 27017, 5432, 6379 are available
 
 _For detailed troubleshooting guides, refer to the specific module README files._
 
