@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyPluginOptions } from 'fastify';
 import apiPlugin from './infraestructure/server/api.plugin.js';
 import cachePlugin from './infraestructure/cache/cache.plugin.js';
 import mongodbPlugin from './infraestructure/mongo/mongodb.plugin.js';
+import postgresPlugin from './infraestructure/postgres/postgres.plugin.js';
 import queuePlugin from './infraestructure/queue/plugin.js';
 import emailPlugin from './infraestructure/email/email.plugin.js';
 import bucketPlugin from './infraestructure/bucket/bucket.plugin.js';
@@ -19,6 +20,9 @@ export default async function app(fastify: FastifyInstance, _opts: FastifyPlugin
 
   // Register MongoDB plugin FIRST for database access
   await fastify.register(mongodbPlugin);
+
+  // Register PostgreSQL plugin AFTER MongoDB (optional - hybrid architecture)
+  await fastify.register(postgresPlugin);
 
   // Register cache plugin SECOND to be available for all routes
   await fastify.register(cachePlugin, {

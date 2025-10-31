@@ -72,6 +72,7 @@ For implementation patterns and guidelines, refer to component-specific READMEs:
 
 ### 📁 **Infrastructure Components**
 - **Database**: `src/infraestructure/mongo/README.md` - BaseRepository, connections, transactions
+- **PostgreSQL**: `src/infraestructure/postgres/README.md` - TypeORM integration, pgvector, hybrid architecture
 - **Cache**: `src/infraestructure/cache/README.md` - Redis implementation and strategies
 - **Queue**: `src/infraestructure/queue/README.md` - BullMQ implementation, job processing
 - **Email**: `src/infraestructure/email/README.md` - SMTP configuration, template system
@@ -84,7 +85,8 @@ For implementation patterns and guidelines, refer to component-specific READMEs:
 - **New Entity**: Follow `src/entities/README.md` patterns
 - **New Module**: Reference `src/modules/auth/README.md` structure
 - **New Job**: Follow `src/infraestructure/queue/jobs/README.md` patterns
-- **Database Operations**: Use BaseRepository patterns from `src/infraestructure/mongo/README.md`
+- **Database Operations (MongoDB)**: Use BaseRepository patterns from `src/infraestructure/mongo/README.md`
+- **Database Operations (PostgreSQL)**: Use TypeORM patterns from `src/infraestructure/postgres/README.md`
 - **Authentication**: Implement RBAC following `src/modules/auth/README.md`
 - **Queue Jobs**: Create auto-contained jobs per `src/infraestructure/queue/jobs/README.md`
 - **Validation**: Reuse global validators from `src/lib/validators/README.md`

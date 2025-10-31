@@ -1,7 +1,7 @@
 ---
 description: 'Specialized mode for task definition and planning only. Does NOT execute tasks - focuses on comprehensive planning and scoping for execution by other agents or GitHub Copilot.'
 tools: ['search/codebase', 'search']
-model: Claude Sonnet 4
+model: Claude Sonnet 4.5
 ---
 
 # Task Planning Mode (Fastify Backend) - PLANNING ONLY
@@ -198,6 +198,7 @@ This project integrates with **Model Context Protocol (MCP) servers** for enhanc
 - `src/modules/auth/README.md` → Module structure and RBAC implementation
 - `src/lib/validators/README.md` → Reusable validation patterns
 - `src/infraestructure/mongo/README.md` → BaseRepository inheritance
+- `src/infraestructure/postgres/README.md` → TypeORM integration and pgvector
 - `src/infraestructure/queue/jobs/README.md` → Job creation patterns
 - `src/infraestructure/email/README.md` → Notification system integration
 - `src/infraestructure/cache/README.md` → Performance optimization strategies

@@ -37,6 +37,20 @@ const envSchema = z
     // MongoDB Database
     MONGO_URI: z.string().url('MONGO_URI must be a valid URL'),
 
+    // PostgreSQL Database (Optional - for hybrid architecture)
+    POSTGRES_HOST: z.string().min(1, 'POSTGRES_HOST cannot be empty').optional(),
+    POSTGRES_PORT: z.coerce.number().min(1).max(65535).default(5432).optional(),
+    POSTGRES_DATABASE: z.string().min(1, 'POSTGRES_DATABASE cannot be empty').optional(),
+    POSTGRES_USERNAME: z.string().min(1, 'POSTGRES_USERNAME cannot be empty').optional(),
+    POSTGRES_PASSWORD: z.string().optional(),
+    POSTGRES_SSL: z.coerce.boolean().default(false).optional(),
+    POSTGRES_SYNCHRONIZE: z.coerce.boolean().default(false).optional(),
+    POSTGRES_LOGGING: z.coerce.boolean().default(false).optional(),
+    POSTGRES_POOL_MIN: z.coerce.number().min(1).max(50).optional(),
+    POSTGRES_POOL_MAX: z.coerce.number().min(1).max(100).optional(),
+    POSTGRES_CONNECTION_TIMEOUT: z.coerce.number().positive().optional(),
+    POSTGRES_IDLE_TIMEOUT: z.coerce.number().positive().optional(),
+
     // Redis Cache Configuration - Primary (API Cache)
     REDIS_HOST: z.string().min(1, 'REDIS_HOST cannot be empty').default('localhost'),
     REDIS_PORT: z.coerce.number().min(1).max(65535).default(6379),
@@ -112,6 +126,14 @@ if (!parsed.success) {
       PORT: process.env.PORT,
       JWT_SECRET: process.env.JWT_SECRET ? `[${process.env.JWT_SECRET.length} chars]` : 'NOT_SET',
       MONGO_URI: process.env.MONGO_URI ? '[REDACTED]' : 'NOT_SET',
+      POSTGRES_HOST: process.env.POSTGRES_HOST,
+      POSTGRES_PORT: process.env.POSTGRES_PORT,
+      POSTGRES_DATABASE: process.env.POSTGRES_DATABASE,
+      POSTGRES_USERNAME: process.env.POSTGRES_USERNAME ? '[REDACTED]' : 'NOT_SET',
+      POSTGRES_PASSWORD: process.env.POSTGRES_PASSWORD ? '[REDACTED]' : 'NOT_SET',
+      POSTGRES_SSL: process.env.POSTGRES_SSL,
+      POSTGRES_SYNCHRONIZE: process.env.POSTGRES_SYNCHRONIZE,
+      POSTGRES_LOGGING: process.env.POSTGRES_LOGGING,
       REDIS_HOST: process.env.REDIS_HOST,
       REDIS_PORT: process.env.REDIS_PORT,
       REDIS_PASSWORD: process.env.REDIS_PASSWORD ? '[REDACTED]' : 'NOT_SET',
