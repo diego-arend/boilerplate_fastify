@@ -1,7 +1,7 @@
 ---
 description: 'Specialized mode for task definition and planning only. Does NOT execute tasks - focuses on comprehensive planning and scoping for execution by other agents or GitHub Copilot.'
 tools: ['search/codebase', 'search']
-model: Claude Sonnet 4.5
+model: GPT-5 mini
 ---
 
 # Task Planning Mode (Fastify Backend) - PLANNING ONLY
