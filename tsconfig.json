@@ -10,8 +10,8 @@
     "module": "nodenext",
     "target": "esnext",
     "types": ["node"],
-    // For nodejs:
-    "lib": ["esnext"],
+    // For nodejs with fetch support:
+    "lib": ["esnext", "dom"],
     // "types": ["node"],
     // and npm install -D @types/node
 

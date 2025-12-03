@@ -1,6 +1,25 @@
 ---
-description: 'Specialized mode for task definition and scoping for execution by the agent or GitHub Copilot ask mode, aligned with backend development using Fastify.'
-tools: ['search/codebase', 'search']
+description: 'Specialized mode for task definition and scoping for execution by the agent or GitHub Copilot Plans mode, aligned with backend development using Fastify.'
+tools:
+  [
+    'edit',
+    'runNotebooks',
+    'search',
+    'new',
+    'runCommands',
+    'runTasks',
+    'context7/*',
+    'usages',
+    'vscodeAPI',
+    'problems',
+    'changes',
+    'testFailure',
+    'openSimpleBrowser',
+    'fetch',
+    'githubRepo',
+    'extensions',
+    'todos'
+  ]
 model: Claude Sonnet 4
 ---
 

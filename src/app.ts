@@ -5,6 +5,7 @@ import mongodbPlugin from './infraestructure/mongo/mongodb.plugin.js';
 import queuePlugin from './infraestructure/queue/plugin.js';
 import emailPlugin from './infraestructure/email/email.plugin.js';
 import bucketPlugin from './infraestructure/bucket/bucket.plugin.js';
+import evolutionApiPlugin from './infraestructure/evolution/evolution.plugin.js';
 import rateLimitPlugin from './infraestructure/server/rateLimit.plugin.js';
 import corsPlugin from './infraestructure/server/cors.plugin.js';
 import multipartPlugin from './infraestructure/server/multipart.plugin.js';
@@ -36,7 +37,12 @@ export default async function app(fastify: FastifyInstance, opts: FastifyPluginO
     autoConnect: true // Auto-connect using environment configuration
   });
 
-  // Register queue plugin AFTER both MongoDB and cache for job processing
+  // Register Evolution API plugin AFTER bucket for WhatsApp messaging services
+  await fastify.register(evolutionApiPlugin, {
+    enableConnectionMonitoring: true // Enable connection health monitoring
+  });
+
+  // Register queue plugin AFTER all external services for job processing
   await fastify.register(queuePlugin, {
     config: fastify.config,
     queueName: fastify.config.QUEUE_NAME,

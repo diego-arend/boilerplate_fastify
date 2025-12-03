@@ -1,4 +1,3 @@
-````instructions
 # Boilerplate Fastify - Copilot Instructions
 
 ## Project Overview
@@ -16,7 +15,7 @@ Modern backend API boilerplate using **Fastify v5.5.0** + **TypeScript** with mo
 - **Email**: SMTP with Mailpit (development)
 - **Validation**: Zod v4.1.5
 - **Authentication**: JWT (jsonwebtoken v9.0.2)
-- **Package Manager**: pnpm v10.13.1 *(REQUIRED - All commands must use pnpm)*
+- **Package Manager**: pnpm v10.13.1 _(REQUIRED - All commands must use pnpm)_
 - **Development**: tsx v4.19.1, Docker + Docker Compose
 
 ## Package Management
@@ -64,23 +63,27 @@ src/
 This project integrates with **Model Context Protocol (MCP) servers** for enhanced development capabilities:
 
 ### **Context7 MCP Server** 🔍
+
 - **Purpose**: Library documentation and code examples
 - **Usage**: `mcp_context7_resolve-library-id` + `mcp_context7_get-library-docs`
 - **Supported Libraries**: MongoDB, Fastify, BullMQ, Redis, TypeScript, Zod, JWT
 - **Example**: Get up-to-date BullMQ documentation with code examples
 
 ### **Playwright MCP Server** 🎭
+
 - **Purpose**: Web automation, testing, and browser interactions
 - **Usage**: `mcp_playwright_browser_*` commands
 - **Capabilities**: Navigate, click, fill forms, take screenshots, test UI
 - **Use Cases**: E2E testing, web scraping, UI validation
 
 ### **When to Use MCPs**
+
 - **Context7**: When you need current library documentation or implementation examples
 - **Playwright**: For web-based testing, automation, or browser interactions
 - **Best Practice**: Use MCPs for external resources, not for existing project code
 
 ### **Browser Testing Guidelines**
+
 - **✅ Use MCP Playwright**: For all browser testing and UI interactions
 - **❌ Never Simple Browser**: Simple Browser is only for quick previews, not testing
 
@@ -89,10 +92,12 @@ This project integrates with **Model Context Protocol (MCP) servers** for enhanc
 For implementation patterns and guidelines, refer to component-specific READMEs:
 
 ### 📁 **Core Components**
+
 - **Entity Patterns**: `src/entities/README.md` - Entity architecture, validation patterns, repository inheritance
 - **Module Structure**: `src/modules/auth/README.md` - Module organization, plugin patterns, controllers, RBAC
 
 ### 📁 **Infrastructure Components**
+
 - **Database**: `src/infraestructure/mongo/README.md` - BaseRepository, connections, transactions
 - **Server**: `src/infraestructure/server/README.md` - Fastify setup and configuration
 - **Cache**: `src/infraestructure/cache/README.md` - Redis implementation and strategies
@@ -101,25 +106,30 @@ For implementation patterns and guidelines, refer to component-specific READMEs:
 - **Email Templates**: `src/infraestructure/email/templates/README.md` - Template engine and rendering
 
 ### 📁 **Business Modules**
+
 - **Authentication**: `src/modules/auth/README.md` - Complete JWT auth system with RBAC
 - **Health Check**: `src/modules/health/` - System health monitoring endpoints
 
 ### 📁 **Entity Documentation**
+
 - **Entity Architecture**: `src/entities/README.md` - Entity patterns, validation, repository inheritance
 - **User Entity**: `src/entities/user/README.md` - User entity implementation example
 
 ### 📁 **Libraries & Utilities**
+
 - **Validators**: `src/lib/validators/README.md` - Validation schemas, security patterns, Zod usage
 - **Logger**: `src/lib/logger/README.md` - Structured logging configuration
 - **Response**: `src/lib/response/README.md` - API response standardization, error handling
 - **Auth Services**: `src/modules/auth/services/README.md` - Authentication services and utilities
 
 ### 📁 **Queue System Documentation**
+
 - **Queue Infrastructure**: `src/infraestructure/queue/README.md` - BullMQ setup, configuration, monitoring
 - **Job Implementation**: `src/infraestructure/queue/jobs/README.md` - Job patterns, testing, examples
 - **Bull Dashboard**: http://localhost:3002/ui - Real-time queue monitoring
 
 ### 📁 **Quick Reference Guide**
+
 - **New Entity**: Follow `src/entities/README.md` patterns
 - **New Module**: Reference `src/modules/auth/README.md` structure
 - **New Job**: Follow `src/infraestructure/queue/jobs/README.md` patterns
@@ -133,16 +143,19 @@ For implementation patterns and guidelines, refer to component-specific READMEs:
 ## Development Standards
 
 ### Package Manager Requirements
+
 - **ALWAYS use pnpm**: Never use npm or yarn commands
 - **Lock file**: pnpm-lock.yaml must be committed
 - **Scripts**: All package.json scripts should be run with `pnpm run <script>`
 
 ### Code Quality & Comments
+
 - **Language**: All comments in English with JSDoc format
 - **TypeScript**: Strict mode enabled, ES Modules
 - **Architecture**: Modular DDD with clean domain boundaries
 
 ### Code Simplicity & Efficiency
+
 - **Keep It Simple**: Always generate the simplest, most direct solution to the problem
 - **Use Existing Libraries**: ALWAYS prefer libraries already installed in package.json over adding new dependencies
 - **Minimal Code**: Write concise, readable code that solves the problem without over-engineering
@@ -150,6 +163,7 @@ For implementation patterns and guidelines, refer to component-specific READMEs:
 - **No Unnecessary Abstractions**: Avoid complex patterns when simple solutions work
 
 ### Security Patterns
+
 - **Input Validation**: XSS protection, NoSQL injection prevention
 - **Authentication**: JWT with secure token handling
 - **Rate Limiting**: Implemented in auth flows
@@ -158,6 +172,7 @@ For implementation patterns and guidelines, refer to component-specific READMEs:
 ## MCP Integration Guidelines
 
 ### **Context7 Usage Examples**
+
 ```typescript
 // Get library documentation
 const docs = await mcp_context7_get_library_docs({
@@ -172,6 +187,7 @@ const libraryId = await mcp_context7_resolve_library_id({
 ```
 
 ### **Playwright Testing Examples**
+
 ```typescript
 // Testing interfaces - use MCP Playwright, not Simple Browser
 await mcp_playwright_browser_navigate({ url: 'http://localhost:3001/docs' });
@@ -179,6 +195,7 @@ await mcp_playwright_browser_snapshot();
 ```
 
 ### **MCP Best Practices**
+
 - **Context7**: For library documentation and examples
 - **Playwright**: For all browser testing and UI interactions (not Simple Browser)
 
@@ -187,18 +204,21 @@ await mcp_playwright_browser_snapshot();
 ## 📚 **Development Workflow**
 
 ### **Starting New Features**
+
 1. **Check existing documentation**: Start with relevant README.md files
 2. **Use project patterns**: Follow established architectures and patterns
 3. **Leverage MCPs**: Use Context7 for external library documentation, Playwright for testing
 4. **Follow pnpm requirements**: Always use pnpm for package management
 
 ### **Troubleshooting & Research**
+
 1. **Project Documentation First**: Check module-specific READMEs
 2. **Context7 MCP**: For up-to-date library examples and best practices
 3. **Playwright MCP**: For UI testing and web automation needs
 4. **External References**: Official documentation links provided above
 
 ### **Code Quality Checklist**
+
 - ✅ Used existing patterns from project READMEs
 - ✅ Followed TypeScript strict mode requirements
 - ✅ Applied security patterns (validation, sanitization)
@@ -209,4 +229,3 @@ await mcp_playwright_browser_snapshot();
 ---
 
 **Note**: For detailed implementation patterns, always consult the component-specific README files listed above. Use MCPs to enhance understanding with external library documentation and testing capabilities.
-````

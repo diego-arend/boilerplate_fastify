@@ -70,7 +70,12 @@ const envSchema = z
     EMAIL_FROM: z.string().email('EMAIL_FROM must be a valid email address').optional(),
     EMAIL_POOL: z.coerce.boolean().default(false).optional(),
     EMAIL_MAX_CONNECTIONS: z.coerce.number().positive().optional(),
-    EMAIL_MAX_MESSAGES: z.coerce.number().positive().optional()
+    EMAIL_MAX_MESSAGES: z.coerce.number().positive().optional(),
+
+    // Evolution API WhatsApp Integration
+    EVOLUTION_API_URL: z.string().url('EVOLUTION_API_URL must be a valid URL').optional(),
+    EVOLUTION_API_KEY: z.string().min(1, 'EVOLUTION_API_KEY cannot be empty').optional(),
+    EVOLUTION_INSTANCE: z.string().min(1, 'EVOLUTION_INSTANCE cannot be empty').optional()
   })
   .refine(
     data => {
@@ -133,7 +138,10 @@ if (!parsed.success) {
       EMAIL_FROM: process.env.EMAIL_FROM,
       EMAIL_POOL: process.env.EMAIL_POOL,
       EMAIL_MAX_CONNECTIONS: process.env.EMAIL_MAX_CONNECTIONS,
-      EMAIL_MAX_MESSAGES: process.env.EMAIL_MAX_MESSAGES
+      EMAIL_MAX_MESSAGES: process.env.EMAIL_MAX_MESSAGES,
+      EVOLUTION_API_URL: process.env.EVOLUTION_API_URL,
+      EVOLUTION_API_KEY: process.env.EVOLUTION_API_KEY ? '[REDACTED]' : 'NOT_SET',
+      EVOLUTION_INSTANCE: process.env.EVOLUTION_INSTANCE
     }
   });
 
